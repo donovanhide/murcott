@@ -1,0 +1,35 @@
+<html>
+
+<head>
+  <link href="/css/style.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+  <script src='//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js'></script>
+  <script>
+    $(function() {
+      var sock = new WebSocket('ws://' + location.host + '/ws');
+      sock.onopen = function() {
+        sock.onmessage = function(res) {
+          var data = JSON.parse(res.data);
+          switch (data.type) {
+            case 'log':
+              console.log('[' + data.payload.level + '] ' + data.payload.what);
+          }
+        };
+      };
+      $('#console_input input').keypress(function(e) {
+        if (e.keyCode == 13) {
+          $(this).val("");
+        }
+      });
+    });
+  </script>
+  <div id="console">
+    <div id="console_input">
+      <input type="text" placeholder="..." autocomplete="off"></input>
+    </div>
+  </div>
+</body>
+
+</html>
