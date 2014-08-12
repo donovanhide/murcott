@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
 	"github.com/h2so5/murcott"
@@ -25,31 +24,38 @@ func main() {
 type Message struct {
 	MsgType string      `json:"type"`
 	Payload interface{} `json:"payload"`
+	Dst     string      `json:"dst"`
+	Src     string      `json:"src"`
 }
 
 type Session struct {
 	client *murcott.Client
 	ws     *websocket.Conn
+	logger *murcott.Logger
 }
 
 func (s *Session) Run() {
-	s.WriteLog("DEBUG", "websocket connected")
 	for {
-		_, p, err := s.ws.ReadMessage()
+		var msg Message
+		err := s.ws.ReadJSON(&msg)
 		if err != nil {
-			return
+			break
 		}
-		fmt.Println(p)
+		switch msg.MsgType {
+		case "msg":
+			s.client.SendMessage(*murcott.NewNodeIdFromString(msg.Dst), msg.Payload)
+		}
 	}
+
+	s.client.Close()
 }
 
-func (s *Session) WriteLog(level string, msg string) {
+func (s *Session) WriteLog(msg string) {
 	s.ws.WriteJSON(Message{
 		MsgType: "log",
 		Payload: struct {
-			Level string `json:"level"`
-			What  string `json:"what"`
-		}{level, msg},
+			What string `json:"what"`
+		}{msg},
 	})
 }
 
@@ -59,10 +65,30 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c := murcott.NewClient()
+	logger := c.Logger()
+	logger.Info("websocket connected")
+
 	s := Session{
-		client: murcott.NewClient(),
+		client: c,
 		ws:     ws,
+		logger: logger,
 	}
+
+	go func(ch <-chan string) {
+		for {
+			msg := <-ch
+			s.WriteLog(msg)
+		}
+	}(logger.Channel())
+
+	c.MessageCallback(func(src murcott.NodeId, payload interface{}) {
+		s.ws.WriteJSON(Message{
+			MsgType: "msg",
+			Src:     src.String(),
+			Payload: payload,
+		})
+	})
 
 	s.Run()
 }

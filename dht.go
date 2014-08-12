@@ -11,8 +11,9 @@ type dhtRpcCallback func(*dhtRpcCommand, *net.UDPAddr)
 type Dht struct {
 	selfnode NodeInfo
 	table    NodeTable
-	rpcChan  chan DhtPacket
 	callback map[string]dhtRpcCallback
+	rpccb    []func(NodeId, []byte)
+	logger   *Logger
 }
 
 type dhtRpcCommand struct {
@@ -21,17 +22,13 @@ type dhtRpcCommand struct {
 	Args   map[string]interface{} `msgpack:"args"`
 }
 
-type DhtPacket struct {
-	Dst     NodeId
-	Payload []byte
-}
-
-func NewDht(k int, selfnode NodeInfo) *Dht {
+func NewDht(k int, selfnode NodeInfo, logger *Logger) *Dht {
 	return &Dht{
 		selfnode: selfnode,
 		table:    NewNodeTable(k),
-		rpcChan:  make(chan DhtPacket),
 		callback: make(map[string]dhtRpcCallback),
+		rpccb:    make([]func(NodeId, []byte), 0),
+		logger:   logger,
 	}
 }
 
@@ -56,8 +53,8 @@ func newRpcReturnCommand(id []byte, args map[string]interface{}) dhtRpcCommand {
 	}
 }
 
-func (p *Dht) RpcChannel() <-chan DhtPacket {
-	return p.rpcChan
+func (p *Dht) RpcCallback(cb func(dst NodeId, payload []byte)) {
+	p.rpccb = append(p.rpccb, cb)
 }
 
 func (p *Dht) AddNode(node NodeInfo) {
@@ -86,6 +83,7 @@ func (p *Dht) ProcessPacket(src NodeInfo, payload []byte, addr *net.UDPAddr) {
 		p.table.Insert(src, src.Id.Xor(p.selfnode.Id))
 		switch out.Method {
 		case "ping":
+			p.logger.Info("Receive DHT Ping from %s", src.Id.String())
 			p.sendPacket(src.Id, newRpcReturnCommand(out.Id, nil), nil)
 
 		case "": // callback
@@ -103,7 +101,7 @@ func (p *Dht) sendPacket(dst NodeId, command dhtRpcCommand, cb dhtRpcCallback) {
 		panic(err)
 	}
 	p.callback[string(command.Id)] = cb
-	go func() {
-		p.rpcChan <- DhtPacket{Dst: dst, Payload: data}
-	}()
+	for _, cb := range p.rpccb {
+		cb(dst, data)
+	}
 }

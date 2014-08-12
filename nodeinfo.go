@@ -22,7 +22,7 @@ func init() {
 			}
 			i := big.NewInt(0)
 			i.SetBytes(b)
-			if i.BitLen() != 160 {
+			if i.BitLen() > 160 {
 				return nil
 			}
 			v.Set(reflect.ValueOf(NodeId{*i}))
@@ -37,6 +37,14 @@ type NodeId struct {
 func NewNodeId(data []byte) *NodeId {
 	i := big.NewInt(0)
 	i.SetBytes(data)
+	return &NodeId{*i}
+}
+
+func NewNodeIdFromString(str string) *NodeId {
+	i, err := base58.DecodeToBig([]byte(str))
+	if err != nil {
+		return nil
+	}
 	return &NodeId{*i}
 }
 

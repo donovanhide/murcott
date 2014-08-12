@@ -16,6 +16,8 @@ type Node struct {
 	dht      *Dht
 	conn     *net.UDPConn
 	exitch   chan struct{}
+	logger   *Logger
+	msgcb    []func(NodeId, []byte)
 }
 
 type udpDatagram struct {
@@ -37,11 +39,14 @@ func getOpenPortConn() (*net.UDPConn, int) {
 	return nil, 0
 }
 
-func NewNode() *Node {
+func NewNode(logger *Logger) *Node {
 	selfnode := NodeInfo{Id: *NewRandomNodeId()}
 	conn, selfport := getOpenPortConn()
-	dht := NewDht(10, selfnode)
+	dht := NewDht(10, selfnode, logger)
 	exitch := make(chan struct{})
+
+	logger.Info("Node ID: %s", selfnode.Id.String())
+	logger.Info("Node UDP port: %d", selfport)
 
 	// lookup bootstrap
 	host, err := net.LookupIP(bootstrap)
@@ -49,19 +54,22 @@ func NewNode() *Node {
 		panic(err)
 	}
 
-	Node := Node{
+	node := Node{
 		selfnode: selfnode,
 		conn:     conn,
 		dht:      dht,
 		exitch:   exitch,
+		logger:   logger,
 	}
 
 	// portscan
 	for port := portBegin; port <= portEnd; port++ {
 		if port != selfport {
-			Node.sendDiscoveryPacket(net.UDPAddr{Port: port, IP: host[0]})
+			node.sendDiscoveryPacket(net.UDPAddr{Port: port, IP: host[0]})
 		}
 	}
+
+	logger.Info("Sent discovery packet to %v:%d-%d", host[0], portBegin, portEnd)
 
 	datach := make(chan udpDatagram)
 
@@ -77,29 +85,35 @@ func NewNode() *Node {
 		}
 	}()
 
+	dht.RpcCallback(func(dst NodeId, payload []byte) {
+		node.sendPacket(dst, "dht", payload)
+	})
+
 	go func() {
-		dhtch := dht.RpcChannel()
 		for {
 			select {
 			case data := <-datach:
 				var out Packet
 				err = msgpack.Unmarshal(data.Data, &out)
 				if err == nil {
-					Node.processPacket(out, data.Addr)
+					node.logger.Info("Receive %s packet from %s", out.Type, out.Src.String())
+					node.processPacket(out, data.Addr)
 				}
-			case packet := <-dhtch:
-				Node.sendPacket(packet.Dst, "dht", packet.Payload)
 			case <-exitch:
 				break
 			}
 		}
 	}()
 
-	return &Node
+	return &node
 }
 
-func (p *Node) SendRawMessage(dst NodeId, payload []byte) {
+func (p *Node) SendMessage(dst NodeId, payload []byte) {
 	p.sendPacket(dst, "msg", payload)
+}
+
+func (p *Node) MessageCallback(cb func(NodeId, []byte)) {
+	p.msgcb = append(p.msgcb, cb)
 }
 
 func (p *Node) processPacket(packet Packet, addr *net.UDPAddr) {
@@ -110,6 +124,9 @@ func (p *Node) processPacket(packet Packet, addr *net.UDPAddr) {
 	case "dht":
 		p.dht.ProcessPacket(info, packet.Payload, addr)
 	case "msg":
+		for _, cb := range p.msgcb {
+			cb(info.Id, packet.Payload)
+		}
 	}
 }
 
@@ -132,12 +149,16 @@ func (p *Node) sendPacket(dst NodeId, typ string, payload []byte) {
 		Type:    typ,
 		Payload: payload,
 	}
+
 	data, err := msgpack.Marshal(packet)
 	if err != nil {
 		panic(err)
 	}
 
 	node := p.dht.GetNodeInfo(dst)
+
+	p.logger.Info("Send %s packet to %s", packet.Type, packet.Dst.String())
+
 	if node != nil {
 		p.conn.WriteToUDP(data, node.Addr)
 	}

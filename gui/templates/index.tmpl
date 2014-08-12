@@ -1,34 +1,120 @@
 <html>
 
 <head>
-  <link href="/css/style.css" rel="stylesheet" type="text/css">
+  <title>murcott</title>
+  <link href='/css/style.css' rel='stylesheet' type='text/css'>
+  <link href='//fonts.googleapis.com/css?family=Lobster' rel='stylesheet' type='text/css'>
+  <link href='//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
 </head>
 
 <body>
-  <script src='//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js'></script>
+  <script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
   <script>
     $(function() {
+
       var sock = new WebSocket('ws://' + location.host + '/ws');
       sock.onopen = function() {
         sock.onmessage = function(res) {
           var data = JSON.parse(res.data);
+          console.log(data);
           switch (data.type) {
             case 'log':
-              console.log('[' + data.payload.level + '] ' + data.payload.what);
+              var text = data.payload.what;
+              $('#debuglog ul').append($('<li>').append(text));
+            case 'msg':
+              addMessageLog(data.src, data.payload);
           }
         };
       };
-      $('#console_input input').keypress(function(e) {
+
+      var Global = {};
+      Global.session_id = '';
+      Global.maeesage_log = {};
+
+      function setCurrentSessionID(id) {
+        Global.session_id = id;
+        $('#log ul').empty();
+        if (Global.maeesage_log[id] == undefined) {
+          Global.maeesage_log[id] = [];
+        }
+        var ary = Global.maeesage_log[id];
+        for (var i = 0; i < ary.length; ++i) {
+          $('#log ul').append($('<li>').append(ary[i].body));
+        }
+        $(document).scrollTop(99999);
+      }
+
+      function addMessageLog(id, message) {
+        if (Global.maeesage_log[id] == undefined) {
+          Global.maeesage_log[id] = [];
+        }
+        Global.maeesage_log[id].push(message);
+        if (Global.session_id == id) {
+          $('#log ul').append($('<li>').append(message.body));
+          $(document).scrollTop(99999);
+        }
+      }
+
+      $('#console_content input').keypress(function(e) {
         if (e.keyCode == 13) {
-          $(this).val("");
+          var val = $(this).val();
+          if (val.length > 0) {
+            $(this).val("");
+            var msg = {
+              body: val
+            };
+            addMessageLog(Global.session_id, msg)
+            sock.send(JSON.stringify({
+              type: 'msg',
+              dst: Global.session_id,
+              payload: msg
+            }));
+          }
         }
       });
+
+      $('#add-friend').click(function() {
+        var id = window.prompt("Please input ID", "");
+        if (id != null) {
+          var div = $('<div>').addClass("friend-id").append(id);
+          var a = $('<a>')
+            .addClass('button')
+            .addClass('friend')
+            .attr('href', 'javascript:void(0)')
+            .append(div)
+            .data('id', id);
+          $(this).before(a);
+        }
+      });
+
+      $(document).on('click', '.friend', function() {
+        $('.friend').removeClass('selected');
+        $(this).addClass('selected');
+        setCurrentSessionID($(this).data('id'));
+      });
+
     });
   </script>
+  <div id="head">
+    <h4>murcott</h4>
+  </div>
+  <div id="roster">
+    <a id="add-friend" class="button" href="javascript:void(0)">
+      <i class="fa fa-plus"></i>
+    </a>
+  </div>
+  <div id="log">
+    <ul>
+    </ul>
+  </div>
   <div id="console">
-    <div id="console_input">
+    <div id="console_content">
       <input type="text" placeholder="..." autocomplete="off"></input>
     </div>
+  </div>
+  <div id="debuglog">
+    <ul>
+    </ul>
   </div>
 </body>
 
