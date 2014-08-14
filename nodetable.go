@@ -1,5 +1,9 @@
 package murcott
 
+import (
+	"sync"
+)
+
 type bucket struct {
 	Zero  *bucket
 	One   *bucket
@@ -10,6 +14,7 @@ type nodeTable struct {
 	root   *bucket
 	selfid NodeId
 	k      int
+	mutex  *sync.Mutex
 }
 
 func newNodeTable(k int, id NodeId) nodeTable {
@@ -17,6 +22,7 @@ func newNodeTable(k int, id NodeId) nodeTable {
 		root:   &bucket{},
 		selfid: id,
 		k:      k,
+		mutex:  &sync.Mutex{},
 	}
 }
 
@@ -34,6 +40,8 @@ func (p *nodeTable) nearestBucket(id NodeId) *bucket {
 }
 
 func (p *nodeTable) insert(node nodeInfo) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	dist := p.selfid.Xor(node.Id)
 	b := p.nearestBucket(dist)
 
@@ -52,6 +60,8 @@ func (p *nodeTable) insert(node nodeInfo) {
 }
 
 func (p *nodeTable) remove(id NodeId) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	dist := p.selfid.Xor(id)
 	b := p.nearestBucket(dist)
 	for i, n := range b.Nodes {
@@ -62,12 +72,16 @@ func (p *nodeTable) remove(id NodeId) {
 }
 
 func (p *nodeTable) nearestNodes(id NodeId) []nodeInfo {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	dist := p.selfid.Xor(id)
 	b := p.nearestBucket(dist)
 	return b.Nodes
 }
 
 func (p *nodeTable) find(id NodeId) *nodeInfo {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	dist := p.selfid.Xor(id)
 	b := p.nearestBucket(dist)
 	for _, v := range b.Nodes {

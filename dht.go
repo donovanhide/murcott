@@ -32,11 +32,6 @@ type dht struct {
 	logger   *Logger
 
 	exit               chan struct{}
-	addNodeRequest     chan nodeInfo
-	updateNodeRequest  chan nodeInfo
-	removeNodeRequest  chan NodeId
-	nodeInfoRequest    chan NodeId
-	nodeInfoResponse   chan *nodeInfo
 	addRetChanRequest  chan dhtRpcRetunChan
 	getRetChanRequest  chan string
 	getRetChanResponse chan chan *dhtRpcReturn
@@ -57,11 +52,6 @@ func newDht(k int, selfnode nodeInfo, logger *Logger) *dht {
 		logger:   logger,
 
 		exit:               make(chan struct{}),
-		addNodeRequest:     make(chan nodeInfo),
-		updateNodeRequest:  make(chan nodeInfo),
-		removeNodeRequest:  make(chan NodeId),
-		nodeInfoRequest:    make(chan NodeId),
-		nodeInfoResponse:   make(chan *nodeInfo),
 		addRetChanRequest:  make(chan dhtRpcRetunChan, 100),
 		getRetChanRequest:  make(chan string),
 		getRetChanResponse: make(chan chan *dhtRpcReturn),
@@ -72,17 +62,8 @@ func newDht(k int, selfnode nodeInfo, logger *Logger) *dht {
 func (p *dht) run() {
 	for {
 		select {
-		case node := <-p.addNodeRequest:
-			p.table.insert(node)
-			p.sendPing(node.Id)
-		case node := <-p.updateNodeRequest:
-			p.table.insert(node)
-		case id := <-p.nodeInfoRequest:
-			p.nodeInfoResponse <- p.table.find(id)
 		case c := <-p.addRetChanRequest:
 			p.rpcRet[c.id] = c.ch
-		case id := <-p.removeNodeRequest:
-			p.table.remove(id)
 		case id := <-p.getRetChanRequest:
 			if ch, ok := p.rpcRet[id]; ok {
 				delete(p.rpcRet, id)
@@ -126,16 +107,16 @@ func (p *dht) rpcChannel() <-chan dhtPacket {
 }
 
 func (p *dht) addNode(node nodeInfo) {
-	p.addNodeRequest <- node
+	p.table.insert(node)
+	p.sendPing(node.Id)
 }
 
 func (p *dht) updateNode(node nodeInfo) {
-	p.updateNodeRequest <- node
+	p.table.insert(node)
 }
 
 func (p *dht) getNodeInfo(id NodeId) *nodeInfo {
-	p.nodeInfoRequest <- id
-	return <-p.nodeInfoResponse
+	return p.table.find(id)
 }
 
 func (p *dht) getRpcRetChan(id string) chan<- *dhtRpcReturn {
@@ -172,7 +153,7 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 			<-time.After(200 * time.Millisecond)
 			if ch := p.getRpcRetChan(id); ch != nil {
 				ch <- nil
-				p.removeNodeRequest <- dst
+				p.table.remove(dst)
 				p.logger.Info("Remove %s from routing table", dst.String())
 			}
 		}()
