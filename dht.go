@@ -51,7 +51,7 @@ type dhtRpcCommand struct {
 func newDht(k int, selfnode nodeInfo, logger *Logger) *dht {
 	d := dht{
 		selfnode: selfnode,
-		table:    newNodeTable(k),
+		table:    newNodeTable(k, selfnode.Id),
 		rpcRet:   make(map[string]chan *dhtRpcReturn),
 		rpcChan:  make(chan dhtPacket, 100),
 		logger:   logger,
@@ -73,14 +73,16 @@ func (p *dht) run() {
 	for {
 		select {
 		case node := <-p.addNodeRequest:
-			p.table.insert(node, node.Id.Xor(p.selfnode.Id))
+			p.table.insert(node)
 			p.sendPing(node.Id)
 		case node := <-p.updateNodeRequest:
-			p.table.insert(node, node.Id.Xor(p.selfnode.Id))
+			p.table.insert(node)
 		case id := <-p.nodeInfoRequest:
-			p.nodeInfoResponse <- p.table.find(id, id.Xor(p.selfnode.Id))
+			p.nodeInfoResponse <- p.table.find(id)
 		case c := <-p.addRetChanRequest:
 			p.rpcRet[c.id] = c.ch
+		case id := <-p.removeNodeRequest:
+			p.table.remove(id)
 		case id := <-p.getRetChanRequest:
 			if ch, ok := p.rpcRet[id]; ok {
 				delete(p.rpcRet, id)
@@ -164,13 +166,17 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 	p.addRetChanRequest <- dhtRpcRetunChan{id: id, ch: ch}
 	p.rpcChan <- dhtPacket{Dst: dst, Payload: data}
 
-	go func() {
-		// timeout
-		<-time.After(200 * time.Millisecond)
-		if ch := p.getRpcRetChan(id); ch != nil {
-			ch <- nil
-		}
-	}()
+	if len(command.Method) > 0 {
+		go func() {
+			// timeout
+			<-time.After(200 * time.Millisecond)
+			if ch := p.getRpcRetChan(id); ch != nil {
+				ch <- nil
+				p.removeNodeRequest <- dst
+				p.logger.Info("Remove %s from routing table", dst.String())
+			}
+		}()
+	}
 
 	return ch
 }
