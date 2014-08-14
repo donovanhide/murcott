@@ -34,28 +34,20 @@ type Session struct {
 	logger *murcott.Logger
 }
 
-func (s *Session) Run() {
-	for {
-		var msg Message
-		err := s.ws.ReadJSON(&msg)
-		if err != nil {
-			break
-		}
-		switch msg.MsgType {
-		case "msg":
-			s.client.SendMessage(*murcott.NewNodeIdFromString(msg.Dst), msg.Payload)
-		}
-	}
-
-	s.client.Close()
-}
-
 func (s *Session) WriteLog(msg string) {
 	s.ws.WriteJSON(Message{
 		MsgType: "log",
 		Payload: struct {
 			What string `json:"what"`
 		}{msg},
+	})
+}
+
+func (s *Session) WriteMessage(src murcott.NodeId, payload interface{}) {
+	s.ws.WriteJSON(Message{
+		MsgType: "msg",
+		Src:     src.String(),
+		Payload: payload,
 	})
 }
 
@@ -75,20 +67,39 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		logger: logger,
 	}
 
-	go func(ch <-chan string) {
+	logch := logger.Channel()
+	exit := make(chan struct{})
+
+	go func() {
 		for {
-			msg := <-ch
-			s.WriteLog(msg)
+			select {
+			case log := <-logch:
+				s.WriteLog(log)
+			case <-exit:
+				return
+			}
 		}
-	}(logger.Channel())
+	}()
 
-	c.MessageCallback(func(src murcott.NodeId, payload interface{}) {
-		s.ws.WriteJSON(Message{
-			MsgType: "msg",
-			Src:     src.String(),
-			Payload: payload,
-		})
-	})
+	go func() {
+		for {
+			msg := c.Recv()
+			s.WriteMessage(msg.Src, msg.Payload)
+		}
+	}()
 
-	s.Run()
+	for {
+		var msg Message
+		err := s.ws.ReadJSON(&msg)
+		if err != nil {
+			break
+		}
+		switch msg.MsgType {
+		case "msg":
+			s.client.Send(*murcott.NewNodeIdFromString(msg.Dst), msg.Payload)
+		}
+	}
+
+	exit <- struct{}{}
+	s.client.Close()
 }
