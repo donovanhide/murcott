@@ -1,6 +1,6 @@
 package murcott
 
-type Packet struct {
+type packet struct {
 	Dst     NodeId `msgpack:"dst"`
 	Src     NodeId `msgpack:"src"`
 	Type    string `msgpack:"type"`

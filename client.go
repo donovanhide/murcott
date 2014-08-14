@@ -5,14 +5,14 @@ import (
 )
 
 type Client struct {
-	node   *Node
+	node   *node
 	logger *Logger
 }
 
 func NewClient() *Client {
 	logger := NewLogger()
 	return &Client{
-		NewNode(logger),
+		newNode(logger),
 		logger,
 	}
 }
@@ -26,11 +26,11 @@ func (p *Client) SendMessage(dst NodeId, msg interface{}) {
 	if err != nil {
 		panic(err)
 	}
-	p.node.SendMessage(dst, data)
+	p.node.sendMessage(dst, data)
 }
 
 func (p *Client) MessageCallback(cb func(NodeId, interface{})) {
-	p.node.MessageCallback(func(src NodeId, payload []byte) {
+	p.node.messageCallback(func(src NodeId, payload []byte) {
 		var out map[string]interface{}
 		err := msgpack.Unmarshal(payload, &out)
 		if err == nil {
@@ -40,5 +40,5 @@ func (p *Client) MessageCallback(cb func(NodeId, interface{})) {
 }
 
 func (p *Client) Close() {
-	p.node.Close()
+	p.node.close()
 }

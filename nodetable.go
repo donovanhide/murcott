@@ -3,19 +3,19 @@ package murcott
 type bucket struct {
 	Zero  *bucket
 	One   *bucket
-	Nodes []NodeInfo
+	Nodes []nodeInfo
 }
 
-type NodeTable struct {
+type nodeTable struct {
 	root *bucket
 	k    int
 }
 
-func NewNodeTable(k int) NodeTable {
-	return NodeTable{root: &bucket{}, k: k}
+func newNodeTable(k int) nodeTable {
+	return nodeTable{root: &bucket{}, k: k}
 }
 
-func (p *NodeTable) nearestBucket(dist NodeId) *bucket {
+func (p *nodeTable) nearestBucket(dist NodeId) *bucket {
 	b := p.root
 	for i := 0; i < dist.BitLen() && b.Zero != nil; i++ {
 		if dist.Bit(i) == 0 {
@@ -27,7 +27,7 @@ func (p *NodeTable) nearestBucket(dist NodeId) *bucket {
 	return b
 }
 
-func (p *NodeTable) Insert(node NodeInfo, dist NodeId) {
+func (p *nodeTable) insert(node nodeInfo, dist NodeId) {
 	b := p.nearestBucket(dist)
 
 	for i, v := range b.Nodes {
@@ -44,12 +44,12 @@ func (p *NodeTable) Insert(node NodeInfo, dist NodeId) {
 	}
 }
 
-func (p *NodeTable) NearestNodes(dist NodeId) []NodeInfo {
+func (p *nodeTable) nearestNodes(dist NodeId) []nodeInfo {
 	b := p.nearestBucket(dist)
 	return b.Nodes
 }
 
-func (p *NodeTable) Find(id NodeId, dist NodeId) *NodeInfo {
+func (p *nodeTable) find(id NodeId, dist NodeId) *nodeInfo {
 	b := p.nearestBucket(dist)
 	for _, v := range b.Nodes {
 		if v.Id.Cmp(id) == 0 {
