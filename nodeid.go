@@ -63,11 +63,11 @@ func (p *NodeId) Xor(n NodeId) NodeId {
 }
 
 func (p *NodeId) BitLen() int {
-	return p.i.BitLen()
+	return 160
 }
 
 func (p *NodeId) Bit(i int) uint {
-	return p.i.Bit(i)
+	return p.i.Bit(159 - i)
 }
 
 func (p *NodeId) Cmp(n NodeId) int {
