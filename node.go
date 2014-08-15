@@ -51,7 +51,7 @@ func getOpenPortConn() (*net.UDPConn, int) {
 }
 
 func newNode(logger *Logger) *node {
-	selfnode := nodeInfo{Id: *NewRandomNodeId()}
+	selfnode := nodeInfo{Id: NewRandomNodeId()}
 	dht := newDht(10, selfnode, logger)
 	exit := make(chan struct{})
 

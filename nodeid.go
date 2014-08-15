@@ -33,25 +33,25 @@ type NodeId struct {
 	i big.Int
 }
 
-func NewNodeId(data []byte) *NodeId {
+func NewNodeId(data []byte) NodeId {
 	i := big.NewInt(0)
 	i.SetBytes(data)
-	return &NodeId{*i}
+	return NodeId{*i}
 }
 
-func NewNodeIdFromString(str string) *NodeId {
+func NewNodeIdFromString(str string) NodeId {
 	i, err := base58.DecodeToBig([]byte(str))
 	if err != nil {
-		return nil
+		panic(err)
 	}
-	return &NodeId{*i}
+	return NodeId{*i}
 }
 
-func NewRandomNodeId() *NodeId {
+func NewRandomNodeId() NodeId {
 	data := make([]byte, 20)
 	_, err := rand.Read(data)
 	if err != nil {
-		return nil
+		panic(err)
 	} else {
 		return NewNodeId(data)
 	}
