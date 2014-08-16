@@ -1,7 +1,6 @@
 package murcott
 
 import (
-	//"fmt"
 	"sync"
 )
 
@@ -30,6 +29,10 @@ func newNodeTable(k int, id NodeId) nodeTable {
 func (p *nodeTable) insert(node nodeInfo) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
+
+	if p.selfid.Cmp(node.Id) == 0 {
+		return
+	}
 
 	b := p.nearestBucket(node.Id)
 
@@ -91,6 +94,7 @@ func (p *nodeTable) nearestBucket(id NodeId) *bucket {
 	}
 	return b
 }
+
 func (p *nodeTable) devideTree() {
 	b := p.root
 	i := 0

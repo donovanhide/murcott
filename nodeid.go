@@ -74,6 +74,10 @@ func (p *NodeId) Cmp(n NodeId) int {
 	return p.i.Cmp(&n.i)
 }
 
+func (p *NodeId) Bytes() []byte {
+	return p.i.Bytes()
+}
+
 func (p *NodeId) String() string {
 	return string(base58.EncodeBig(nil, &p.i))
 }

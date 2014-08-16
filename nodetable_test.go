@@ -13,9 +13,9 @@ func TestNodeTableInsertRemove(t *testing.T) {
 	ary := make([]NodeId, 100)
 
 	for i := 0; i < len(ary); i++ {
+		b.Add(b, big.NewInt(int64(1)))
 		id := NewNodeId(b.Bytes())
 		ary[i] = id
-		b.Add(b, big.NewInt(int64(1)))
 	}
 
 	for _, id := range ary {
