@@ -50,12 +50,20 @@ func PrivateKeyFromString(str string) *PrivateKey {
 	if err != nil {
 		return nil
 	}
+	if !out.verifyKey() {
+		return nil
+	}
 	return &out
 }
 
 func (p *PrivateKey) String() string {
 	data, _ := msgpack.Marshal(p)
 	return string(base58.EncodeBig(nil, big.NewInt(0).SetBytes(data)))
+}
+
+func (p *PrivateKey) verifyKey() bool {
+	data := []byte("test")
+	return p.PublicKey.verify(data, p.sign(data))
 }
 
 func (p *PrivateKey) sign(data []byte) *signature {
