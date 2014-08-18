@@ -16,9 +16,9 @@ type Client struct {
 	exit    chan struct{}
 }
 
-func NewClient() *Client {
+func NewClient(key *PrivateKey) *Client {
 	logger := NewLogger()
-	node := newNode(logger)
+	node := newNode(key, logger)
 	ch := node.messageChannel()
 	go node.run()
 

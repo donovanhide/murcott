@@ -27,7 +27,7 @@ func TestDhtPing(t *testing.T) {
 				t.Errorf("wrong packet destination: %s", p.Dst)
 				exit <- true
 			} else {
-				dht2.processPacket(node1, p.Payload, nil)
+				dht2.processPacket(node1, p.Payload)
 				exit <- true
 			}
 		default:
@@ -86,7 +86,7 @@ func TestDhtGroup(t *testing.T) {
 		id := NewNodeIdFromString(ids[i])
 		addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4000")
 		node := nodeInfo{Id: id, Addr: addr}
-		dht := newDht(10, node, logger)
+		dht := newDht(20, node, logger)
 		idary[i] = node
 		chans[i] = dht.rpcChannel()
 		go dht.run()
@@ -111,7 +111,7 @@ func TestDhtGroup(t *testing.T) {
 			p := value.Interface().(dhtPacket)
 			id := p.Dst.String()
 			dht := dhtmap[id]
-			dht.processPacket(idary[chosen], p.Payload, nil)
+			dht.processPacket(idary[chosen], p.Payload)
 		}
 	}
 

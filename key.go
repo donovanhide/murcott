@@ -24,8 +24,8 @@ type signature struct {
 	r, s *big.Int
 }
 
-func (p *PublicKey) PublicKeyHash() [20]byte {
-	return sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...))
+func (p *PublicKey) PublicKeyHash() NodeId {
+	return NewNodeId(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
 }
 
 func GeneratePrivateKey() *PrivateKey {

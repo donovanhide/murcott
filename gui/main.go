@@ -57,7 +57,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := murcott.NewClient()
+	c := murcott.NewClient(murcott.GeneratePrivateKey())
 	logger := c.Logger()
 	logger.Info("websocket connected")
 

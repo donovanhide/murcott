@@ -295,7 +295,7 @@ func (p *dht) loadValue(key string) *string {
 	}
 }
 
-func (p *dht) processPacket(src nodeInfo, payload []byte, addr *net.UDPAddr) {
+func (p *dht) processPacket(src nodeInfo, payload []byte) {
 	var command dhtRpcCommand
 	err := msgpack.Unmarshal(payload, &command)
 	if err == nil {
@@ -356,7 +356,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte, addr *net.UDPAddr) {
 		case "": // callback
 			id := string(command.Id)
 			if ch := p.getRpcRetChan(id); ch != nil {
-				ch <- &dhtRpcReturn{command: command, addr: addr}
+				ch <- &dhtRpcReturn{command: command, addr: src.Addr}
 			}
 		}
 	}
