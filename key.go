@@ -5,7 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha1"
-	"encoding/base64"
+	"github.com/tv42/base58"
 	"github.com/vmihailenco/msgpack"
 	"math/big"
 	"reflect"
@@ -41,12 +41,12 @@ func GeneratePrivateKey() *PrivateKey {
 }
 
 func PrivateKeyFromString(str string) *PrivateKey {
-	data, err := base64.StdEncoding.DecodeString(str)
+	b, err := base58.DecodeToBig([]byte(str))
 	if err != nil {
 		return nil
 	}
 	var out PrivateKey
-	err = msgpack.Unmarshal(data, &out)
+	err = msgpack.Unmarshal(b.Bytes(), &out)
 	if err != nil {
 		return nil
 	}
@@ -55,7 +55,7 @@ func PrivateKeyFromString(str string) *PrivateKey {
 
 func (p *PrivateKey) String() string {
 	data, _ := msgpack.Marshal(p)
-	return base64.StdEncoding.EncodeToString(data)
+	return string(base58.EncodeBig(nil, big.NewInt(0).SetBytes(data)))
 }
 
 func (p *PrivateKey) sign(data []byte) *signature {
