@@ -33,9 +33,9 @@ type NodeId struct {
 	i big.Int
 }
 
-func NewNodeId(data []byte) NodeId {
+func NewNodeId(data [20]byte) NodeId {
 	i := big.NewInt(0)
-	i.SetBytes(data)
+	i.SetBytes(data[:])
 	return NodeId{*i}
 }
 
@@ -48,8 +48,8 @@ func NewNodeIdFromString(str string) NodeId {
 }
 
 func NewRandomNodeId() NodeId {
-	data := make([]byte, 20)
-	_, err := rand.Read(data)
+	var data [20]byte
+	_, err := rand.Read(data[:])
 	if err != nil {
 		panic(err)
 	} else {

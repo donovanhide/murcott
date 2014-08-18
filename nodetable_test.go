@@ -7,15 +7,19 @@ import (
 
 func TestNodeTableInsertRemove(t *testing.T) {
 	b := big.NewInt(int64(0))
-	selfid := NewNodeId(b.Bytes())
+	var id [20]byte
+	copy(id[:], b.Bytes()[:])
+	selfid := NewNodeId(id)
 	n := newNodeTable(50, selfid)
 
 	ary := make([]NodeId, 100)
 
 	for i := 0; i < len(ary); i++ {
 		b.Add(b, big.NewInt(int64(1)))
-		id := NewNodeId(b.Bytes())
-		ary[i] = id
+		var id [20]byte
+		copy(id[:], b.Bytes()[:])
+		node := NewNodeId(id)
+		ary[i] = node
 	}
 
 	for _, id := range ary {
