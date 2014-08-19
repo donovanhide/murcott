@@ -57,27 +57,27 @@ func NewRandomNodeId() NodeId {
 	}
 }
 
-func (p *NodeId) Xor(n NodeId) NodeId {
+func (id NodeId) Xor(n NodeId) NodeId {
 	d := big.NewInt(0)
-	return NodeId{i: *d.Xor(&p.i, &n.i)}
+	return NodeId{i: *d.Xor(&id.i, &n.i)}
 }
 
-func (p *NodeId) BitLen() int {
+func (id NodeId) BitLen() int {
 	return 160
 }
 
-func (p *NodeId) Bit(i int) uint {
-	return p.i.Bit(159 - i)
+func (id NodeId) Bit(i int) uint {
+	return id.i.Bit(159 - i)
 }
 
-func (p *NodeId) Cmp(n NodeId) int {
-	return p.i.Cmp(&n.i)
+func (id NodeId) Cmp(n NodeId) int {
+	return id.i.Cmp(&n.i)
 }
 
-func (p *NodeId) Bytes() []byte {
-	return p.i.Bytes()
+func (id NodeId) Bytes() []byte {
+	return id.i.Bytes()
 }
 
-func (p *NodeId) String() string {
-	return string(base58.EncodeBig(nil, &p.i))
+func (id NodeId) String() string {
+	return string(base58.EncodeBig(nil, &id.i))
 }
