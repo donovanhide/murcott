@@ -41,7 +41,7 @@
           }
           var ary = Global.maeesage_log[id];
           for (var i = 0; i < ary.length; ++i) {
-            $('#log ul').append($('<li>').append(ary[i].body));
+            $('#log ul').append($('<li>').append(ary[i]));
           }
           $(document).scrollTop(99999);
         }
@@ -52,7 +52,7 @@
           }
           Global.maeesage_log[id].push(message);
           if (Global.session_id == id) {
-            $('#log ul').append($('<li>').append(message.body));
+            $('#log ul').append($('<li>').append(message));
             $(document).scrollTop(99999);
           }
         }
@@ -62,14 +62,11 @@
             var val = $(this).val();
             if (val.length > 0) {
               $(this).val("");
-              var msg = {
-                body: val
-              };
-              addMessageLog(Global.session_id, msg)
+              addMessageLog(Global.session_id, val)
               sock.send(JSON.stringify({
                 type: 'msg',
                 dst: Global.session_id,
-                payload: msg
+                payload: val
               }));
             }
           }

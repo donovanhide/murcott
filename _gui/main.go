@@ -78,7 +78,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := murcott.NewClient(key)
-	logger := c.Logger()
+	logger := c.Logger
 	logger.Info("websocket connected")
 
 	s := Session{
@@ -103,8 +103,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		for {
-			msg := c.Recv()
-			s.WriteMessage(msg.Src, msg.Payload)
+			id, msg := c.Recv()
+			switch msg.(type) {
+			case murcott.ChatMessage:
+				s.WriteMessage(id, msg.(murcott.ChatMessage).Body)
+			}
 		}
 	}()
 
@@ -118,7 +121,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		case "msg":
 			id, err := murcott.NewNodeIdFromString(msg.Dst)
 			if err == nil {
-				s.client.Send(id, msg.Payload)
+				if body, ok := msg.Payload.(string); ok {
+					s.client.Send(id, murcott.ChatMessage{Body: body})
+				}
 			}
 		}
 	}
