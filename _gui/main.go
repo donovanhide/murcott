@@ -116,7 +116,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 		switch msg.MsgType {
 		case "msg":
-			s.client.Send(murcott.NewNodeIdFromString(msg.Dst), msg.Payload)
+			id, err := murcott.NewNodeIdFromString(msg.Dst)
+			if err == nil {
+				s.client.Send(id, msg.Payload)
+			}
 		}
 	}
 

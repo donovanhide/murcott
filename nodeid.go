@@ -39,12 +39,12 @@ func NewNodeId(data [20]byte) NodeId {
 	return NodeId{*i}
 }
 
-func NewNodeIdFromString(str string) NodeId {
+func NewNodeIdFromString(str string) (NodeId, error) {
 	i, err := base58.DecodeToBig([]byte(str))
 	if err != nil {
-		panic(err)
+		return NodeId{}, err
 	}
-	return NodeId{*i}
+	return NodeId{*i}, nil
 }
 
 func NewRandomNodeId() NodeId {

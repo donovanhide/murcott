@@ -83,7 +83,7 @@ func TestDhtGroup(t *testing.T) {
 	}
 
 	for i := 0; i < n; i++ {
-		id := NewNodeIdFromString(ids[i])
+		id, _ := NewNodeIdFromString(ids[i])
 		addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4000")
 		node := nodeInfo{Id: id, Addr: addr}
 		dht := newDht(20, node, logger)

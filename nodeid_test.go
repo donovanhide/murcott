@@ -1,7 +1,6 @@
 package murcott
 
 import (
-	//	"math/big"
 	"github.com/vmihailenco/msgpack"
 	"testing"
 )
@@ -22,8 +21,8 @@ func TestNodeIdMsgpack(t *testing.T) {
 func TestNodeIdString(t *testing.T) {
 	id := NewRandomNodeId()
 	str := id.String()
-	id2 := NewNodeIdFromString(str)
-	if id.Cmp(id2) != 0 {
-		t.Errorf("cannot parse NodeId string")
+	id2, err := NewNodeIdFromString(str)
+	if err != nil || id.Cmp(id2) != 0 {
+		t.Errorf("failed to generate NodeId from string")
 	}
 }
