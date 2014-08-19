@@ -103,7 +103,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		for {
-			id, msg := c.Recv()
+			id, msg, err := c.Recv()
+			if err != nil {
+				return
+			}
 			switch msg.(type) {
 			case murcott.ChatMessage:
 				s.WriteMessage(id, msg.(murcott.ChatMessage).Body)

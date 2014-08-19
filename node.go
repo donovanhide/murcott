@@ -1,6 +1,7 @@
 package murcott
 
 import (
+	"errors"
 	"github.com/vmihailenco/msgpack"
 	"net"
 )
@@ -35,7 +36,7 @@ type node struct {
 	waitingPackets []incomingPacket
 	logger         *Logger
 	msgcb          []func(NodeId, []byte)
-	msgChan        chan message
+	recv           chan message
 	sendChan       chan packet
 	exit           chan struct{}
 }
@@ -63,29 +64,10 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 	selfnode := nodeInfo{Id: key.PublicKeyHash()}
 	dht := newDht(10, selfnode, logger)
 	exit := make(chan struct{})
-
-	node := node{
-		selfnode: selfnode,
-		conn:     nil,
-		key:      key,
-		keycache: make(map[string]PublicKey),
-		dht:      dht,
-		logger:   logger,
-		msgChan:  make(chan message, 100),
-		sendChan: make(chan packet, 100),
-		exit:     exit,
-	}
-
-	return &node
-}
-
-func (p *node) run() {
-
 	conn, selfport := getOpenPortConn()
-	p.conn = conn
 
-	p.logger.Info("Node ID: %s", p.selfnode.Id.String())
-	p.logger.Info("Node UDP port: %d", selfport)
+	logger.Info("Node ID: %s", selfnode.Id.String())
+	logger.Info("Node UDP port: %d", selfport)
 
 	// lookup bootstrap
 	host, err := net.LookupIP(bootstrap)
@@ -93,14 +75,44 @@ func (p *node) run() {
 		panic(err)
 	}
 
+	node := node{
+		selfnode: selfnode,
+		conn:     conn,
+		key:      key,
+		keycache: make(map[string]PublicKey),
+		dht:      dht,
+		logger:   logger,
+		recv:     make(chan message, 100),
+		sendChan: make(chan packet, 100),
+		exit:     exit,
+	}
+
 	// portscan
 	for port := portBegin; port <= portEnd; port++ {
 		if port != selfport {
-			p.sendDiscoveryPacket(&net.UDPAddr{Port: port, IP: host[0]})
+			node.sendDiscoveryPacket(&net.UDPAddr{Port: port, IP: host[0]})
 		}
 	}
 
-	p.logger.Info("Sent discovery packet to %v:%d-%d", host[0], portBegin, portEnd)
+	logger.Info("Sent discovery packet to %v:%d-%d", host[0], portBegin, portEnd)
+	go node.run()
+
+	return &node
+}
+
+func (p *node) sendMessage(dst NodeId, payload []byte) {
+	p.sendPacket(dst, "msg", payload)
+}
+
+func (p *node) recvMessage() (NodeId, []byte, error) {
+	if m, ok := <-p.recv; ok {
+		return m.id, m.payload, nil
+	} else {
+		return NodeId{}, nil, errors.New("Node closed")
+	}
+}
+
+func (p *node) run() {
 
 	datach := make(chan udpDatagram)
 	rpcch := p.dht.rpcChannel()
@@ -109,7 +121,7 @@ func (p *node) run() {
 	go func() {
 		for {
 			var buf [1024]byte
-			len, addr, err := conn.ReadFromUDP(buf[:])
+			len, addr, err := p.conn.ReadFromUDP(buf[:])
 			if err != nil {
 				break
 			}
@@ -138,7 +150,7 @@ func (p *node) run() {
 
 		case data := <-datach:
 			var packet packet
-			err = msgpack.Unmarshal(data.Data, &packet)
+			err := msgpack.Unmarshal(data.Data, &packet)
 			if err != nil {
 				continue
 			}
@@ -172,14 +184,6 @@ func (p *node) run() {
 	}
 }
 
-func (p *node) sendMessage(dst NodeId, payload []byte) {
-	p.sendPacket(dst, "msg", payload)
-}
-
-func (p *node) messageChannel() <-chan message {
-	return p.msgChan
-}
-
 func (p *node) sendPublicKeyResponse(addr *net.UDPAddr) {
 	data, _ := msgpack.Marshal(p.key.PublicKey)
 	p.sendPacketAddr(addr, "key", data)
@@ -209,7 +213,7 @@ func (p *node) processPacket(packet packet, addr *net.UDPAddr) {
 	case "dht":
 		p.dht.processPacket(info, packet.Payload)
 	case "msg":
-		p.msgChan <- message{id: info.Id, payload: packet.Payload}
+		p.recv <- message{id: info.Id, payload: packet.Payload}
 	}
 }
 
@@ -266,6 +270,7 @@ func (p *node) sendPacket(dst NodeId, typ string, payload []byte) {
 }
 
 func (p *node) close() {
+	close(p.recv)
 	p.dht.close()
 	p.exit <- struct{}{}
 	p.conn.Close()

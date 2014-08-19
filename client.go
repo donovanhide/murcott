@@ -30,30 +30,25 @@ func NewClient(key *PrivateKey) *Client {
 	c := Client{
 		node:   node,
 		recv:   make(chan msgpair),
-		exit:   make(chan struct{}),
 		Logger: logger,
 	}
 
-	go node.run()
 	go c.run()
 	return &c
 }
 
 func (p *Client) run() {
-	ch := p.node.messageChannel()
-
 	for {
-		select {
-		case m := <-ch:
-			var t struct {
-				Type string `msgpack:"type"`
-			}
-			err := msgpack.Unmarshal(m.payload, &t)
-			if err == nil {
-				p.parseMessage(t.Type, m.payload, m.id)
-			}
-		case <-p.exit:
-			return
+		id, payload, err := p.node.recvMessage()
+		if err != nil {
+			break
+		}
+		var t struct {
+			Type string `msgpack:"type"`
+		}
+		err = msgpack.Unmarshal(payload, &t)
+		if err == nil {
+			p.parseMessage(t.Type, payload, id)
 		}
 	}
 }
@@ -94,12 +89,15 @@ func (p *Client) Send(dst NodeId, msg Message) error {
 	return nil
 }
 
-func (p *Client) Recv() (NodeId, Message) {
-	m := <-p.recv
-	return m.id, m.msg
+func (p *Client) Recv() (NodeId, Message, error) {
+	if m, ok := <-p.recv; ok {
+		return m.id, m.msg, nil
+	} else {
+		return NodeId{}, nil, errors.New("Client closed")
+	}
 }
 
 func (p *Client) Close() {
-	p.exit <- struct{}{}
+	close(p.recv)
 	p.node.close()
 }
