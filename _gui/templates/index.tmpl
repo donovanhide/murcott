@@ -1,0 +1,150 @@
+<html>
+
+<head>
+  <title>murcott</title>
+  <link href='/css/style.css' rel='stylesheet' type='text/css'>
+  <link href='//fonts.googleapis.com/css?family=Lobster' rel='stylesheet' type='text/css'>
+  <link href='//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
+</head>
+
+<body>
+  <script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+  <script>
+    $(function() {
+      function startSesson(key) {
+        $('#roster').show();
+        $('#console').show();
+        var sock = new WebSocket('ws://' + location.host + '/ws?key=' + key);
+        sock.onopen = function() {
+          sock.onmessage = function(res) {
+            var data = JSON.parse(res.data);
+            console.log(data);
+            switch (data.type) {
+              case 'log':
+                var text = data.payload.what;
+                $('#debuglog ul').append($('<li>').append(text));
+              case 'msg':
+                addMessageLog(data.src, data.payload);
+            }
+          };
+        };
+
+        var Global = {};
+        Global.session_id = '';
+        Global.maeesage_log = {};
+
+        function setCurrentSessionID(id) {
+          Global.session_id = id;
+          $('#log ul').empty();
+          if (Global.maeesage_log[id] == undefined) {
+            Global.maeesage_log[id] = [];
+          }
+          var ary = Global.maeesage_log[id];
+          for (var i = 0; i < ary.length; ++i) {
+            $('#log ul').append($('<li>').append(ary[i].body));
+          }
+          $(document).scrollTop(99999);
+        }
+
+        function addMessageLog(id, message) {
+          if (Global.maeesage_log[id] == undefined) {
+            Global.maeesage_log[id] = [];
+          }
+          Global.maeesage_log[id].push(message);
+          if (Global.session_id == id) {
+            $('#log ul').append($('<li>').append(message.body));
+            $(document).scrollTop(99999);
+          }
+        }
+
+        $('#console_content input').keypress(function(e) {
+          if (e.keyCode == 13) {
+            var val = $(this).val();
+            if (val.length > 0) {
+              $(this).val("");
+              var msg = {
+                body: val
+              };
+              addMessageLog(Global.session_id, msg)
+              sock.send(JSON.stringify({
+                type: 'msg',
+                dst: Global.session_id,
+                payload: msg
+              }));
+            }
+          }
+        });
+
+        $('#add-friend').click(function() {
+          var id = window.prompt("Please input ID", "");
+          if (id != null) {
+            var div = $('<div>').addClass("node-id").append(id);
+            var a = $('<a>')
+              .addClass('button')
+              .addClass('node')
+              .attr('href', 'javascript:void(0)')
+              .append(div)
+              .data('id', id);
+            $(this).before(a);
+          }
+        });
+
+        $(document).on('click', '#roster > .node', function() {
+          $('.node').removeClass('selected');
+          $(this).addClass('selected');
+          setCurrentSessionID($(this).data('id'));
+        });
+      }
+
+      $(document).on('click', '#login-modal > .node', function() {
+        $("#login-modal").hide()
+        startSesson($(this).data('key'))
+      });
+
+      $('#add-account').click(function() {
+        var button = $(this);
+        $.getJSON("/newkey", function(data) {
+          var id = $('<div>').addClass("node-id").append(data.id);
+          var a = $('<a>')
+            .addClass('button')
+            .addClass('node')
+            .attr('href', 'javascript:void(0)')
+            .append(id)
+            .data('id', data.id)
+            .data('key', data.key);
+          button.before(a);
+        })
+      });
+    });
+  </script>
+  <div id="head">
+    <h4>murcott</h4>
+  </div>
+  <div id="login-modal-wrap">
+    <div id="login-modal">
+      <a id="add-account" class="add-node button" href="javascript:void(0)">
+        <i class="fa fa-plus"></i>
+      </a>
+    </div>
+  </div>
+  <div id="roster" style="display:none;">
+    <a id="add-friend" class="add-node button" href="javascript:void(0)">
+      <i class="fa fa-plus"></i>
+    </a>
+  </div>
+  <div id="log">
+    <ul>
+    </ul>
+  </div>
+  <div id="console">
+    <div id="console_content">
+      <input type="text" placeholder="..." autocomplete="off"></input>
+    </div>
+  </div>
+  <div id="debuglog">
+    <ul>
+    </ul>
+  </div>
+</body>
+
+</html>

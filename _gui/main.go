@@ -18,6 +18,14 @@ func main() {
 	})
 	m.Get("/ws", ws)
 
+	m.Get("/newkey", func(r render.Render) {
+		key := murcott.GeneratePrivateKey()
+		r.JSON(200, map[string]interface{}{
+			"id":  key.PublicKeyHash().String(),
+			"key": key.String(),
+		})
+	})
+
 	m.Run()
 }
 
@@ -52,12 +60,24 @@ func (s *Session) WriteMessage(src murcott.NodeId, payload interface{}) {
 }
 
 func ws(w http.ResponseWriter, r *http.Request) {
+
+	r.ParseForm()
+
+	var key *murcott.PrivateKey
+	if len(r.Form["key"]) == 1 {
+		keystr := r.Form["key"][0]
+		key = murcott.PrivateKeyFromString(keystr)
+	}
+	if key == nil {
+		key = murcott.GeneratePrivateKey()
+	}
+
 	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
 	if err != nil {
 		return
 	}
 
-	c := murcott.NewClient(murcott.GeneratePrivateKey())
+	c := murcott.NewClient(key)
 	logger := c.Logger()
 	logger.Info("websocket connected")
 

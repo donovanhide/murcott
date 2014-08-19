@@ -76,6 +76,18 @@ h4 {
 .button:hover {
   background-color: rgba(255, 255, 255, 0.6);
 }
+#login-modal-wrap {
+  position: fixed;
+  width: 100%;
+  top: 30%;
+}
+#login-modal {
+  position: relative;
+  width: 220px;
+  margin-top: -250px;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  margin: 0 auto;
+}
 #roster {
   position: fixed;
   width: 220px;
@@ -83,23 +95,26 @@ h4 {
   bottom: 0px;
   left: 0px;
 }
-#roster .friend {
+.node {
   width: 200px;
   height: 32px;
   margin: 10px;
 }
-.friend-id {
+.node-id {
   text-align: center;
   margin: 10px 6px;
   font-size: 8px;
 }
-#add-friend {
+.add-node {
   text-align: center;
   width: 200px;
   height: 32px;
   margin: 10px;
 }
-#add-friend i {
+.node-command {
+  text-align: center;
+}
+.add-node i {
   font-size: 24px;
   margin: 6px;
   color: rgba(255, 255, 255, 0.6);
