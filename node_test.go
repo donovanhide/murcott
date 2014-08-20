@@ -1,20 +1,11 @@
 package murcott
 
 import (
-	"fmt"
 	"testing"
 )
 
 func TestNodeMessageExchange(t *testing.T) {
 	logger := NewLogger()
-
-	go func() {
-		for {
-			l := <-logger.Channel()
-			fmt.Println(l)
-		}
-	}()
-
 	msg := "The quick brown fox jumps over the lazy dog"
 
 	node1 := newNode(GeneratePrivateKey(), logger)

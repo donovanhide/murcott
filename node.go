@@ -106,7 +106,7 @@ func (p *node) recvMessage() (NodeId, []byte, error) {
 func (p *node) run() {
 
 	recv := make(chan packet)
-	rpcch := p.dht.rpcChannel()
+	rpcch := p.dht.rpc
 
 	// read datagram from udp socket
 	go func() {
@@ -264,8 +264,8 @@ func (p *node) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []b
 }
 
 func (p *node) close() {
+	p.exit <- struct{}{}
 	close(p.recv)
 	p.dht.close()
-	p.exit <- struct{}{}
 	p.conn.Close()
 }

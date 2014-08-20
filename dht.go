@@ -70,7 +70,7 @@ type dht struct {
 	k        int
 	kvs      keyValueStore
 	rpcRet   rpcReturnMap
-	rpcChan  chan dhtPacket
+	rpc      chan dhtPacket
 	logger   *Logger
 	exit     chan struct{}
 }
@@ -101,9 +101,9 @@ func newDht(k int, selfnode nodeInfo, logger *Logger) *dht {
 			chmap: make(map[string]chan *dhtRpcReturn),
 			mutex: &sync.Mutex{},
 		},
-		rpcChan: make(chan dhtPacket, 100),
-		logger:  logger,
-		exit:    make(chan struct{}),
+		rpc:    make(chan dhtPacket, 100),
+		logger: logger,
+		exit:   make(chan struct{}),
 	}
 	return &d
 }
@@ -117,8 +117,8 @@ func (p *dht) run() {
 	}
 }
 
-func (p *dht) rpcChannel() <-chan dhtPacket {
-	return p.rpcChan
+func (p *dht) rpcnel() <-chan dhtPacket {
+	return p.rpc
 }
 
 func (p *dht) addNode(node nodeInfo) {
@@ -390,11 +390,6 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 	}
 }
 
-func (p *dht) close() {
-	close(p.rpcChan)
-	p.exit <- struct{}{}
-}
-
 func newRpcCommand(method string, args map[string]interface{}) dhtRpcCommand {
 	id := make([]byte, 20)
 	_, err := rand.Read(id)
@@ -437,7 +432,12 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 	ch := make(chan *dhtRpcReturn, 2)
 
 	p.rpcRet.push(id, ch)
-	p.rpcChan <- dhtPacket{Dst: dst, Payload: data}
+	p.rpc <- dhtPacket{Dst: dst, Payload: data}
 
 	return ch
+}
+
+func (p *dht) close() {
+	p.exit <- struct{}{}
+	close(p.rpc)
 }
