@@ -9,7 +9,7 @@ import (
 const (
 	portBegin = 9200
 	portEnd   = 9220
-	bootstrap = "bt.murcott.net"
+	bootstrap = "127.0.0.1"
 )
 
 type nodeInfo struct {
@@ -22,28 +22,18 @@ type message struct {
 	payload []byte
 }
 
-type incomingPacket struct {
-	packet packet
-	addr   *net.UDPAddr
-}
-
 type node struct {
-	selfnode       nodeInfo
-	dht            *dht
-	conn           *net.UDPConn
-	key            *PrivateKey
-	keycache       map[string]PublicKey
-	waitingPackets []incomingPacket
-	logger         *Logger
-	msgcb          []func(NodeId, []byte)
-	recv           chan message
-	sendChan       chan packet
-	exit           chan struct{}
-}
-
-type udpDatagram struct {
-	Data []byte
-	Addr *net.UDPAddr
+	info        nodeInfo
+	dht         *dht
+	conn        *net.UDPConn
+	key         *PrivateKey
+	keycache    map[string]PublicKey
+	keyWaiting  []packet
+	addrWaiting []packet
+	logger      *Logger
+	recv        chan message
+	send        chan packet
+	exit        chan struct{}
 }
 
 func getOpenPortConn() (*net.UDPConn, int) {
@@ -76,21 +66,22 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 	}
 
 	node := node{
-		selfnode: selfnode,
+		info:     selfnode,
 		conn:     conn,
 		key:      key,
 		keycache: make(map[string]PublicKey),
 		dht:      dht,
 		logger:   logger,
 		recv:     make(chan message, 100),
-		sendChan: make(chan packet, 100),
+		send:     make(chan packet, 100),
 		exit:     exit,
 	}
 
 	// portscan
 	for port := portBegin; port <= portEnd; port++ {
 		if port != selfport {
-			node.sendDiscoveryPacket(&net.UDPAddr{Port: port, IP: host[0]})
+			addr := &net.UDPAddr{Port: port, IP: host[0]}
+			node.sendPacket(NodeId{}, addr, "disco", nil)
 		}
 	}
 
@@ -101,7 +92,7 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 }
 
 func (p *node) sendMessage(dst NodeId, payload []byte) {
-	p.sendPacket(dst, "msg", payload)
+	p.sendPacket(dst, nil, "msg", payload)
 }
 
 func (p *node) recvMessage() (NodeId, []byte, error) {
@@ -114,7 +105,7 @@ func (p *node) recvMessage() (NodeId, []byte, error) {
 
 func (p *node) run() {
 
-	datach := make(chan udpDatagram)
+	recv := make(chan packet)
 	rpcch := p.dht.rpcChannel()
 
 	// read datagram from udp socket
@@ -125,7 +116,16 @@ func (p *node) run() {
 			if err != nil {
 				break
 			}
-			datach <- udpDatagram{buf[:len], addr}
+
+			var packet packet
+			err = msgpack.Unmarshal(buf[:len], &packet)
+			if err != nil {
+				continue
+			}
+			p.logger.Info("Receive %s packet from %s", packet.Type, packet.Src.String())
+			packet.addr = addr
+
+			recv <- packet
 		}
 	}()
 
@@ -133,32 +133,32 @@ func (p *node) run() {
 
 	for {
 		select {
-
-		case packet := <-p.sendChan:
+		case packet := <-p.send:
 			packet.sign(p.key)
-			data, err := msgpack.Marshal(packet)
-			if err == nil {
+			addr := packet.addr
+			if addr == nil {
 				node := p.dht.getNodeInfo(packet.Dst)
 				if node != nil {
-					p.conn.WriteToUDP(data, node.Addr)
+					addr = node.Addr
+				}
+			}
+			if addr != nil {
+				data, err := msgpack.Marshal(packet)
+				if err == nil {
+					p.conn.WriteToUDP(data, addr)
 				} else {
-					p.logger.Error("route not found: %s", packet.Dst.String())
+					p.logger.Error("packet marshal error")
 				}
 			} else {
-				p.logger.Error("packet marshal error")
+				p.logger.Error("route not found: %s", packet.Dst.String())
+				p.addrWaiting = append(p.addrWaiting, packet)
 			}
 
-		case data := <-datach:
-			var packet packet
-			err := msgpack.Unmarshal(data.Data, &packet)
-			if err != nil {
-				continue
-			}
-			p.logger.Info("Receive %s packet from %s", packet.Type, packet.Src.String())
-
+		case packet := <-recv:
 			if packet.Type == "key" {
 				if len(packet.Payload) == 0 {
-					p.sendPublicKeyResponse(data.Addr)
+					key, _ := msgpack.Marshal(p.key.PublicKey)
+					p.sendPacket(packet.Src, packet.addr, "key", key)
 				} else {
 					p.processPublicKeyResponse(packet)
 				}
@@ -166,27 +166,23 @@ func (p *node) run() {
 				// find publickey from cache
 				if key, ok := p.keycache[packet.Src.String()]; ok {
 					if packet.verify(&key) {
-						p.processPacket(packet, data.Addr)
+						p.processPacket(packet)
 					}
 				} else {
 					// request publickey
-					p.sendPacketAddr(data.Addr, "key", nil)
-					p.addWaitingPacket(incomingPacket{packet: packet, addr: data.Addr})
+					p.sendPacket(packet.Src, packet.addr, "key", nil)
+					p.keyWaiting = append(p.keyWaiting, packet)
 				}
 			}
+			p.processWaitingRouteyPackets()
 
 		case rpc := <-rpcch:
-			p.sendPacket(rpc.Dst, "dht", rpc.Payload)
+			p.sendPacket(rpc.Dst, nil, "dht", rpc.Payload)
 
 		case <-p.exit:
 			return
 		}
 	}
-}
-
-func (p *node) sendPublicKeyResponse(addr *net.UDPAddr) {
-	data, _ := msgpack.Marshal(p.key.PublicKey)
-	p.sendPacketAddr(addr, "key", data)
 }
 
 func (p *node) processPublicKeyResponse(packet packet) {
@@ -198,15 +194,15 @@ func (p *node) processPublicKeyResponse(packet packet) {
 			id := packet.Src.String()
 			p.keycache[id] = key
 			p.logger.Info("Get publickey for %s", id)
-			p.processWaitingPackets()
+			p.processWaitingKeyPackets()
 		} else {
 			p.logger.Error("receive wrong public key")
 		}
 	}
 }
 
-func (p *node) processPacket(packet packet, addr *net.UDPAddr) {
-	info := nodeInfo{Id: packet.Src, Addr: addr}
+func (p *node) processPacket(packet packet) {
+	info := nodeInfo{Id: packet.Src, Addr: packet.addr}
 	switch packet.Type {
 	case "disco":
 		p.dht.addNode(info)
@@ -217,56 +213,54 @@ func (p *node) processPacket(packet packet, addr *net.UDPAddr) {
 	}
 }
 
-func (p *node) addWaitingPacket(in incomingPacket) {
-	p.waitingPackets = append(p.waitingPackets, in)
-}
-
 // process packets waiting publickeys
-func (p *node) processWaitingPackets() {
-	rest := make([]incomingPacket, 0, len(p.keycache))
-	for _, in := range p.waitingPackets {
+func (p *node) processWaitingKeyPackets() {
+	rest := make([]packet, 0, len(p.keyWaiting))
+	for _, packet := range p.keyWaiting {
 		// find publickey from cache
-		if key, ok := p.keycache[in.packet.Src.String()]; ok {
-			if in.packet.verify(&key) {
-				p.processPacket(in.packet, in.addr)
+		if key, ok := p.keycache[packet.Src.String()]; ok {
+			if packet.verify(&key) {
+				p.processPacket(packet)
 			}
 		} else {
-			rest = append(rest, in)
+			rest = append(rest, packet)
 		}
 	}
-	p.waitingPackets = rest
+	p.keyWaiting = rest
 }
 
-func (p *node) sendDiscoveryPacket(addr *net.UDPAddr) {
-	p.sendPacketAddr(addr, "disco", nil)
-}
-
-func (p *node) sendPacketAddr(addr *net.UDPAddr, typ string, payload []byte) {
-	packet := packet{
-		Src:     p.selfnode.Id,
-		Type:    typ,
-		Payload: payload,
+// process packets waiting addresses
+func (p *node) processWaitingRouteyPackets() {
+	rest := make([]packet, 0, len(p.addrWaiting))
+	for _, packet := range p.addrWaiting {
+		node := p.dht.getNodeInfo(packet.Dst)
+		if node != nil {
+			data, err := msgpack.Marshal(packet)
+			if err == nil {
+				p.conn.WriteToUDP(data, node.Addr)
+			} else {
+				p.logger.Error("packet marshal error")
+			}
+		} else {
+			rest = append(rest, packet)
+		}
 	}
-
-	packet.sign(p.key)
-
-	data, err := msgpack.Marshal(packet)
-	if err != nil {
-		panic(err)
-	}
-	p.conn.WriteToUDP(data, addr)
+	p.addrWaiting = rest
 }
 
-func (p *node) sendPacket(dst NodeId, typ string, payload []byte) {
+func (p *node) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []byte) {
 	packet := packet{
 		Dst:     dst,
-		Src:     p.selfnode.Id,
+		Src:     p.info.Id,
 		Type:    typ,
 		Payload: payload,
+		addr:    addr,
 	}
+	p.send <- packet
 
-	p.sendChan <- packet
-	p.logger.Info("Send %s packet to %s", packet.Type, packet.Dst.String())
+	if id := dst.String(); len(id) > 0 {
+		p.logger.Info("Send %s packet to %s", packet.Type, id)
+	}
 }
 
 func (p *node) close() {

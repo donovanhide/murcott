@@ -3,6 +3,7 @@ package murcott
 import (
 	"errors"
 	"github.com/vmihailenco/msgpack"
+	"net"
 )
 
 type packet struct {
@@ -11,6 +12,7 @@ type packet struct {
 	Type    string    `msgpack:"type"`
 	Payload []byte    `msgpack:"payload"`
 	Sign    signature `msgpack:"sign"`
+	addr    *net.UDPAddr
 }
 
 func (p *packet) serialize() []byte {
