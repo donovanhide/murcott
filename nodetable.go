@@ -67,7 +67,7 @@ func (p *nodeTable) nearestNodes(id NodeId) []nodeInfo {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	b := p.nearestBucket(id)
-	return b.nodes
+	return append([]nodeInfo(nil), b.nodes...)
 }
 
 func (p *nodeTable) find(id NodeId) *nodeInfo {

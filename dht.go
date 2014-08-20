@@ -6,6 +6,7 @@ import (
 	"github.com/vmihailenco/msgpack"
 	"net"
 	"sort"
+	"sync"
 )
 
 type dhtRpcCallback func(*dhtRpcCommand, *net.UDPAddr)
@@ -20,24 +21,58 @@ type dhtRpcReturn struct {
 	addr    *net.UDPAddr
 }
 
-type dhtRpcRetunChan struct {
-	id string
-	ch chan *dhtRpcReturn
+type rpcReturnMap struct {
+	chmap map[string]chan *dhtRpcReturn
+	mutex *sync.Mutex
+}
+
+func (p *rpcReturnMap) push(id string, c chan *dhtRpcReturn) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.chmap[id] = c
+}
+
+func (p *rpcReturnMap) pop(id string) chan *dhtRpcReturn {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if c, ok := p.chmap[id]; ok {
+		delete(p.chmap, id)
+		return c
+	} else {
+		return nil
+	}
+}
+
+type keyValueStore struct {
+	storage map[string]string
+	mutex   *sync.Mutex
+}
+
+func (p *keyValueStore) set(key, value string) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.storage[key] = value
+}
+
+func (p *keyValueStore) get(key string) (string, bool) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if v, ok := p.storage[key]; ok {
+		return v, true
+	} else {
+		return "", false
+	}
 }
 
 type dht struct {
 	selfnode nodeInfo
 	table    nodeTable
 	k        int
-	kvs      map[string]string
-	rpcRet   map[string]chan *dhtRpcReturn
+	kvs      keyValueStore
+	rpcRet   rpcReturnMap
 	rpcChan  chan dhtPacket
 	logger   *Logger
-
-	exit               chan struct{}
-	addRetChanRequest  chan dhtRpcRetunChan
-	getRetChanRequest  chan string
-	getRetChanResponse chan chan *dhtRpcReturn
+	exit     chan struct{}
 }
 
 type dhtRpcCommand struct {
@@ -58,15 +93,17 @@ func newDht(k int, selfnode nodeInfo, logger *Logger) *dht {
 		selfnode: selfnode,
 		table:    newNodeTable(k, selfnode.Id),
 		k:        k,
-		kvs:      make(map[string]string),
-		rpcRet:   make(map[string]chan *dhtRpcReturn),
-		rpcChan:  make(chan dhtPacket, 100),
-		logger:   logger,
-
-		exit:               make(chan struct{}),
-		addRetChanRequest:  make(chan dhtRpcRetunChan, 100),
-		getRetChanRequest:  make(chan string, 100),
-		getRetChanResponse: make(chan chan *dhtRpcReturn, 100),
+		kvs: keyValueStore{
+			storage: make(map[string]string),
+			mutex:   &sync.Mutex{},
+		},
+		rpcRet: rpcReturnMap{
+			chmap: make(map[string]chan *dhtRpcReturn),
+			mutex: &sync.Mutex{},
+		},
+		rpcChan: make(chan dhtPacket, 100),
+		logger:  logger,
+		exit:    make(chan struct{}),
 	}
 	return &d
 }
@@ -74,15 +111,6 @@ func newDht(k int, selfnode nodeInfo, logger *Logger) *dht {
 func (p *dht) run() {
 	for {
 		select {
-		case c := <-p.addRetChanRequest:
-			p.rpcRet[c.id] = c.ch
-		case id := <-p.getRetChanRequest:
-			if ch, ok := p.rpcRet[id]; ok {
-				delete(p.rpcRet, id)
-				p.getRetChanResponse <- ch
-			} else {
-				p.getRetChanResponse <- nil
-			}
 		case <-p.exit:
 			return
 		}
@@ -213,7 +241,7 @@ loop:
 
 func (p *dht) loadValue(key string) *string {
 
-	if v, ok := p.kvs[key]; ok {
+	if v, ok := p.kvs.get(key); ok {
 		return &v
 	}
 
@@ -328,7 +356,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 			p.logger.Info("Receive DHT Store from %s", src.Id.String())
 			if key, ok := command.Args["key"].(string); ok {
 				if val, ok := command.Args["value"].(string); ok {
-					p.kvs[key] = val
+					p.kvs.set(key, val)
 				}
 			}
 
@@ -336,7 +364,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 			p.logger.Info("Receive DHT Find-Node from %s", src.Id.String())
 			if key, ok := command.Args["key"].(string); ok {
 				args := map[string]interface{}{}
-				if val, ok := p.kvs[key]; ok {
+				if val, ok := p.kvs.get(key); ok {
 					args["value"] = val
 				} else {
 					hash := sha1.Sum([]byte(key))
@@ -355,7 +383,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 
 		case "": // callback
 			id := string(command.Id)
-			if ch := p.getRpcRetChan(id); ch != nil {
+			if ch := p.rpcRet.pop(id); ch != nil {
 				ch <- &dhtRpcReturn{command: command, addr: src.Addr}
 			}
 		}
@@ -388,15 +416,6 @@ func newRpcReturnCommand(id []byte, args map[string]interface{}) dhtRpcCommand {
 	}
 }
 
-func (p *dht) getRpcRetChan(id string) chan<- *dhtRpcReturn {
-	if v, ok := p.rpcRet[id]; ok {
-		delete(p.rpcRet, id)
-		return v
-	} else {
-		return nil
-	}
-}
-
 func (p *dht) sendPing(dst NodeId) {
 	c := newRpcCommand("ping", nil)
 	ch := p.sendPacket(dst, c)
@@ -417,7 +436,7 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 	id := string(command.Id)
 	ch := make(chan *dhtRpcReturn, 2)
 
-	p.rpcRet[id] = ch
+	p.rpcRet.push(id, ch)
 	p.rpcChan <- dhtPacket{Dst: dst, Payload: data}
 
 	return ch
