@@ -46,12 +46,12 @@ func getOpenPortConn() (*net.UDPConn, int) {
 }
 
 func newNode(key *PrivateKey, logger *Logger) *node {
-	selfnode := nodeInfo{Id: key.PublicKeyHash()}
-	dht := newDht(10, selfnode, logger)
+	info := nodeInfo{Id: key.PublicKeyHash()}
+	dht := newDht(10, info, logger)
 	exit := make(chan struct{})
 	conn, selfport := getOpenPortConn()
 
-	logger.Info("Node ID: %s", selfnode.Id.String())
+	logger.Info("Node ID: %s", info.Id.String())
 	logger.Info("Node UDP port: %d", selfport)
 
 	// lookup bootstrap
@@ -61,7 +61,7 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 	}
 
 	node := node{
-		info:     selfnode,
+		info:     info,
 		conn:     conn,
 		key:      key,
 		keycache: make(map[string]PublicKey),
@@ -178,7 +178,7 @@ func (p *node) run() {
 					p.keyWaiting = append(p.keyWaiting, packet)
 				}
 			}
-			p.processWaitingRouteyPackets()
+			p.processWaitingRoutePackets()
 
 		case <-p.exit:
 			return
@@ -231,7 +231,7 @@ func (p *node) processWaitingKeyPackets() {
 }
 
 // process packets waiting addresses
-func (p *node) processWaitingRouteyPackets() {
+func (p *node) processWaitingRoutePackets() {
 	rest := make([]packet, 0, len(p.addrWaiting))
 	for _, packet := range p.addrWaiting {
 		node := p.dht.getNodeInfo(packet.Dst)
