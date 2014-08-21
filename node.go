@@ -133,8 +133,6 @@ func (p *node) run() {
 		}
 	}()
 
-	go p.dht.run()
-
 	for {
 		select {
 		case packet := <-p.send:

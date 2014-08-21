@@ -12,8 +12,6 @@ func TestDhtPing(t *testing.T) {
 
 	dht1 := newDht(10, node1, newLogger())
 	dht2 := newDht(10, node2, newLogger())
-	go dht1.run()
-	go dht2.run()
 
 	dht1.addNode(node2)
 
@@ -44,7 +42,6 @@ func TestDhtTimeout(t *testing.T) {
 	node2 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
 	dht1 := newDht(10, node1, newLogger())
 	dht1.addNode(node2)
-	go dht1.run()
 	ch := dht1.sendPacket(node2.Id, dhtRpcCommand{})
 	select {
 	case r := <-ch:
@@ -92,7 +89,6 @@ func TestDhtGroup(t *testing.T) {
 		node := nodeInfo{Id: id, Addr: addr}
 		d := newDht(20, node, logger)
 		idary[i] = node
-		go d.run()
 		dhtmap[id.String()] = d
 		go func(d *dht) {
 			for {

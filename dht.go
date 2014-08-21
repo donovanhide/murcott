@@ -74,7 +74,6 @@ type dht struct {
 	rpcRet rpcReturnMap
 	rpc    chan dhtPacket
 	logger *Logger
-	exit   chan struct{}
 }
 
 type dhtRpcCommand struct {
@@ -105,18 +104,8 @@ func newDht(k int, info nodeInfo, logger *Logger) *dht {
 		},
 		rpc:    make(chan dhtPacket, 100),
 		logger: logger,
-		exit:   make(chan struct{}),
 	}
 	return &d
-}
-
-func (p *dht) run() {
-	for {
-		select {
-		case <-p.exit:
-			return
-		}
-	}
 }
 
 func (p *dht) addNode(node nodeInfo) {
@@ -401,6 +390,5 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 }
 
 func (p *dht) close() {
-	p.exit <- struct{}{}
 	close(p.rpc)
 }
