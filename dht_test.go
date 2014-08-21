@@ -2,7 +2,6 @@ package murcott
 
 import (
 	"net"
-	"reflect"
 	"testing"
 )
 
@@ -17,26 +16,14 @@ func TestDhtPing(t *testing.T) {
 
 	dht1.addNode(node2)
 
-	dht1ch := dht1.rpc
-	exit := make(chan bool)
-
-	go func() {
-		select {
-		case p := <-dht1ch:
-			if p.Dst.Cmp(node2.Id) != 0 {
-				t.Errorf("wrong packet destination: %s", p.Dst)
-				exit <- true
-			} else {
-				dht2.processPacket(node1, p.Payload)
-				exit <- true
-			}
-		default:
-			exit <- false
-		}
-	}()
-
-	if <-exit == false {
-		t.Errorf("dht1 never makes PING packet")
+	dst, payload, err := dht1.nextPacket()
+	if err != nil {
+		return
+	}
+	if dst.Cmp(node2.Id) != 0 {
+		t.Errorf("wrong packet destination: %s", dst.String())
+	} else {
+		dht2.processPacket(node1, payload)
 	}
 
 	if dht1.getNodeInfo(node2.Id) == nil {
@@ -57,7 +44,6 @@ func TestDhtGroup(t *testing.T) {
 	n := 20
 	dhtmap := make(map[string]*dht)
 	idary := make([]nodeInfo, n)
-	chans := make([]<-chan dhtPacket, n)
 
 	ids := []string{
 		"2R2eoXNPEhbmhx7aNqgY1e2SdKrJ",
@@ -86,50 +72,29 @@ func TestDhtGroup(t *testing.T) {
 		id, _ := NewNodeIdFromString(ids[i])
 		addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4000")
 		node := nodeInfo{Id: id, Addr: addr}
-		dht := newDht(20, node, logger)
+		d := newDht(20, node, logger)
 		idary[i] = node
-		chans[i] = dht.rpc
-		go dht.run()
-		dhtmap[id.String()] = dht
+		go d.run()
+		dhtmap[id.String()] = d
+		go func(d *dht) {
+			for {
+				dst, payload, err := d.nextPacket()
+				if err != nil {
+					return
+				}
+				id := dst.String()
+				dht := dhtmap[id]
+				dht.processPacket(d.info, payload)
+			}
+		}(d)
 	}
 
 	rootNode := idary[0]
 	rootDht := dhtmap[rootNode.Id.String()]
 
-	trans := func() {
-		cases := make([]reflect.SelectCase, len(chans)+1)
-		for i, ch := range chans {
-			cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(ch)}
-		}
-		cases[len(cases)-1] = reflect.SelectCase{Dir: reflect.SelectDefault}
-
-		for {
-			chosen, value, ok := reflect.Select(cases)
-			if !ok || chosen == len(cases)-1 {
-				break
-			}
-			p := value.Interface().(dhtPacket)
-			id := p.Dst.String()
-			dht := dhtmap[id]
-			dht.processPacket(idary[chosen], p.Payload)
-		}
-	}
-
-	exit := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-exit:
-				return
-			default:
-				trans()
-			}
-		}
-	}()
-
 	for _, d := range dhtmap {
 		d.addNode(rootNode)
-		d.findNearestNode(d.selfnode.Id)
+		d.findNearestNode(d.info.Id)
 	}
 
 	kvs := map[string]string{
@@ -154,9 +119,5 @@ func TestDhtGroup(t *testing.T) {
 		}
 	}
 
-	exit <- struct{}{}
-
-	for _, d := range dhtmap {
-		d.close()
-	}
+	// TODO: close dhts correctly
 }

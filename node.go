@@ -12,11 +12,6 @@ const (
 	bootstrap = "127.0.0.1"
 )
 
-type nodeInfo struct {
-	Id   NodeId
-	Addr *net.UDPAddr
-}
-
 type message struct {
 	id      NodeId
 	payload []byte
@@ -106,7 +101,6 @@ func (p *node) recvMessage() (NodeId, []byte, error) {
 func (p *node) run() {
 
 	recv := make(chan packet)
-	rpcch := p.dht.rpc
 
 	// read datagram from udp socket
 	go func() {
@@ -126,6 +120,16 @@ func (p *node) run() {
 			packet.addr = addr
 
 			recv <- packet
+		}
+	}()
+
+	go func() {
+		for {
+			dst, payload, err := p.dht.nextPacket()
+			if err != nil {
+				return
+			}
+			p.sendPacket(dst, nil, "dht", payload)
 		}
 	}()
 
@@ -175,9 +179,6 @@ func (p *node) run() {
 				}
 			}
 			p.processWaitingRouteyPackets()
-
-		case rpc := <-rpcch:
-			p.sendPacket(rpc.Dst, nil, "dht", rpc.Payload)
 
 		case <-p.exit:
 			return

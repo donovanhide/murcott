@@ -3,6 +3,7 @@ package murcott
 import (
 	"crypto/rand"
 	"crypto/sha1"
+	"errors"
 	"github.com/vmihailenco/msgpack"
 	"net"
 	"sort"
@@ -12,8 +13,8 @@ import (
 type dhtRpcCallback func(*dhtRpcCommand, *net.UDPAddr)
 
 type dhtPacket struct {
-	Dst     NodeId
-	Payload []byte
+	dst     NodeId
+	payload []byte
 }
 
 type dhtRpcReturn struct {
@@ -65,14 +66,14 @@ func (p *keyValueStore) get(key string) (string, bool) {
 }
 
 type dht struct {
-	selfnode nodeInfo
-	table    nodeTable
-	k        int
-	kvs      keyValueStore
-	rpcRet   rpcReturnMap
-	rpc      chan dhtPacket
-	logger   *Logger
-	exit     chan struct{}
+	info   nodeInfo
+	table  nodeTable
+	k      int
+	kvs    keyValueStore
+	rpcRet rpcReturnMap
+	rpc    chan dhtPacket
+	logger *Logger
+	exit   chan struct{}
 }
 
 type dhtRpcCommand struct {
@@ -88,11 +89,11 @@ func (p *dhtRpcCommand) getArgs(k string, v ...interface{}) {
 	}
 }
 
-func newDht(k int, selfnode nodeInfo, logger *Logger) *dht {
+func newDht(k int, info nodeInfo, logger *Logger) *dht {
 	d := dht{
-		selfnode: selfnode,
-		table:    newNodeTable(k, selfnode.Id),
-		k:        k,
+		info:  info,
+		table: newNodeTable(k, info.Id),
+		k:     k,
 		kvs: keyValueStore{
 			storage: make(map[string]string),
 			mutex:   &sync.Mutex{},
@@ -117,10 +118,6 @@ func (p *dht) run() {
 	}
 }
 
-func (p *dht) rpcnel() <-chan dhtPacket {
-	return p.rpc
-}
-
 func (p *dht) addNode(node nodeInfo) {
 	p.table.insert(node)
 	p.sendPing(node.Id)
@@ -139,25 +136,6 @@ func (p *dht) storeValue(key string, value string) {
 	for _, n := range p.findNearestNode(NewNodeId(hash)) {
 		p.sendPacket(n.Id, c)
 	}
-}
-
-type nodeInfoSorter struct {
-	nodes []nodeInfo
-	id    NodeId
-}
-
-func (p nodeInfoSorter) Len() int {
-	return len(p.nodes)
-}
-
-func (p nodeInfoSorter) Swap(i, j int) {
-	p.nodes[i], p.nodes[j] = p.nodes[j], p.nodes[i]
-}
-
-func (p nodeInfoSorter) Less(i, j int) bool {
-	disti := p.nodes[i].Id.Xor(p.id)
-	distj := p.nodes[j].Id.Xor(p.id)
-	return (disti.Cmp(distj) == -1)
 }
 
 func (p *dht) findNearestNode(findid NodeId) []nodeInfo {
@@ -179,7 +157,7 @@ func (p *dht) findNearestNode(findid NodeId) []nodeInfo {
 							var idary [20]byte
 							copy(idary[:], []byte(id)[:20])
 							node := nodeInfo{Id: NewNodeId(idary), Addr: addr}
-							if node.Id.Cmp(p.selfnode.Id) != 0 {
+							if node.Id.Cmp(p.info.Id) != 0 {
 								p.table.insert(node)
 								reqch <- node
 							}
@@ -390,6 +368,14 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 	}
 }
 
+func (p *dht) nextPacket() (NodeId, []byte, error) {
+	if c, ok := <-p.rpc; ok {
+		return c.dst, c.payload, nil
+	} else {
+		return NodeId{}, nil, errors.New("DHT closed")
+	}
+}
+
 func newRpcCommand(method string, args map[string]interface{}) dhtRpcCommand {
 	id := make([]byte, 20)
 	_, err := rand.Read(id)
@@ -432,7 +418,7 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 	ch := make(chan *dhtRpcReturn, 2)
 
 	p.rpcRet.push(id, ch)
-	p.rpc <- dhtPacket{Dst: dst, Payload: data}
+	p.rpc <- dhtPacket{dst: dst, payload: data}
 
 	return ch
 }
