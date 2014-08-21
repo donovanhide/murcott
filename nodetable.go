@@ -30,14 +30,14 @@ func (p *nodeTable) insert(node nodeInfo) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if p.selfid.Cmp(node.Id) == 0 {
+	if p.selfid.cmp(node.Id) == 0 {
 		return
 	}
 
 	b := p.nearestBucket(node.Id)
 
 	for i, v := range b.nodes {
-		if v.Id.Cmp(node.Id) == 0 {
+		if v.Id.cmp(node.Id) == 0 {
 			b.nodes = append(append(b.nodes[:i], b.nodes[i+1:]...), node)
 			return
 		}
@@ -57,7 +57,7 @@ func (p *nodeTable) remove(id NodeId) {
 	defer p.mutex.Unlock()
 	b := p.nearestBucket(id)
 	for i, n := range b.nodes {
-		if n.Id.Cmp(id) == 0 {
+		if n.Id.cmp(id) == 0 {
 			b.nodes = append(b.nodes[:i], b.nodes[i+1:]...)
 		}
 	}
@@ -75,7 +75,7 @@ func (p *nodeTable) find(id NodeId) *nodeInfo {
 	defer p.mutex.Unlock()
 	b := p.nearestBucket(id)
 	for _, v := range b.nodes {
-		if v.Id.Cmp(id) == 0 {
+		if v.Id.cmp(id) == 0 {
 			return &v
 		}
 	}
@@ -83,10 +83,10 @@ func (p *nodeTable) find(id NodeId) *nodeInfo {
 }
 
 func (p *nodeTable) nearestBucket(id NodeId) *bucket {
-	dist := p.selfid.Xor(id)
+	dist := p.selfid.xor(id)
 	b := p.root
-	for i := 0; i < dist.BitLen() && b.zero != nil; i++ {
-		if dist.Bit(i) == 0 {
+	for i := 0; i < dist.bitLen() && b.zero != nil; i++ {
+		if dist.bit(i) == 0 {
 			b = b.zero
 		} else {
 			b = b.one
@@ -105,8 +105,8 @@ func (p *nodeTable) devideTree() {
 		b.zero = &bucket{}
 		b.one = &bucket{}
 		for _, n := range b.nodes {
-			dist := p.selfid.Xor(n.Id)
-			if dist.Bit(i) == 0 {
+			dist := p.selfid.xor(n.Id)
+			if dist.bit(i) == 0 {
 				b.zero.nodes = append(b.zero.nodes, n)
 			} else {
 				b.one.nodes = append(b.one.nodes, n)

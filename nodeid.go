@@ -47,7 +47,7 @@ func NewNodeIdFromString(str string) (NodeId, error) {
 	return NodeId{*i}, nil
 }
 
-func NewRandomNodeId() NodeId {
+func newRandomNodeId() NodeId {
 	var data [20]byte
 	_, err := rand.Read(data[:])
 	if err != nil {
@@ -57,20 +57,20 @@ func NewRandomNodeId() NodeId {
 	}
 }
 
-func (id NodeId) Xor(n NodeId) NodeId {
+func (id NodeId) xor(n NodeId) NodeId {
 	d := big.NewInt(0)
 	return NodeId{i: *d.Xor(&id.i, &n.i)}
 }
 
-func (id NodeId) BitLen() int {
+func (id NodeId) bitLen() int {
 	return 160
 }
 
-func (id NodeId) Bit(i int) uint {
+func (id NodeId) bit(i int) uint {
 	return id.i.Bit(159 - i)
 }
 
-func (id NodeId) Cmp(n NodeId) int {
+func (id NodeId) cmp(n NodeId) int {
 	return id.i.Cmp(&n.i)
 }
 

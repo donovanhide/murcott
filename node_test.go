@@ -17,7 +17,7 @@ func TestNodeMessageExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("node2: recvMessage() returns error")
 	}
-	if id.Cmp(node1.info.Id) != 0 {
+	if id.cmp(node1.info.Id) != 0 {
 		t.Errorf("node2: wrong source id")
 	}
 	if string(data) != msg {
@@ -30,7 +30,7 @@ func TestNodeMessageExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("node1: recvMessage() returns error")
 	}
-	if id.Cmp(node2.info.Id) != 0 {
+	if id.cmp(node2.info.Id) != 0 {
 		t.Errorf("node1: wrong source id")
 	}
 	if string(data) != msg {

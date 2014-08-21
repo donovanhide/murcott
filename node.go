@@ -191,7 +191,7 @@ func (p *node) processPublicKeyResponse(packet packet) {
 	err := msgpack.Unmarshal(packet.Payload, &key)
 	if err == nil {
 		id := key.PublicKeyHash()
-		if id.Cmp(packet.Src) == 0 {
+		if id.cmp(packet.Src) == 0 {
 			id := packet.Src.String()
 			p.keycache[id] = key
 			p.logger.info("Get publickey for %s", id)

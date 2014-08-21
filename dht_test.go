@@ -6,8 +6,8 @@ import (
 )
 
 func TestDhtPing(t *testing.T) {
-	node1 := nodeInfo{Id: NewRandomNodeId(), Addr: nil}
-	node2 := nodeInfo{Id: NewRandomNodeId(), Addr: nil}
+	node1 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
+	node2 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
 
 	dht1 := newDht(10, node1, newLogger())
 	dht2 := newDht(10, node2, newLogger())
@@ -20,7 +20,7 @@ func TestDhtPing(t *testing.T) {
 	if err != nil {
 		return
 	}
-	if dst.Cmp(node2.Id) != 0 {
+	if dst.cmp(node2.Id) != 0 {
 		t.Errorf("wrong packet destination: %s", dst.String())
 	} else {
 		dht2.processPacket(node1, payload)

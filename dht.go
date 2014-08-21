@@ -157,7 +157,7 @@ func (p *dht) findNearestNode(findid NodeId) []nodeInfo {
 							var idary [20]byte
 							copy(idary[:], []byte(id)[:20])
 							node := nodeInfo{Id: NewNodeId(idary), Addr: addr}
-							if node.Id.Cmp(p.info.Id) != 0 {
+							if node.Id.cmp(p.info.Id) != 0 {
 								p.table.insert(node)
 								reqch <- node
 							}
@@ -243,7 +243,7 @@ func (p *dht) loadValue(key string) *string {
 
 				var nodes []map[string]string
 				ret.command.getArgs("nodes", &nodes)
-				dist := id.Xor(keyid)
+				dist := id.xor(keyid)
 				for _, n := range nodes {
 					if id, ok := n["id"]; ok {
 						if addr, err := net.ResolveUDPAddr("udp", n["addr"]); err == nil {
@@ -251,7 +251,7 @@ func (p *dht) loadValue(key string) *string {
 							copy(idary[:], []byte(id)[:20])
 							node := NewNodeId(idary)
 							p.table.insert(nodeInfo{Id: node, Addr: addr})
-							if dist.Cmp(node.Xor(keyid)) == 1 {
+							if dist.cmp(node.xor(keyid)) == 1 {
 								reqch <- node
 							}
 						}
