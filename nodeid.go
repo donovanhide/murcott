@@ -29,16 +29,19 @@ func init() {
 		})
 }
 
+// NodeId represents a 160-bit node identifier.
 type NodeId struct {
 	i big.Int
 }
 
+// NewNodeId generates NodeId from the given big-endian byte array.
 func NewNodeId(data [20]byte) NodeId {
 	i := big.NewInt(0)
 	i.SetBytes(data[:])
 	return NodeId{*i}
 }
 
+// NewNodeIdFromString generates NodeId from the given base58-encoded string.
 func NewNodeIdFromString(str string) (NodeId, error) {
 	i, err := base58.DecodeToBig([]byte(str))
 	if err != nil {
@@ -74,10 +77,12 @@ func (id NodeId) cmp(n NodeId) int {
 	return id.i.Cmp(&n.i)
 }
 
+// Bytes returns identifier as a big-endian byte array.
 func (id NodeId) Bytes() []byte {
 	return id.i.Bytes()
 }
 
+// String returns identifier as a base58-encoded byte array.
 func (id NodeId) String() string {
 	return string(base58.EncodeBig(nil, &id.i))
 }

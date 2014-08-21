@@ -11,10 +11,12 @@ import (
 	"reflect"
 )
 
+// PublicKey represents an ECDSA public key.
 type PublicKey struct {
 	x, y *big.Int
 }
 
+// PrivateKey represents an ECDSA private key.
 type PrivateKey struct {
 	PublicKey
 	d *big.Int
@@ -24,10 +26,12 @@ type signature struct {
 	r, s *big.Int
 }
 
+// PublicKeyHash returns a SHA-1 digest for the public key.
 func (p *PublicKey) PublicKeyHash() NodeId {
 	return NewNodeId(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
 }
 
+// GeneratePrivateKey generates new ECDSA key pair.
 func GeneratePrivateKey() *PrivateKey {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err == nil {
@@ -40,6 +44,7 @@ func GeneratePrivateKey() *PrivateKey {
 	}
 }
 
+// PrivateKeyFromString generates PrivateKey from the given base58-encoded string.
 func PrivateKeyFromString(str string) *PrivateKey {
 	b, err := base58.DecodeToBig([]byte(str))
 	if err != nil {
@@ -56,6 +61,7 @@ func PrivateKeyFromString(str string) *PrivateKey {
 	return &out
 }
 
+// String returns the private key as a base58-encoded byte array.
 func (p *PrivateKey) String() string {
 	data, _ := msgpack.Marshal(p)
 	return string(base58.EncodeBig(nil, big.NewInt(0).SetBytes(data)))

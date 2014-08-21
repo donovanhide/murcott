@@ -1,3 +1,4 @@
+// Package murcott is a decentralized instant messaging framework.
 package murcott
 
 import (
@@ -6,15 +7,13 @@ import (
 	"reflect"
 )
 
-type Message interface{}
-
 type ChatMessage struct {
 	Body string `msgpack:"body"`
 }
 
 type msgpair struct {
 	id  NodeId
-	msg Message
+	msg interface{}
 }
 
 type Client struct {
@@ -24,6 +23,7 @@ type Client struct {
 	Logger *Logger
 }
 
+// NewClient generates a Client with the given PrivateKey.
 func NewClient(key *PrivateKey) *Client {
 	logger := newLogger()
 	node := newNode(key, logger)
@@ -74,10 +74,11 @@ func (p *Client) parseCommand(payload []byte, id NodeId, typ interface{}) {
 	}
 }
 
-func (p *Client) Send(dst NodeId, msg Message) error {
+// Send the given message to the destination node.
+func (p *Client) Send(dst NodeId, msg interface{}) error {
 	t := struct {
-		Type    string  `msgpack:"type"`
-		Content Message `msgpack:"content"`
+		Type    string      `msgpack:"type"`
+		Content interface{} `msgpack:"content"`
 	}{Content: msg}
 
 	switch msg.(type) {
@@ -95,7 +96,8 @@ func (p *Client) Send(dst NodeId, msg Message) error {
 	return nil
 }
 
-func (p *Client) Recv() (NodeId, Message, error) {
+// Receive a message from any nodes.
+func (p *Client) Recv() (NodeId, interface{}, error) {
 	if m, ok := <-p.recv; ok {
 		return m.id, m.msg, nil
 	} else {
