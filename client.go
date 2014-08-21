@@ -3,6 +3,7 @@ package murcott
 import (
 	"errors"
 	"github.com/vmihailenco/msgpack"
+	"reflect"
 )
 
 type Message interface{}
@@ -56,23 +57,28 @@ func (p *Client) run() {
 func (p *Client) parseMessage(typ string, payload []byte, id NodeId) {
 	switch typ {
 	case "chat":
-		chat := struct {
-			Content ChatMessage `msgpack:"content"`
-		}{}
-		if msgpack.Unmarshal(payload, &chat) == nil {
-			p.recv <- msgpair{id: id, msg: chat.Content}
-		}
+		p.parseCommand(payload, id, ChatMessage{})
 	default:
 		p.Logger.error("Unknown message type: %s", typ)
 	}
 }
 
+func (p *Client) parseCommand(payload []byte, id NodeId, typ interface{}) {
+	c := struct {
+		Content interface{} `msgpack:"content"`
+	}{}
+	v := reflect.New(reflect.ValueOf(typ).Type())
+	c.Content = v.Interface()
+	if msgpack.Unmarshal(payload, &c) == nil {
+		p.recv <- msgpair{id: id, msg: reflect.Indirect(v).Interface()}
+	}
+}
+
 func (p *Client) Send(dst NodeId, msg Message) error {
-	var t struct {
+	t := struct {
 		Type    string  `msgpack:"type"`
 		Content Message `msgpack:"content"`
-	}
-	t.Content = msg
+	}{Content: msg}
 
 	switch msg.(type) {
 	case ChatMessage:
