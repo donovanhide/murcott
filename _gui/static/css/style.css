@@ -101,9 +101,12 @@ h4 {
   margin: 10px;
 }
 .node-id {
-  text-align: center;
-  margin: 10px 6px;
+  width: 180px;
+  padding: 0px 6px;
+  line-height: 32px;
   font-size: 8px;
+  color: black;
+  text-decoration: none;
 }
 .add-node {
   text-align: center;
@@ -112,7 +115,12 @@ h4 {
   margin: 10px;
 }
 .node-command {
+  padding: 8px 8px;
   text-align: center;
+  display: block;
+  float: right;
+  color: black;
+  text-decoration: none;
 }
 .add-node i {
   font-size: 24px;

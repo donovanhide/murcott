@@ -75,41 +75,93 @@
         $('#add-friend').click(function() {
           var id = window.prompt("Please input ID", "");
           if (id != null) {
-            var div = $('<div>').addClass("node-id").append(id);
+            var idlabel = $('<a>')
+              .addClass("node-id").append(id.substr(0, 20) + "...")
+              .attr('href', 'javascript:void(0)');
+            var rem = $('<a>')
+              .addClass("node-command")
+              .append('<i class="fa fa-trash-o"></i>')
+              .attr('href', 'javascript:void(0)')
+              .click(function() {
+                $(this).parent('.node').remove();
+              });
             var a = $('<a>')
               .addClass('button')
               .addClass('node')
               .attr('href', 'javascript:void(0)')
-              .append(div)
+              .append(idlabel)
+              .append(rem)
               .data('id', id);
             $(this).before(a);
           }
         });
 
-        $(document).on('click', '#roster > .node', function() {
+        $(document).on('click', '#roster > .node > .node-id', function() {
           $('.node').removeClass('selected');
-          $(this).addClass('selected');
-          setCurrentSessionID($(this).data('id'));
+          var node = $(this).parent('.node');
+          node.addClass('selected');
+          console.log(node.data('id'))
+          setCurrentSessionID(node.data('id'));
         });
       }
 
-      $(document).on('click', '#login-modal > .node', function() {
+      function updateAccountList() {
+        var list = [];
+        $('#login-modal .node').each(function() {
+          list.push({
+            id: $(this).data('id'),
+            key: $(this).data('key')
+          })
+        })
+        localStorage["accounts"] = JSON.stringify(list)
+      }
+
+      try {
+        var accounts = JSON.parse(localStorage["accounts"]);
+        console.log(accounts)
+        if (Array.isArray(accounts)) {
+          for (i = 0; i < accounts.length; i++) {
+            addAccountButton(accounts[i].id, accounts[i].key);
+          }
+        }
+      } catch (e) {
+        console.log(e)
+      }
+
+      function addAccountButton(id, key) {
+        var idlabel = $('<a>')
+          .addClass("node-id").append(id.substr(0, 20) + "...")
+          .attr('href', 'javascript:void(0)');
+        var rem = $('<a>')
+          .addClass("node-command")
+          .append('<i class="fa fa-trash-o"></i>')
+          .attr('href', 'javascript:void(0)')
+          .click(function() {
+            $(this).parent('.node').remove();
+            updateAccountList();
+          })
+        var br = $('<a>').css('clear', 'both');
+        var a = $('<a>')
+          .addClass('button')
+          .addClass('node')
+          .append(idlabel)
+          .append(rem)
+          .append(br)
+          .data('id', id)
+          .data('key', key);
+        var button = $('#add-account');
+        button.before(a);
+      }
+
+      $(document).on('click', '#login-modal > .node > .node-id', function() {
         $("#login-modal").hide()
-        startSesson($(this).data('key'))
+        startSesson($(this).parent(".node").data('key'))
       });
 
       $('#add-account').click(function() {
-        var button = $(this);
         $.getJSON("/newkey", function(data) {
-          var id = $('<div>').addClass("node-id").append(data.id);
-          var a = $('<a>')
-            .addClass('button')
-            .addClass('node')
-            .attr('href', 'javascript:void(0)')
-            .append(id)
-            .data('id', data.id)
-            .data('key', data.key);
-          button.before(a);
+          addAccountButton(data.id, data.key)
+          updateAccountList();
         })
       });
     });
