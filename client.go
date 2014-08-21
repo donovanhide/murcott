@@ -24,7 +24,7 @@ type Client struct {
 }
 
 func NewClient(key *PrivateKey) *Client {
-	logger := NewLogger()
+	logger := newLogger()
 	node := newNode(key, logger)
 
 	c := Client{
@@ -63,7 +63,7 @@ func (p *Client) parseMessage(typ string, payload []byte, id NodeId) {
 			p.recv <- msgpair{id: id, msg: chat.Content}
 		}
 	default:
-		p.Logger.Error("Unknown message type: %s", typ)
+		p.Logger.error("Unknown message type: %s", typ)
 	}
 }
 

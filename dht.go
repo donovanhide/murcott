@@ -309,11 +309,11 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 
 		switch command.Method {
 		case "ping":
-			p.logger.Info("Receive DHT Ping from %s", src.Id.String())
+			p.logger.info("Receive DHT Ping from %s", src.Id.String())
 			p.sendPacket(src.Id, newRpcReturnCommand(command.Id, nil))
 
 		case "find-node":
-			p.logger.Info("Receive DHT Find-Node from %s", src.Id.String())
+			p.logger.info("Receive DHT Find-Node from %s", src.Id.String())
 			if id, ok := command.Args["id"].(string); ok {
 				args := map[string]interface{}{}
 				var idary [20]byte
@@ -331,7 +331,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 			}
 
 		case "store":
-			p.logger.Info("Receive DHT Store from %s", src.Id.String())
+			p.logger.info("Receive DHT Store from %s", src.Id.String())
 			if key, ok := command.Args["key"].(string); ok {
 				if val, ok := command.Args["value"].(string); ok {
 					p.kvs.set(key, val)
@@ -339,7 +339,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 			}
 
 		case "find-value":
-			p.logger.Info("Receive DHT Find-Node from %s", src.Id.String())
+			p.logger.info("Receive DHT Find-Node from %s", src.Id.String())
 			if key, ok := command.Args["key"].(string); ok {
 				args := map[string]interface{}{}
 				if val, ok := p.kvs.get(key); ok {
@@ -403,7 +403,7 @@ func (p *dht) sendPing(dst NodeId) {
 	go func() {
 		ret := <-ch
 		if ret != nil {
-			p.logger.Info("Receive DHT ping response")
+			p.logger.info("Receive DHT ping response")
 		}
 	}()
 }

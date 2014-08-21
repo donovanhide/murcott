@@ -51,8 +51,8 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 	exit := make(chan struct{})
 	conn, selfport := getOpenPortConn()
 
-	logger.Info("Node ID: %s", info.Id.String())
-	logger.Info("Node UDP port: %d", selfport)
+	logger.info("Node ID: %s", info.Id.String())
+	logger.info("Node UDP port: %d", selfport)
 
 	// lookup bootstrap
 	host, err := net.LookupIP(bootstrap)
@@ -80,7 +80,7 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 		}
 	}
 
-	logger.Info("Sent discovery packet to %v:%d-%d", host[0], portBegin, portEnd)
+	logger.info("Sent discovery packet to %v:%d-%d", host[0], portBegin, portEnd)
 	go node.run()
 
 	return &node
@@ -116,7 +116,7 @@ func (p *node) run() {
 			if err != nil {
 				continue
 			}
-			p.logger.Info("Receive %s packet from %s", packet.Type, packet.Src.String())
+			p.logger.info("Receive %s packet from %s", packet.Type, packet.Src.String())
 			packet.addr = addr
 
 			recv <- packet
@@ -151,10 +151,10 @@ func (p *node) run() {
 				if err == nil {
 					p.conn.WriteToUDP(data, addr)
 				} else {
-					p.logger.Error("packet marshal error")
+					p.logger.error("packet marshal error")
 				}
 			} else {
-				p.logger.Error("route not found: %s", packet.Dst.String())
+				p.logger.error("route not found: %s", packet.Dst.String())
 				p.addrWaiting = append(p.addrWaiting, packet)
 			}
 
@@ -194,10 +194,10 @@ func (p *node) processPublicKeyResponse(packet packet) {
 		if id.Cmp(packet.Src) == 0 {
 			id := packet.Src.String()
 			p.keycache[id] = key
-			p.logger.Info("Get publickey for %s", id)
+			p.logger.info("Get publickey for %s", id)
 			p.processWaitingKeyPackets()
 		} else {
-			p.logger.Error("receive wrong public key")
+			p.logger.error("receive wrong public key")
 		}
 	}
 }
@@ -240,7 +240,7 @@ func (p *node) processWaitingRoutePackets() {
 			if err == nil {
 				p.conn.WriteToUDP(data, node.Addr)
 			} else {
-				p.logger.Error("packet marshal error")
+				p.logger.error("packet marshal error")
 			}
 		} else {
 			rest = append(rest, packet)
@@ -260,7 +260,7 @@ func (p *node) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []b
 	p.send <- packet
 
 	if id := dst.String(); len(id) > 0 {
-		p.logger.Info("Send %s packet to %s", packet.Type, id)
+		p.logger.info("Send %s packet to %s", packet.Type, id)
 	}
 }
 

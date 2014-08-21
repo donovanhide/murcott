@@ -39,7 +39,6 @@ type Message struct {
 type Session struct {
 	client *murcott.Client
 	ws     *websocket.Conn
-	logger *murcott.Logger
 }
 
 func (s *Session) WriteLog(msg string) {
@@ -78,26 +77,19 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := murcott.NewClient(key)
-	logger := c.Logger
-	logger.Info("websocket connected")
 
 	s := Session{
 		client: c,
 		ws:     ws,
-		logger: logger,
 	}
 
-	logch := logger.Channel()
 	exit := make(chan struct{})
 
 	go func() {
 		for {
-			select {
-			case log := <-logch:
-				s.WriteLog(log)
-			case <-exit:
-				return
-			}
+			var buf [1024]byte
+			len, _ := c.Logger.Read(buf[:])
+			s.WriteLog(string(buf[:len]))
 		}
 	}()
 

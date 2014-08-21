@@ -9,8 +9,8 @@ func TestDhtPing(t *testing.T) {
 	node1 := nodeInfo{Id: NewRandomNodeId(), Addr: nil}
 	node2 := nodeInfo{Id: NewRandomNodeId(), Addr: nil}
 
-	dht1 := newDht(10, node1, NewLogger())
-	dht2 := newDht(10, node2, NewLogger())
+	dht1 := newDht(10, node1, newLogger())
+	dht2 := newDht(10, node2, newLogger())
 	go dht1.run()
 	go dht2.run()
 
@@ -39,7 +39,7 @@ func TestDhtPing(t *testing.T) {
 }
 
 func TestDhtGroup(t *testing.T) {
-	logger := NewLogger()
+	logger := newLogger()
 
 	n := 20
 	dhtmap := make(map[string]*dht)

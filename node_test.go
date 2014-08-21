@@ -5,7 +5,7 @@ import (
 )
 
 func TestNodeMessageExchange(t *testing.T) {
-	logger := NewLogger()
+	logger := newLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
 
 	node1 := newNode(GeneratePrivateKey(), logger)
