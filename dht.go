@@ -150,19 +150,12 @@ func (p *dht) findNearestNode(findid NodeId) []nodeInfo {
 		ret := <-ch
 		if ret != nil {
 			if _, ok := ret.command.Args["nodes"]; ok {
-				var nodes []map[string]string
+				var nodes []nodeInfo
 				ret.command.getArgs("nodes", &nodes)
 				for _, n := range nodes {
-					if id, ok := n["id"]; ok {
-						if addr, err := net.ResolveUDPAddr("udp", n["addr"]); err == nil {
-							var idary [20]byte
-							copy(idary[:], []byte(id)[:20])
-							node := nodeInfo{Id: NewNodeId(idary), Addr: addr}
-							if node.Id.cmp(p.info.Id) != 0 {
-								p.table.insert(node)
-								reqch <- node
-							}
-						}
+					if n.Id.cmp(p.info.Id) != 0 {
+						p.table.insert(n)
+						reqch <- n
 					}
 				}
 			}
@@ -241,21 +234,13 @@ func (p *dht) loadValue(key string) *string {
 			if val, ok := ret.command.Args["value"].(string); ok {
 				retch <- &val
 			} else if _, ok := ret.command.Args["nodes"]; ok {
-
-				var nodes []map[string]string
+				var nodes []nodeInfo
 				ret.command.getArgs("nodes", &nodes)
 				dist := id.xor(keyid)
 				for _, n := range nodes {
-					if id, ok := n["id"]; ok {
-						if addr, err := net.ResolveUDPAddr("udp", n["addr"]); err == nil {
-							var idary [20]byte
-							copy(idary[:], []byte(id)[:20])
-							node := NewNodeId(idary)
-							p.table.insert(nodeInfo{Id: node, Addr: addr})
-							if dist.cmp(node.xor(keyid)) == 1 {
-								reqch <- node
-							}
-						}
+					p.table.insert(n)
+					if dist.cmp(n.Id.xor(keyid)) == 1 {
+						reqch <- n.Id
 					}
 				}
 			}
@@ -319,15 +304,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 				args := map[string]interface{}{}
 				var idary [20]byte
 				copy(idary[:], []byte(id)[:20])
-				nodes := p.table.nearestNodes(NewNodeId(idary))
-				ary := make([]map[string]string, len(nodes))
-				for i, n := range nodes {
-					ary[i] = map[string]string{
-						"id":   string(n.Id.Bytes()),
-						"addr": n.Addr.String(),
-					}
-				}
-				args["nodes"] = ary
+				args["nodes"] = p.table.nearestNodes(NewNodeId(idary))
 				p.sendPacket(src.Id, newRpcReturnCommand(command.Id, args))
 			}
 
@@ -347,15 +324,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 					args["value"] = val
 				} else {
 					hash := sha1.Sum([]byte(key))
-					nodes := p.table.nearestNodes(NewNodeId(hash))
-					ary := make([]map[string]string, len(nodes))
-					for i, n := range nodes {
-						ary[i] = map[string]string{
-							"id":   string(n.Id.Bytes()),
-							"addr": n.Addr.String(),
-						}
-					}
-					args["nodes"] = ary
+					args["nodes"] = p.table.nearestNodes(NewNodeId(hash))
 				}
 				p.sendPacket(src.Id, newRpcReturnCommand(command.Id, args))
 			}
