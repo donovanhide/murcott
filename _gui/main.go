@@ -83,8 +83,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		ws:     ws,
 	}
 
-	exit := make(chan struct{})
-
 	go func() {
 		for {
 			var buf [1024]byte
@@ -123,6 +121,5 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	exit <- struct{}{}
 	s.client.Close()
 }
