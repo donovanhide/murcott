@@ -8,6 +8,7 @@ import (
 	"net"
 	"sort"
 	"sync"
+	"time"
 )
 
 type dhtRpcCallback func(*dhtRpcCommand, *net.UDPAddr)
@@ -419,6 +420,13 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 
 	p.rpcRet.push(id, ch)
 	p.rpc <- dhtPacket{dst: dst, payload: data}
+
+	go func(id string) {
+		<-time.After(time.Second)
+		if c := p.rpcRet.pop(id); c != nil {
+			c <- nil
+		}
+	}(id)
 
 	return ch
 }

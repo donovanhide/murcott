@@ -3,6 +3,7 @@ package murcott
 import (
 	"net"
 	"testing"
+	"time"
 )
 
 func TestDhtPing(t *testing.T) {
@@ -36,6 +37,23 @@ func TestDhtPing(t *testing.T) {
 
 	dht1.close()
 	dht2.close()
+}
+
+func TestDhtTimeout(t *testing.T) {
+	node1 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
+	node2 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
+	dht1 := newDht(10, node1, newLogger())
+	dht1.addNode(node2)
+	go dht1.run()
+	ch := dht1.sendPacket(node2.Id, dhtRpcCommand{})
+	select {
+	case r := <-ch:
+		if r != nil {
+			t.Errorf("timed-out channel should return nil")
+		}
+	case <-time.After(2 * time.Second):
+		t.Errorf("packet timeout does not work")
+	}
 }
 
 func TestDhtGroup(t *testing.T) {
