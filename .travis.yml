@@ -1,5 +1,8 @@
 language: go
 
+install:
+ - go get -v ./_gui ...
+
 script:
  - go test -v -race
  - go build _gui/main.go
