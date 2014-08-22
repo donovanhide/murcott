@@ -2,3 +2,4 @@ language: go
 
 script:
  - go test -v -race
+ - go build _gui/main.go

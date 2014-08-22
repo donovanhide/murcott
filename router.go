@@ -17,7 +17,7 @@ type message struct {
 	payload []byte
 }
 
-type node struct {
+type router struct {
 	info        nodeInfo
 	dht         *dht
 	conn        *net.UDPConn
@@ -45,7 +45,7 @@ func getOpenPortConn() (*net.UDPConn, int) {
 	return nil, 0
 }
 
-func newNode(key *PrivateKey, logger *Logger) *node {
+func newRouter(key *PrivateKey, logger *Logger) *router {
 	info := nodeInfo{Id: key.PublicKeyHash()}
 	dht := newDht(10, info, logger)
 	exit := make(chan struct{})
@@ -60,7 +60,7 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 		panic(err)
 	}
 
-	node := node{
+	node := router{
 		info:     info,
 		conn:     conn,
 		key:      key,
@@ -86,11 +86,11 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 	return &node
 }
 
-func (p *node) sendMessage(dst NodeId, payload []byte) {
+func (p *router) sendMessage(dst NodeId, payload []byte) {
 	p.sendPacket(dst, nil, "msg", payload)
 }
 
-func (p *node) recvMessage() (NodeId, []byte, error) {
+func (p *router) recvMessage() (NodeId, []byte, error) {
 	if m, ok := <-p.recv; ok {
 		return m.id, m.payload, nil
 	} else {
@@ -98,7 +98,7 @@ func (p *node) recvMessage() (NodeId, []byte, error) {
 	}
 }
 
-func (p *node) run() {
+func (p *router) run() {
 
 	recv := make(chan packet)
 
@@ -184,7 +184,7 @@ func (p *node) run() {
 	}
 }
 
-func (p *node) processPublicKeyResponse(packet packet) {
+func (p *router) processPublicKeyResponse(packet packet) {
 	var key PublicKey
 	err := msgpack.Unmarshal(packet.Payload, &key)
 	if err == nil {
@@ -200,7 +200,7 @@ func (p *node) processPublicKeyResponse(packet packet) {
 	}
 }
 
-func (p *node) processPacket(packet packet) {
+func (p *router) processPacket(packet packet) {
 	info := nodeInfo{Id: packet.Src, Addr: packet.addr}
 	switch packet.Type {
 	case "disco":
@@ -213,7 +213,7 @@ func (p *node) processPacket(packet packet) {
 }
 
 // process packets waiting publickeys
-func (p *node) processWaitingKeyPackets() {
+func (p *router) processWaitingKeyPackets() {
 	rest := make([]packet, 0, len(p.keyWaiting))
 	for _, packet := range p.keyWaiting {
 		// find publickey from cache
@@ -229,7 +229,7 @@ func (p *node) processWaitingKeyPackets() {
 }
 
 // process packets waiting addresses
-func (p *node) processWaitingRoutePackets() {
+func (p *router) processWaitingRoutePackets() {
 	rest := make([]packet, 0, len(p.addrWaiting))
 	for _, packet := range p.addrWaiting {
 		node := p.dht.getNodeInfo(packet.Dst)
@@ -247,7 +247,7 @@ func (p *node) processWaitingRoutePackets() {
 	p.addrWaiting = rest
 }
 
-func (p *node) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []byte) {
+func (p *router) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []byte) {
 	packet := packet{
 		Dst:     dst,
 		Src:     p.info.Id,
@@ -262,7 +262,7 @@ func (p *node) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []b
 	}
 }
 
-func (p *node) close() {
+func (p *router) close() {
 	p.exit <- struct{}{}
 	close(p.recv)
 	p.dht.close()

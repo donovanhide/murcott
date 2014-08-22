@@ -17,7 +17,7 @@ type msgpair struct {
 }
 
 type Client struct {
-	node   *node
+	router *router
 	recv   chan msgpair
 	exit   chan struct{}
 	Logger *Logger
@@ -26,10 +26,10 @@ type Client struct {
 // NewClient generates a Client with the given PrivateKey.
 func NewClient(key *PrivateKey) *Client {
 	logger := newLogger()
-	node := newNode(key, logger)
+	router := newRouter(key, logger)
 
 	c := Client{
-		node:   node,
+		router: router,
 		recv:   make(chan msgpair),
 		Logger: logger,
 	}
@@ -40,7 +40,7 @@ func NewClient(key *PrivateKey) *Client {
 
 func (p *Client) run() {
 	for {
-		id, payload, err := p.node.recvMessage()
+		id, payload, err := p.router.recvMessage()
 		if err != nil {
 			break
 		}
@@ -92,7 +92,7 @@ func (p *Client) Send(dst NodeId, msg interface{}) error {
 	if err != nil {
 		return err
 	}
-	p.node.sendMessage(dst, data)
+	p.router.sendMessage(dst, data)
 	return nil
 }
 
@@ -107,5 +107,5 @@ func (p *Client) Recv() (NodeId, interface{}, error) {
 
 func (p *Client) Close() {
 	close(p.recv)
-	p.node.close()
+	p.router.close()
 }
