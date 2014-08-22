@@ -7,38 +7,34 @@ import (
 	"reflect"
 )
 
-type ChatMessage struct {
-	Body string `msgpack:"body"`
-}
-
 type msgpair struct {
 	id  NodeId
 	msg interface{}
 }
 
-type Client struct {
+type Node struct {
 	router *router
 	recv   chan msgpair
 	exit   chan struct{}
 	Logger *Logger
 }
 
-// NewClient generates a Client with the given PrivateKey.
-func NewClient(key *PrivateKey) *Client {
+// NewNode generates a Node with the given PrivateKey.
+func NewNode(key *PrivateKey) *Node {
 	logger := newLogger()
 	router := newRouter(key, logger)
 
-	c := Client{
+	n := Node{
 		router: router,
 		recv:   make(chan msgpair),
 		Logger: logger,
 	}
 
-	go c.run()
-	return &c
+	go n.run()
+	return &n
 }
 
-func (p *Client) run() {
+func (p *Node) run() {
 	for {
 		id, payload, err := p.router.recvMessage()
 		if err != nil {
@@ -54,7 +50,7 @@ func (p *Client) run() {
 	}
 }
 
-func (p *Client) parseMessage(typ string, payload []byte, id NodeId) {
+func (p *Node) parseMessage(typ string, payload []byte, id NodeId) {
 	switch typ {
 	case "chat":
 		p.parseCommand(payload, id, ChatMessage{})
@@ -63,7 +59,7 @@ func (p *Client) parseMessage(typ string, payload []byte, id NodeId) {
 	}
 }
 
-func (p *Client) parseCommand(payload []byte, id NodeId, typ interface{}) {
+func (p *Node) parseCommand(payload []byte, id NodeId, typ interface{}) {
 	c := struct {
 		Content interface{} `msgpack:"content"`
 	}{}
@@ -75,7 +71,7 @@ func (p *Client) parseCommand(payload []byte, id NodeId, typ interface{}) {
 }
 
 // Send the given message to the destination node.
-func (p *Client) Send(dst NodeId, msg interface{}) error {
+func (p *Node) Send(dst NodeId, msg interface{}) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
@@ -97,7 +93,7 @@ func (p *Client) Send(dst NodeId, msg interface{}) error {
 }
 
 // Receive a message from any nodes.
-func (p *Client) Recv() (NodeId, interface{}, error) {
+func (p *Node) Recv() (NodeId, interface{}, error) {
 	if m, ok := <-p.recv; ok {
 		return m.id, m.msg, nil
 	} else {
@@ -105,7 +101,7 @@ func (p *Client) Recv() (NodeId, interface{}, error) {
 	}
 }
 
-func (p *Client) Close() {
+func (p *Node) Close() {
 	close(p.recv)
 	p.router.close()
 }

@@ -37,8 +37,8 @@ type Message struct {
 }
 
 type Session struct {
-	client *murcott.Client
-	ws     *websocket.Conn
+	node *murcott.Node
+	ws   *websocket.Conn
 }
 
 func (s *Session) WriteLog(msg string) {
@@ -76,11 +76,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := murcott.NewClient(key)
+	c := murcott.NewNode(key)
 
 	s := Session{
-		client: c,
-		ws:     ws,
+		node: c,
+		ws:   ws,
 	}
 
 	go func() {
@@ -115,11 +115,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			id, err := murcott.NewNodeIdFromString(msg.Dst)
 			if err == nil {
 				if body, ok := msg.Payload.(string); ok {
-					s.client.Send(id, murcott.ChatMessage{Body: body})
+					s.node.Send(id, murcott.ChatMessage{Body: body})
 				}
 			}
 		}
 	}
 
-	s.client.Close()
+	s.node.Close()
 }

@@ -5,19 +5,19 @@ import (
 	"testing"
 )
 
-func TestClientChatMessage(t *testing.T) {
+func TestNodeChatMessage(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	client1 := NewClient(key1)
-	client2 := NewClient(key2)
+	node1 := NewNode(key1)
+	node2 := NewNode(key2)
 	body := "Hello"
 
-	err := client1.Send(key2.PublicKeyHash(), ChatMessage{Body: body})
+	err := node1.Send(key2.PublicKeyHash(), ChatMessage{Body: body})
 	if err != nil {
 		t.Errorf("Send() error: %v", err)
 	}
 
-	id, msg, err := client2.Recv()
+	id, msg, err := node2.Recv()
 	if err != nil {
 		t.Errorf("Recv() error: %v", err)
 	}
@@ -34,6 +34,6 @@ func TestClientChatMessage(t *testing.T) {
 		t.Errorf("wrong message type: %v; expects ChatMessage", reflect.ValueOf(msg).Type())
 	}
 
-	client1.Close()
-	client2.Close()
+	node1.Close()
+	node2.Close()
 }
