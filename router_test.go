@@ -13,27 +13,27 @@ func TestRouterMessageExchange(t *testing.T) {
 
 	router1.sendMessage(router2.info.Id, []byte(msg))
 
-	id, data, err := router2.recvMessage()
+	m, err := router2.recvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if id.cmp(router1.info.Id) != 0 {
+	if m.id.cmp(router1.info.Id) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
-	if string(data) != msg {
+	if string(m.payload) != msg {
 		t.Errorf("router2: wrong message body")
 	}
 
 	router2.sendMessage(router1.info.Id, []byte(msg))
 
-	id, data, err = router1.recvMessage()
+	m, err = router1.recvMessage()
 	if err != nil {
 		t.Errorf("router1: recvMessage() returns error")
 	}
-	if id.cmp(router2.info.Id) != 0 {
+	if m.id.cmp(router2.info.Id) != 0 {
 		t.Errorf("router1: wrong source id")
 	}
-	if string(data) != msg {
+	if string(m.payload) != msg {
 		t.Errorf("router1: wrong message body")
 	}
 

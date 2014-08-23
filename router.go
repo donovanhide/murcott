@@ -90,11 +90,11 @@ func (p *router) sendMessage(dst NodeId, payload []byte) {
 	p.sendPacket(dst, nil, "msg", payload)
 }
 
-func (p *router) recvMessage() (NodeId, []byte, error) {
+func (p *router) recvMessage() (message, error) {
 	if m, ok := <-p.recv; ok {
-		return m.id, m.payload, nil
+		return m, nil
 	} else {
-		return NodeId{}, nil, errors.New("Node closed")
+		return message{}, errors.New("Node closed")
 	}
 }
 

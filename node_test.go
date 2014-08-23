@@ -1,39 +1,57 @@
 package murcott
 
 import (
-	"reflect"
 	"testing"
 )
 
 func TestNodeChatMessage(t *testing.T) {
+	logger := newLogger()
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	node1 := NewNode(key1)
-	node2 := NewNode(key2)
-	body := "Hello"
+	node1 := newNode(key1, logger)
+	node2 := newNode(key2, logger)
+	plainmsg := NewPlainChatMessage("Hello")
 
-	err := node1.Send(key2.PublicKeyHash(), ChatMessage{Body: body})
-	if err != nil {
-		t.Errorf("Send() error: %v", err)
-	}
+	success := make(chan bool)
 
-	id, msg, err := node2.Recv()
-	if err != nil {
-		t.Errorf("Recv() error: %v", err)
-	}
-
-	if id.cmp(key1.PublicKeyHash()) != 0 {
-		t.Errorf("wrong source id")
-	}
-
-	if m, ok := msg.(ChatMessage); ok {
-		if m.Body != body {
-			t.Errorf("wrong message body: %s; expects %s", m.Body, body)
+	node2.handle(func(src NodeId, msg interface{}) interface{} {
+		if m, ok := msg.(ChatMessage); ok {
+			if m.Text() == plainmsg.Text() {
+				if src.cmp(key1.PublicKeyHash()) == 0 {
+					success <- true
+				} else {
+					t.Errorf("wrong source id")
+					success <- false
+				}
+			} else {
+				t.Errorf("wrong message body")
+				success <- false
+			}
+		} else {
+			t.Errorf("wrong message type")
+			success <- false
 		}
-	} else {
-		t.Errorf("wrong message type: %v; expects ChatMessage", reflect.ValueOf(msg).Type())
+		return messageAck{}
+	})
+
+	node1.send(key2.PublicKeyHash(), plainmsg, func(msg interface{}) {
+		if _, ok := msg.(messageAck); ok {
+			success <- true
+		} else {
+			t.Errorf("wrong ack type")
+			success <- false
+		}
+	})
+
+	go node1.run()
+	go node2.run()
+
+	for i := 0; i < 2; i++ {
+		if !<-success {
+			return
+		}
 	}
 
-	node1.Close()
-	node2.Close()
+	node1.close()
+	node2.close()
 }

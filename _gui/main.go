@@ -37,8 +37,8 @@ type Message struct {
 }
 
 type Session struct {
-	node *murcott.Node
-	ws   *websocket.Conn
+	client *murcott.Client
+	ws     *websocket.Conn
 }
 
 func (s *Session) WriteLog(msg string) {
@@ -76,11 +76,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := murcott.NewNode(key)
+	c := murcott.NewClient(key)
 
 	s := Session{
-		node: c,
-		ws:   ws,
+		client: c,
+		ws:     ws,
 	}
 
 	go func() {
@@ -91,18 +91,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	go func() {
-		for {
-			id, msg, err := c.Recv()
-			if err != nil {
-				return
-			}
-			switch msg.(type) {
-			case murcott.ChatMessage:
-				s.WriteMessage(id, msg.(murcott.ChatMessage).Body)
-			}
-		}
-	}()
+	c.HandleMessages(func(src murcott.NodeId, msg murcott.ChatMessage) {
+		s.WriteMessage(src, msg.Text())
+	})
+
+	go c.Run()
 
 	for {
 		var msg Message
@@ -115,11 +108,17 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			id, err := murcott.NewNodeIdFromString(msg.Dst)
 			if err == nil {
 				if body, ok := msg.Payload.(string); ok {
-					s.node.Send(id, murcott.ChatMessage{Body: body})
+					s.client.SendMessage(id, murcott.NewPlainChatMessage(body), func(ok bool) {
+						if ok {
+							s.WriteLog("ok")
+						} else {
+							s.WriteLog("timeout")
+						}
+					})
 				}
 			}
 		}
 	}
 
-	s.node.Close()
+	c.Close()
 }
