@@ -4,18 +4,23 @@ package murcott
 type Client struct {
 	node       *node
 	msgHandler messageHandler
+	storage    *Storage
+	Roster     *Roster
 	Logger     *Logger
 }
 
 type messageHandler func(src NodeId, msg ChatMessage)
 
 // NewClient generates a Client with the given PrivateKey.
-func NewClient(key *PrivateKey) *Client {
+func NewClient(key *PrivateKey, storage *Storage) *Client {
 	logger := newLogger()
+	roster, _ := storage.loadRoster()
 
 	c := &Client{
-		node:   newNode(key, logger),
-		Logger: logger,
+		node:    newNode(key, logger),
+		storage: storage,
+		Roster:  roster,
+		Logger:  logger,
 	}
 
 	c.node.handle(func(src NodeId, msg interface{}) interface{} {
@@ -39,6 +44,7 @@ func (c *Client) Run() {
 
 // Stop the current mainloop.
 func (c *Client) Close() {
+	c.storage.saveRoster(c.Roster)
 	c.node.close()
 }
 

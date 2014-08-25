@@ -58,6 +58,17 @@ func (s *Session) WriteMessage(src murcott.NodeId, payload interface{}) {
 	})
 }
 
+func (s *Session) WriteRoster(roster *murcott.Roster) {
+	list := make([]string, 0)
+	for _, id := range roster.List() {
+		list = append(list, id.String())
+	}
+	s.ws.WriteJSON(Message{
+		MsgType: "roster",
+		Payload: list,
+	})
+}
+
 func ws(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
@@ -76,7 +87,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := murcott.NewClient(key)
+	storage := murcott.NewStorage(key.PublicKeyHash().String() + ".sqlite3")
+	c := murcott.NewClient(key, storage)
 
 	s := Session{
 		client: c,
@@ -97,6 +109,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	go c.Run()
 
+	s.WriteRoster(s.client.Roster)
+
 	for {
 		var msg Message
 		err := s.ws.ReadJSON(&msg)
@@ -104,6 +118,20 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch msg.MsgType {
+		case "add-friend":
+			if str, ok := msg.Payload.(string); ok {
+				id, err := murcott.NewNodeIdFromString(str)
+				if err == nil {
+					s.client.Roster.Add(id)
+				}
+			}
+		case "remove-friend":
+			if str, ok := msg.Payload.(string); ok {
+				id, err := murcott.NewNodeIdFromString(str)
+				if err == nil {
+					s.client.Roster.Remove(id)
+				}
+			}
 		case "msg":
 			id, err := murcott.NewNodeIdFromString(msg.Dst)
 			if err == nil {

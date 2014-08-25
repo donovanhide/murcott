@@ -13,17 +13,18 @@ const (
 	ClearRosterStmt
 )
 
-type storage struct {
+// Storage represents a persistent storage.
+type Storage struct {
 	db   *sql.DB
 	stmt map[int]*sql.Stmt
 }
 
-func newStorage(name string) *storage {
+func NewStorage(name string) *Storage {
 	db, err := sql.Open("sqlite3", name)
 	if err != nil {
 		return nil
 	}
-	s := &storage{
+	s := &Storage{
 		db:   db,
 		stmt: make(map[int]*sql.Stmt),
 	}
@@ -31,8 +32,8 @@ func newStorage(name string) *storage {
 	return s
 }
 
-func (s *storage) init() {
-	s.prepare(CreateRosterTableStmt, "CREATE TABLE roster (id BLOB)")
+func (s *Storage) init() {
+	s.prepare(CreateRosterTableStmt, "CREATE TABLE roster (id TEXT)")
 	s.exec(CreateRosterTableStmt)
 
 	s.prepare(LoadRosterStmt, "SELECT id FROM roster")
@@ -40,7 +41,7 @@ func (s *storage) init() {
 	s.prepare(ClearRosterStmt, "DELETE FROM roster")
 }
 
-func (s *storage) prepare(t int, query string) error {
+func (s *Storage) prepare(t int, query string) error {
 	stmt, err := s.db.Prepare(query)
 	if err != nil {
 		return err
@@ -49,7 +50,7 @@ func (s *storage) prepare(t int, query string) error {
 	return nil
 }
 
-func (s *storage) exec(t int, args ...interface{}) (sql.Result, error) {
+func (s *Storage) exec(t int, args ...interface{}) (sql.Result, error) {
 	if stmt, ok := s.stmt[t]; ok {
 		return stmt.Exec(args...)
 	} else {
@@ -57,7 +58,7 @@ func (s *storage) exec(t int, args ...interface{}) (sql.Result, error) {
 	}
 }
 
-func (s *storage) query(t int, args ...interface{}) (*sql.Rows, error) {
+func (s *Storage) query(t int, args ...interface{}) (*sql.Rows, error) {
 	if stmt, ok := s.stmt[t]; ok {
 		return stmt.Query(args...)
 	} else {
@@ -65,7 +66,7 @@ func (s *storage) query(t int, args ...interface{}) (*sql.Rows, error) {
 	}
 }
 
-func (s *storage) loadRoster() ([]NodeId, error) {
+func (s *Storage) loadRoster() (*Roster, error) {
 	var list []NodeId
 	rows, err := s.query(LoadRosterStmt)
 	if err != nil {
@@ -80,16 +81,16 @@ func (s *storage) loadRoster() ([]NodeId, error) {
 			list = append(list, nodeid)
 		}
 	}
-	return list, nil
+	return &Roster{list: list}, nil
 }
 
-func (s *storage) saveRoster(roster []NodeId) error {
+func (s *Storage) saveRoster(roster *Roster) error {
 	_, err := s.exec(ClearRosterStmt)
 	if err != nil {
 		return err
 	}
 
-	for _, id := range roster {
+	for _, id := range roster.list {
 		_, err := s.exec(InsertIdToRosterStmt, id.String())
 		if err != nil {
 			return err
@@ -98,7 +99,7 @@ func (s *storage) saveRoster(roster []NodeId) error {
 	return nil
 }
 
-func (s *storage) close() {
+func (s *Storage) close() {
 	for _, stmt := range s.stmt {
 		stmt.Close()
 	}

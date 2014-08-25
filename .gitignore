@@ -25,3 +25,6 @@ gui/main
 
 # gin
 gin-bin
+
+# database
+*.sqlite3

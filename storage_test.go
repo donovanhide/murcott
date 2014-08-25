@@ -5,7 +5,7 @@ import (
 )
 
 func TestStorageRoster(t *testing.T) {
-	s := newStorage(":memory:")
+	s := NewStorage(":memory:")
 
 	roster := []NodeId{
 		newRandomNodeId(),

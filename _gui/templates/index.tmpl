@@ -23,8 +23,15 @@
               case 'log':
                 var text = data.payload.what;
                 $('#debuglog ul').append($('<li>').append(text));
+                break;
               case 'msg':
                 addMessageLog(data.src, data.payload);
+                break;
+              case 'roster':
+                for (i = 0; i < data.payload.length; i++) {
+                  addRosterButton(data.payload[i]);
+                }
+                break;
             }
           };
         };
@@ -72,27 +79,39 @@
           }
         });
 
+        function addRosterButton(id) {
+          var idlabel = $('<a>')
+            .addClass("node-id").append(id.substr(0, 20) + "...")
+            .attr('href', 'javascript:void(0)');
+          var rem = $('<a>')
+            .addClass("node-command")
+            .append('<i class="fa fa-trash-o"></i>')
+            .attr('href', 'javascript:void(0)')
+            .click(function() {
+              $(this).parent('.node').remove();
+              sock.send(JSON.stringify({
+                type: 'remove-friend',
+                payload: id
+              }));
+            });
+          var a = $('<a>')
+            .addClass('button')
+            .addClass('node')
+            .attr('href', 'javascript:void(0)')
+            .append(idlabel)
+            .append(rem)
+            .data('id', id);
+          $('#add-friend').before(a);
+          sock.send(JSON.stringify({
+            type: 'add-friend',
+            payload: id
+          }));
+        }
+
         $('#add-friend').click(function() {
           var id = window.prompt("Please input ID", "");
           if (id != null) {
-            var idlabel = $('<a>')
-              .addClass("node-id").append(id.substr(0, 20) + "...")
-              .attr('href', 'javascript:void(0)');
-            var rem = $('<a>')
-              .addClass("node-command")
-              .append('<i class="fa fa-trash-o"></i>')
-              .attr('href', 'javascript:void(0)')
-              .click(function() {
-                $(this).parent('.node').remove();
-              });
-            var a = $('<a>')
-              .addClass('button')
-              .addClass('node')
-              .attr('href', 'javascript:void(0)')
-              .append(idlabel)
-              .append(rem)
-              .data('id', id);
-            $(this).before(a);
+            addRosterButton(id);
           }
         });
 
