@@ -7,8 +7,8 @@ import (
 func TestClientMessage(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	client1 := NewClient(key1)
-	client2 := NewClient(key2)
+	client1 := NewClient(key1, NewStorage(":memory:"))
+	client2 := NewClient(key2, NewStorage(":memory:"))
 
 	success := make(chan bool)
 	plainmsg := NewPlainChatMessage("Hello")

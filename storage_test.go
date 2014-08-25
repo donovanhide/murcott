@@ -7,12 +7,14 @@ import (
 func TestStorageRoster(t *testing.T) {
 	s := NewStorage(":memory:")
 
-	roster := []NodeId{
-		newRandomNodeId(),
-		newRandomNodeId(),
-		newRandomNodeId(),
-		newRandomNodeId(),
-		newRandomNodeId(),
+	roster := &Roster{
+		list: []NodeId{
+			newRandomNodeId(),
+			newRandomNodeId(),
+			newRandomNodeId(),
+			newRandomNodeId(),
+			newRandomNodeId(),
+		},
 	}
 
 	err := s.saveRoster(roster)
@@ -25,13 +27,13 @@ func TestStorageRoster(t *testing.T) {
 		t.Errorf("loadRoster error: %v", err)
 	}
 
-	if len(r) != len(roster) {
+	if len(r.list) != len(roster.list) {
 		t.Errorf("roster length mismatch")
 	}
 
-	for i, id := range r {
-		if id.cmp(roster[i]) != 0 {
-			t.Errorf("wrong NodeId: %s; expects %s", id.String(), roster[i].String())
+	for i, id := range r.list {
+		if id.cmp(roster.list[i]) != 0 {
+			t.Errorf("wrong NodeId: %s; expects %s", id.String(), roster.list[i].String())
 		}
 	}
 
