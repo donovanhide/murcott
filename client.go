@@ -5,6 +5,7 @@ type Client struct {
 	node       *node
 	msgHandler messageHandler
 	storage    *Storage
+	profile    UserProfile
 	Roster     *Roster
 	Logger     *Logger
 }
@@ -30,6 +31,8 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 				c.msgHandler(src, msg.(ChatMessage))
 			}
 			return messageAck{}
+		case userProfileRequest:
+			return userProfileResponse{Profile: c.profile}
 		}
 		return nil
 	})
@@ -37,18 +40,18 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 	return c
 }
 
-// Start a mainloop in the current goroutine.
+// Starts a mainloop in the current goroutine.
 func (c *Client) Run() {
 	c.node.run()
 }
 
-// Stop the current mainloop.
+// Stops the current mainloop.
 func (c *Client) Close() {
 	c.storage.saveRoster(c.Roster)
 	c.node.close()
 }
 
-// Send the given message to the destination node.
+// Sends the given message to the destination node.
 func (c *Client) SendMessage(dst NodeId, msg ChatMessage, ack func(ok bool)) {
 	c.node.send(dst, msg, func(r interface{}) {
 		ack(r != nil)
@@ -58,4 +61,21 @@ func (c *Client) SendMessage(dst NodeId, msg ChatMessage, ack func(ok bool)) {
 // HandleMessages registers the given function as a massage handler.
 func (c *Client) HandleMessages(handler func(src NodeId, msg ChatMessage)) {
 	c.msgHandler = handler
+}
+
+// Requests a user profile to the destination node.
+func (c *Client) RequestProfile(dst NodeId, f func(profile UserProfile)) {
+	c.node.send(dst, userProfileRequest{}, func(r interface{}) {
+		if p, ok := r.(userProfileResponse); ok {
+			f(p.Profile)
+		}
+	})
+}
+
+func (c *Client) Profile() UserProfile {
+	return c.profile
+}
+
+func (c *Client) SetProfile(profile UserProfile) {
+	c.profile = profile
 }

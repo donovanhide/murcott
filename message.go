@@ -80,3 +80,10 @@ func (m *ChatMessage) Len() int {
 
 type messageAck struct {
 }
+
+type userProfileRequest struct {
+}
+
+type userProfileResponse struct {
+	Profile UserProfile `msgpack:"profile"`
+}
