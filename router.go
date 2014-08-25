@@ -105,7 +105,7 @@ func (p *router) run() {
 	// read datagram from udp socket
 	go func() {
 		for {
-			var buf [1024]byte
+			var buf [65507]byte
 			len, addr, err := p.conn.ReadFromUDP(buf[:])
 			if err != nil {
 				break
