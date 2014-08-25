@@ -23,6 +23,9 @@ func init() {
 	msgpack.Register(reflect.TypeOf(UserAvatar{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {
 			avatar := v.Interface().(UserAvatar)
+			if avatar.Image == nil {
+				return e.Encode(map[string]string{})
+			}
 			var b bytes.Buffer
 			err := png.Encode(&b, avatar.Image)
 			if err != nil {
@@ -38,20 +41,23 @@ func init() {
 			if err != nil {
 				return nil
 			}
-			m := i.(map[interface{}]interface{})
-			if t, ok := m["type"].(string); ok {
-				if data, ok := m["data"].(string); ok {
-					if t == "png" {
-						b := bytes.NewBuffer([]byte(data))
-						img, err := png.Decode(b)
-						if err != nil {
-							return err
+			if m, ok := i.(map[interface{}]interface{}); ok {
+				if t, ok := m["type"].(string); ok {
+					if data, ok := m["data"].(string); ok {
+						if t == "png" {
+							b := bytes.NewBuffer([]byte(data))
+							img, err := png.Decode(b)
+							if err != nil {
+								return err
+							}
+							v.Set(reflect.ValueOf(UserAvatar{Image: img}))
+						} else {
+							errors.New("unsupported image type")
 						}
-						v.Set(reflect.ValueOf(UserAvatar{Image: img}))
-					} else {
-						errors.New("unsupported image type")
 					}
 				}
+			} else {
+				v.Set(reflect.ValueOf(UserAvatar{}))
 			}
 			return nil
 		})

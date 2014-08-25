@@ -99,7 +99,7 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 	go client1.Run()
 	go client2.Run()
 
-	client1.RequestProfile(key2.PublicKeyHash(), func(p UserProfile) {
+	client1.RequestProfile(key2.PublicKeyHash(), func(p *UserProfile) {
 		if p.Nickname != profile.Nickname {
 			t.Errorf("wrong Nickname: %s; expects %s", p.Nickname, profile.Nickname)
 			success <- false

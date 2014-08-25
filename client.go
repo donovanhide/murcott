@@ -6,6 +6,7 @@ type Client struct {
 	msgHandler messageHandler
 	storage    *Storage
 	profile    UserProfile
+	id         NodeId
 	Roster     *Roster
 	Logger     *Logger
 }
@@ -20,8 +21,14 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 	c := &Client{
 		node:    newNode(key, logger),
 		storage: storage,
+		id:      key.PublicKeyHash(),
 		Roster:  roster,
 		Logger:  logger,
+	}
+
+	profile := storage.loadProfile(c.id)
+	if profile != nil {
+		c.profile = *profile
 	}
 
 	c.node.handle(func(src NodeId, msg interface{}) interface{} {
@@ -64,10 +71,14 @@ func (c *Client) HandleMessages(handler func(src NodeId, msg ChatMessage)) {
 }
 
 // Requests a user profile to the destination node.
-func (c *Client) RequestProfile(dst NodeId, f func(profile UserProfile)) {
+// If no response is received from the node, RequestProfile tries to load a profile from the cache.
+func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
 	c.node.send(dst, userProfileRequest{}, func(r interface{}) {
 		if p, ok := r.(userProfileResponse); ok {
-			f(p.Profile)
+			c.storage.saveProfile(dst, p.Profile)
+			f(&p.Profile)
+		} else {
+			f(c.storage.loadProfile(dst))
 		}
 	})
 }
@@ -77,5 +88,6 @@ func (c *Client) Profile() UserProfile {
 }
 
 func (c *Client) SetProfile(profile UserProfile) {
+	c.storage.saveProfile(c.id, profile)
 	c.profile = profile
 }

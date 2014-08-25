@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/vmihailenco/msgpack"
 )
 
 const (
@@ -11,6 +12,11 @@ const (
 	loadRosterStmt
 	insertIdToRosterStmt
 	clearRosterStmt
+
+	createProfileTableStmt
+	loadProfileStmt
+	insertProfileStmt
+	updateProfileStmt
 )
 
 // Storage represents a persistent storage.
@@ -39,6 +45,13 @@ func (s *Storage) init() {
 	s.prepare(loadRosterStmt, "SELECT id FROM roster")
 	s.prepare(insertIdToRosterStmt, "INSERT INTO roster (id) VALUES(?)")
 	s.prepare(clearRosterStmt, "DELETE FROM roster")
+
+	s.prepare(createProfileTableStmt, "CREATE TABLE profile (id TEXT, nickname TEXT, data BLOB)")
+	s.exec(createProfileTableStmt)
+
+	s.prepare(loadProfileStmt, "SELECT data FROM profile WHERE id = ?")
+	s.prepare(insertProfileStmt, "INSERT INTO profile (id, nickname, data) VALUES(?, ?, ?)")
+	s.prepare(updateProfileStmt, "UPDATE profile SET nickname = ?, data = ? WHERE id = ?")
 }
 
 func (s *Storage) prepare(t int, query string) error {
@@ -63,6 +76,14 @@ func (s *Storage) query(t int, args ...interface{}) (*sql.Rows, error) {
 		return stmt.Query(args...)
 	} else {
 		return nil, errors.New("unregistered stmt")
+	}
+}
+
+func (s *Storage) queryRow(t int, args ...interface{}) *sql.Row {
+	if stmt, ok := s.stmt[t]; ok {
+		return stmt.QueryRow(args...)
+	} else {
+		return nil
 	}
 }
 
@@ -97,6 +118,37 @@ func (s *Storage) saveRoster(roster *Roster) error {
 		}
 	}
 	return nil
+}
+
+func (s *Storage) loadProfile(id NodeId) *UserProfile {
+	row := s.queryRow(loadProfileStmt, id.String())
+	if row == nil {
+		return nil
+	} else {
+		var profile UserProfile
+		var data string
+		row.Scan(&data)
+		err := msgpack.Unmarshal([]byte(data), &profile)
+		if err != nil {
+			return nil
+		} else {
+			return &profile
+		}
+	}
+}
+
+func (s *Storage) saveProfile(id NodeId, profile UserProfile) error {
+	data, err := msgpack.Marshal(profile)
+	if err != nil {
+		return err
+	}
+	if s.loadProfile(id) == nil {
+		_, err := s.exec(insertProfileStmt, id.String(), profile.Nickname, string(data))
+		return err
+	} else {
+		_, err := s.exec(updateProfileStmt, profile.Nickname, string(data), id.String())
+		return err
+	}
 }
 
 func (s *Storage) close() {
