@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	CreateRosterTableStmt = iota
-	LoadRosterStmt
-	InsertIdToRosterStmt
-	ClearRosterStmt
+	createRosterTableStmt = iota
+	loadRosterStmt
+	insertIdToRosterStmt
+	clearRosterStmt
 )
 
 // Storage represents a persistent storage.
@@ -33,12 +33,12 @@ func NewStorage(name string) *Storage {
 }
 
 func (s *Storage) init() {
-	s.prepare(CreateRosterTableStmt, "CREATE TABLE roster (id TEXT)")
-	s.exec(CreateRosterTableStmt)
+	s.prepare(createRosterTableStmt, "CREATE TABLE roster (id TEXT)")
+	s.exec(createRosterTableStmt)
 
-	s.prepare(LoadRosterStmt, "SELECT id FROM roster")
-	s.prepare(InsertIdToRosterStmt, "INSERT INTO roster (id) VALUES(?)")
-	s.prepare(ClearRosterStmt, "DELETE FROM roster")
+	s.prepare(loadRosterStmt, "SELECT id FROM roster")
+	s.prepare(insertIdToRosterStmt, "INSERT INTO roster (id) VALUES(?)")
+	s.prepare(clearRosterStmt, "DELETE FROM roster")
 }
 
 func (s *Storage) prepare(t int, query string) error {
@@ -68,7 +68,7 @@ func (s *Storage) query(t int, args ...interface{}) (*sql.Rows, error) {
 
 func (s *Storage) loadRoster() (*Roster, error) {
 	var list []NodeId
-	rows, err := s.query(LoadRosterStmt)
+	rows, err := s.query(loadRosterStmt)
 	if err != nil {
 		return nil, err
 	}
@@ -85,13 +85,13 @@ func (s *Storage) loadRoster() (*Roster, error) {
 }
 
 func (s *Storage) saveRoster(roster *Roster) error {
-	_, err := s.exec(ClearRosterStmt)
+	_, err := s.exec(clearRosterStmt)
 	if err != nil {
 		return err
 	}
 
 	for _, id := range roster.list {
-		_, err := s.exec(InsertIdToRosterStmt, id.String())
+		_, err := s.exec(insertIdToRosterStmt, id.String())
 		if err != nil {
 			return err
 		}
