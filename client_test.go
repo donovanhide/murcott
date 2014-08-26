@@ -130,3 +130,73 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 	client1.Close()
 	client2.Close()
 }
+
+func TestClientStatus(t *testing.T) {
+	key1 := GeneratePrivateKey()
+	key2 := GeneratePrivateKey()
+	key3 := GeneratePrivateKey()
+	client1 := NewClient(key1, NewStorage(":memory:"))
+	client2 := NewClient(key2, NewStorage(":memory:"))
+
+	status1 := UserStatus{Type: StatusActive, Message: ":-("}
+	status2 := UserStatus{Type: StatusAway, Message: "zzz"}
+
+	success := make(chan bool)
+
+	go client1.Run()
+	go client2.Run()
+
+	client1.SetStatus(status1)
+	client2.SetStatus(status2)
+
+	client1.RequestStatus(key2.PublicKeyHash(), func(p UserStatus) {
+		if p.Type != status2.Type {
+			t.Errorf("wrong Type: %s; expects %s", p.Type, status2.Type)
+			success <- false
+			return
+		}
+		if p.Message != status2.Message {
+			t.Errorf("wrong Message: %s; expects %s", p.Message, status2.Message)
+			success <- false
+			return
+		}
+		success <- true
+	})
+
+	client2.RequestStatus(key1.PublicKeyHash(), func(p UserStatus) {
+		if p.Type != status1.Type {
+			t.Errorf("wrong Type: %s; expects %s", p.Type, status1.Type)
+			success <- false
+			return
+		}
+		if p.Message != status1.Message {
+			t.Errorf("wrong Message: %s; expects %s", p.Message, status1.Message)
+			success <- false
+			return
+		}
+		success <- true
+	})
+
+	client2.RequestStatus(key3.PublicKeyHash(), func(p UserStatus) {
+		if p.Type != StatusOffline {
+			t.Errorf("wrong Type: %s; expects %s", p.Type, StatusOffline)
+			success <- false
+			return
+		}
+		if p.Message != "" {
+			t.Errorf("wrong Message: %s; expects %s", p.Message, "")
+			success <- false
+			return
+		}
+		success <- true
+	})
+
+	for i := 0; i < 3; i++ {
+		if !<-success {
+			return
+		}
+	}
+
+	client1.Close()
+	client2.Close()
+}

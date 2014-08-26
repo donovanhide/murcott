@@ -41,6 +41,7 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 	n.registerMessageType("ack", messageAck{})
 	n.registerMessageType("profile-req", userProfileRequest{})
 	n.registerMessageType("profile-res", userProfileResponse{})
+	n.registerMessageType("presence", userPresence{})
 
 	return n
 }

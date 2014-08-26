@@ -5,6 +5,7 @@ type Client struct {
 	node       *node
 	msgHandler messageHandler
 	storage    *Storage
+	status     UserStatus
 	profile    UserProfile
 	id         NodeId
 	Roster     *Roster
@@ -21,6 +22,7 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 	c := &Client{
 		node:    newNode(key, logger),
 		storage: storage,
+		status:  UserStatus{Type: StatusOffline},
 		id:      key.PublicKeyHash(),
 		Roster:  roster,
 		Logger:  logger,
@@ -40,6 +42,8 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 			return messageAck{}
 		case userProfileRequest:
 			return userProfileResponse{Profile: c.profile}
+		case userPresence:
+			return userPresence{Status: c.status}
 		}
 		return nil
 	})
@@ -81,6 +85,26 @@ func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
 			f(c.storage.loadProfile(dst))
 		}
 	})
+}
+
+// Requests a user status to the destination node.
+// If no response is received from the node, RequestStatus returns an offline status.
+func (c *Client) RequestStatus(dst NodeId, f func(profile UserStatus)) {
+	c.node.send(dst, userPresence{Status: c.status}, func(r interface{}) {
+		if p, ok := r.(userPresence); ok {
+			f(p.Status)
+		} else {
+			f(UserStatus{Type: StatusOffline})
+		}
+	})
+}
+
+func (c *Client) Status() UserStatus {
+	return c.status
+}
+
+func (c *Client) SetStatus(status UserStatus) {
+	c.status = status
 }
 
 func (c *Client) Profile() UserProfile {

@@ -69,6 +69,17 @@ func (s *Session) WriteRoster(roster *murcott.Roster) {
 	})
 }
 
+func (s *Session) WriteProfile(id murcott.NodeId, profile murcott.UserProfile) {
+	s.ws.WriteJSON(Message{
+		MsgType: "profile",
+		Src:     id.String(),
+		Payload: map[string]interface{}{
+			"nickname": profile.Nickname,
+			"ext":      profile.Extension,
+		},
+	})
+}
+
 func ws(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
@@ -109,7 +120,20 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	go c.Run()
 
+	c.SetStatus(murcott.UserStatus{
+		Type:    murcott.StatusActive,
+		Message: ":-)",
+	})
+
 	s.WriteRoster(s.client.Roster)
+
+	for _, id := range c.Roster.List() {
+		c.RequestProfile(id, func(p *murcott.UserProfile) {
+			if p != nil {
+				s.WriteProfile(id, *p)
+			}
+		})
+	}
 
 	for {
 		var msg Message
@@ -123,6 +147,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 				id, err := murcott.NewNodeIdFromString(str)
 				if err == nil {
 					s.client.Roster.Add(id)
+					c.RequestProfile(id, func(p *murcott.UserProfile) {
+						if p != nil {
+							s.WriteProfile(id, *p)
+						}
+					})
 				}
 			}
 		case "remove-friend":

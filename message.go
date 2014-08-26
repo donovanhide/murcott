@@ -87,3 +87,7 @@ type userProfileRequest struct {
 type userProfileResponse struct {
 	Profile UserProfile `msgpack:"profile"`
 }
+
+type userPresence struct {
+	Status UserStatus `msgpack:"status"`
+}
