@@ -2,17 +2,19 @@
 package murcott
 
 type Client struct {
-	node       *node
-	msgHandler messageHandler
-	storage    *Storage
-	status     UserStatus
-	profile    UserProfile
-	id         NodeId
-	Roster     *Roster
-	Logger     *Logger
+	node          *node
+	msgHandler    messageHandler
+	statusHandler statusHandler
+	storage       *Storage
+	status        UserStatus
+	profile       UserProfile
+	id            NodeId
+	Roster        *Roster
+	Logger        *Logger
 }
 
 type messageHandler func(src NodeId, msg ChatMessage)
+type statusHandler func(src NodeId, status UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
 func NewClient(key *PrivateKey, storage *Storage) *Client {
@@ -43,7 +45,10 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 		case userProfileRequest:
 			return userProfileResponse{Profile: c.profile}
 		case userPresence:
-			return userPresence{Status: c.status}
+			if c.statusHandler != nil {
+				c.statusHandler(src, msg.(userPresence).Status)
+			}
+			c.node.send(src, userPresence{Status: c.status}, nil)
 		}
 		return nil
 	})
@@ -74,6 +79,11 @@ func (c *Client) HandleMessages(handler func(src NodeId, msg ChatMessage)) {
 	c.msgHandler = handler
 }
 
+// HandleMessages registers the given function as a status handler.
+func (c *Client) HandleStatuses(handler func(src NodeId, status UserStatus)) {
+	c.statusHandler = handler
+}
+
 // Requests a user profile to the destination node.
 // If no response is received from the node, RequestProfile tries to load a profile from the cache.
 func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
@@ -87,24 +97,15 @@ func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
 	})
 }
 
-// Requests a user status to the destination node.
-// If no response is received from the node, RequestStatus returns an offline status.
-func (c *Client) RequestStatus(dst NodeId, f func(profile UserStatus)) {
-	c.node.send(dst, userPresence{Status: c.status}, func(r interface{}) {
-		if p, ok := r.(userPresence); ok {
-			f(p.Status)
-		} else {
-			f(UserStatus{Type: StatusOffline})
-		}
-	})
-}
-
 func (c *Client) Status() UserStatus {
 	return c.status
 }
 
 func (c *Client) SetStatus(status UserStatus) {
 	c.status = status
+	for _, n := range c.Roster.List() {
+		c.node.send(n, userPresence{Status: c.status}, nil)
+	}
 }
 
 func (c *Client) Profile() UserProfile {

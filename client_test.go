@@ -134,22 +134,18 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 func TestClientStatus(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	key3 := GeneratePrivateKey()
 	client1 := NewClient(key1, NewStorage(":memory:"))
 	client2 := NewClient(key2, NewStorage(":memory:"))
 
 	status1 := UserStatus{Type: StatusActive, Message: ":-("}
 	status2 := UserStatus{Type: StatusAway, Message: "zzz"}
 
+	client1.Roster.Add(key2.PublicKeyHash())
+	client2.Roster.Add(key1.PublicKeyHash())
+
 	success := make(chan bool)
 
-	go client1.Run()
-	go client2.Run()
-
-	client1.SetStatus(status1)
-	client2.SetStatus(status2)
-
-	client1.RequestStatus(key2.PublicKeyHash(), func(p UserStatus) {
+	client1.HandleStatuses(func(src NodeId, p UserStatus) {
 		if p.Type != status2.Type {
 			t.Errorf("wrong Type: %s; expects %s", p.Type, status2.Type)
 			success <- false
@@ -163,7 +159,7 @@ func TestClientStatus(t *testing.T) {
 		success <- true
 	})
 
-	client2.RequestStatus(key1.PublicKeyHash(), func(p UserStatus) {
+	client2.HandleStatuses(func(src NodeId, p UserStatus) {
 		if p.Type != status1.Type {
 			t.Errorf("wrong Type: %s; expects %s", p.Type, status1.Type)
 			success <- false
@@ -177,21 +173,13 @@ func TestClientStatus(t *testing.T) {
 		success <- true
 	})
 
-	client2.RequestStatus(key3.PublicKeyHash(), func(p UserStatus) {
-		if p.Type != StatusOffline {
-			t.Errorf("wrong Type: %s; expects %s", p.Type, StatusOffline)
-			success <- false
-			return
-		}
-		if p.Message != "" {
-			t.Errorf("wrong Message: %s; expects %s", p.Message, "")
-			success <- false
-			return
-		}
-		success <- true
-	})
+	go client1.Run()
+	go client2.Run()
 
-	for i := 0; i < 3; i++ {
+	client1.SetStatus(status1)
+	client2.SetStatus(status2)
+
+	for i := 0; i < 2; i++ {
 		if !<-success {
 			return
 		}
