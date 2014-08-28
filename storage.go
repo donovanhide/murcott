@@ -87,7 +87,7 @@ func (s *Storage) queryRow(t int, args ...interface{}) *sql.Row {
 	}
 }
 
-func (s *Storage) loadRoster() (*Roster, error) {
+func (s *Storage) LoadRoster() (*Roster, error) {
 	var list []NodeId
 	rows, err := s.query(loadRosterStmt)
 	if err != nil {
@@ -105,7 +105,7 @@ func (s *Storage) loadRoster() (*Roster, error) {
 	return &Roster{list: list}, nil
 }
 
-func (s *Storage) saveRoster(roster *Roster) error {
+func (s *Storage) SaveRoster(roster *Roster) error {
 	_, err := s.exec(clearRosterStmt)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (s *Storage) saveRoster(roster *Roster) error {
 	return nil
 }
 
-func (s *Storage) loadProfile(id NodeId) *UserProfile {
+func (s *Storage) LoadProfile(id NodeId) *UserProfile {
 	row := s.queryRow(loadProfileStmt, id.String())
 	if row == nil {
 		return nil
@@ -137,12 +137,12 @@ func (s *Storage) loadProfile(id NodeId) *UserProfile {
 	}
 }
 
-func (s *Storage) saveProfile(id NodeId, profile UserProfile) error {
+func (s *Storage) SaveProfile(id NodeId, profile UserProfile) error {
 	data, err := msgpack.Marshal(profile)
 	if err != nil {
 		return err
 	}
-	if s.loadProfile(id) == nil {
+	if s.LoadProfile(id) == nil {
 		_, err := s.exec(insertProfileStmt, id.String(), profile.Nickname, string(data))
 		return err
 	} else {

@@ -19,7 +19,7 @@ type statusHandler func(src NodeId, status UserStatus)
 // NewClient generates a Client with the given PrivateKey.
 func NewClient(key *PrivateKey, storage *Storage) *Client {
 	logger := newLogger()
-	roster, _ := storage.loadRoster()
+	roster, _ := storage.LoadRoster()
 
 	c := &Client{
 		node:    newNode(key, logger),
@@ -30,7 +30,7 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 		Logger:  logger,
 	}
 
-	profile := storage.loadProfile(c.id)
+	profile := storage.LoadProfile(c.id)
 	if profile != nil {
 		c.profile = *profile
 	}
@@ -63,7 +63,7 @@ func (c *Client) Run() {
 
 // Stops the current mainloop.
 func (c *Client) Close() {
-	c.storage.saveRoster(c.Roster)
+	c.storage.SaveRoster(c.Roster)
 	c.node.close()
 }
 
@@ -89,10 +89,10 @@ func (c *Client) HandleStatuses(handler func(src NodeId, status UserStatus)) {
 func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
 	c.node.send(dst, userProfileRequest{}, func(r interface{}) {
 		if p, ok := r.(userProfileResponse); ok {
-			c.storage.saveProfile(dst, p.Profile)
+			c.storage.SaveProfile(dst, p.Profile)
 			f(&p.Profile)
 		} else {
-			f(c.storage.loadProfile(dst))
+			f(c.storage.LoadProfile(dst))
 		}
 	})
 }
@@ -113,6 +113,6 @@ func (c *Client) Profile() UserProfile {
 }
 
 func (c *Client) SetProfile(profile UserProfile) {
-	c.storage.saveProfile(c.id, profile)
+	c.storage.SaveProfile(c.id, profile)
 	c.profile = profile
 }
