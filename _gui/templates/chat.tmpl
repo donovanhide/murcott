@@ -1,0 +1,191 @@
+<html>
+
+<head>
+  <title>murcott</title>
+  <link href='/css/style.css' rel='stylesheet' type='text/css'>
+  <link href='//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
+</head>
+
+<body>
+  <script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+  <script>
+    $(function() {
+      var funcid = 0;
+      var func = [];
+
+      var sock = new WebSocket('ws://' + location.host + '/ws/{{.}}');
+      sock.onopen = function() {
+        sock.onmessage = function(res) {
+          var data = JSON.parse(res.data);
+          var c = func[data["id"]];
+          if (typeof c == 'function') {
+            c.apply(null, data["result"]);
+          }
+        };
+
+        invoke("HandleLog", function(log) {
+          if (log.indexOf('[ERROR]') === 0) {
+            console.warn('%c' + log, 'color:red');
+          } else {
+            console.log(log);
+          }
+        });
+
+        invoke("HandleMessage", function(dst, msg) {
+          addChatLog(dst, msg);
+        });
+
+        invoke("GetRoster", function(r) {
+          for (i = 0; i < r.length; i++) {
+            addChatPage(r[i]);
+          }
+        });
+      };
+
+      function invoke() {
+        var args = Array.prototype.slice.call(arguments);
+        args.shift();
+        if (arguments.length > 0) {
+          for (i = 0; i < args.length; i++) {
+            if (typeof args[i] == 'function') {
+              func[funcid] = args[i];
+              args[i] = funcid;
+              funcid++;
+            }
+          }
+          var c = {
+            "jsonrpc": "2.0",
+            "method": arguments[0],
+            "params": args,
+            "id": 0
+          }
+          sock.send(JSON.stringify(c));
+        }
+      }
+
+      function activatePage(page) {
+        $('div.page').hide();
+        $('li.item a').removeClass('active');
+        $('div.page[page=' + page + ']').show();
+        $('li.item a[page=' + page + ']').addClass('active');
+      }
+
+      $(document).on("click", "li.item a[page]", function() {
+        activatePage($(this).attr('page'));
+      });
+
+      function addChatLog(id, msg) {
+        var $chatlog = $('div.page[page=' + id + '] ul.chatlog');
+        $chatlog.append($('<li>').append(msg));
+      }
+
+      function addChatPage(id) {
+        var $li = $('<li>')
+          .addClass('item')
+          .append(
+            $('<a>')
+            .attr('href', 'javascript:void(0)')
+            .attr('page', id)
+            .append(id)
+          );
+        $('#add-friend').before($li);
+
+        var $input = $('<input>')
+          .attr('id', 'chat-input')
+          .attr('type', 'text');
+        $input.keypress(function(e) {
+          if (e.keyCode == 13) {
+            var val = $(this).val();
+            if (val.length > 0) {
+              $(this).val("");
+              invoke('SendMessage', id, val, function(ok) {
+                if (ok) {
+                  addChatLog(id, val);
+                } else {
+                  addChatLog(id, '[Not Delivered] ' + val);
+                }
+              });
+            }
+          }
+        });
+
+        var $c = $('<div>')
+          .hide()
+          .addClass('page')
+          .attr('page', id)
+          .append($('<ul>').addClass('chatlog'))
+          .append($('<div>').attr('id', 'input-wrap').append($input));
+
+        $('#contents').append($c);
+      }
+
+      $('#add-friend a').click(function() {
+        var id = window.prompt("Please input ID", "");
+        if (id != null) {
+          addChatPage(id);
+          invoke('AddFriend', id);
+        }
+      });
+
+      $('#toggle-status').click(function() {
+        var $a = $(this);
+        if ($a.text() == 'Active') {
+          $a.text('Away');
+          invoke("SetStatus", "away");
+        } else {
+          $a.text('Active');
+          invoke("SetStatus", "active");
+        }
+      });
+
+      $('#settings').submit(function() {
+        return false;
+      });
+
+      $('input[name=avatar]').change(function(e) {
+        var files = e.target.files;
+      });
+
+      $('div.page').hide();
+      activatePage('settings');
+
+    });
+  </script>
+  <div id="sidebar">
+    <h2><i class="fa fa-heart"></i> Friends</h2>
+    <ul id="friend-list">
+      <li id="add-friend"><i class="fa fa-plus-circle"></i>  <a href="javascript:void(0)">Add friend</a>
+      </li>
+    </ul>
+    <h2><i class="fa fa-cogs"></i> Account</h2>
+    <ul>
+      <li>Status: <a id="toggle-status" href="javascript:void(0)">Active</a>
+      </li>
+      <li class="item"><a href="javascript:void(0)" page="settings">Settings</a>
+      </li>
+    </ul>
+  </div>
+  <div id="contents">
+    <div class="page" page="settings">
+      <form id="settings">
+        <ul>
+          <li>
+            <label>Nickname:
+              <input type="text" name="nickname">
+            </label>
+          </li>
+          <li>
+            <label>Avatar:
+              <input type="file" name="avatar">
+            </label>
+          </li>
+          <li>
+            <input id="submit-profile" type="submit" value="Update" width="100">
+          </li>
+        </ul>
+      </form>
+    </div>
+  </div>
+</body>
+
+</html>

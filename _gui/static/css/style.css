@@ -5,148 +5,153 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  height: 100%;
   width: 100%;
   font-size: 14px;
   font-family: sans-serif;
-  background-color: #FF9900;
+  background-color: #fefefe;
 }
 ::selection {
-  background-color: rgba(145, 178, 58, 0.8);
+  background-color: #ddd;
 }
-h4 {
-  margin: 0px;
-  font-family: 'Lobster', cursive;
-  font-size: 20px;
-}
-#wrap {
-  position: absolute;
-  width: 100%;
-}
-#main {
-  position: relative;
-  height: 100%;
-  width: 100%;
-}
-#head {
-  position: fixed;
-  background-color: rgba(0, 0, 0, 0.7);
-  height: 28px;
-  width: 100%;
-  color: rgba(145, 178, 58, 0.8);
+h1 {
+  color: #ff844f;
+  font-family: 'Lobster', sans-serif;
+  text-shadow: 0px 1px 1px #85442a;
   text-align: center;
+  margin-top: 40px;
+  margin-bottom: 80px;
+  font-size: 72px;
 }
-#console {
+ul#account-list {
+  list-style: none;
+  width: 320px;
+  margin: auto;
+  padding: 0;
+}
+ul#account-list li {
+  text-align: center;
+  margin: 12px;
+}
+ul#account-list a {
+  font-size: 12px;
+  color: #fff;
+  display: block;
+  padding: 12px;
+  text-decoration: none;
+  background-color: #ff844f;
+  border-radius: 4px;
+  box-shadow: 0px 1px 1px #9e3c33;
+}
+ul#account-list a:hover {
+  background-color: #d2613f;
+}
+ul#account-list li#new-account {
+  margin-top: 24px;
+  margin-bottom: 80px;
+}
+ul#account-list li#new-account a {
+  color: #ff844f;
+  box-shadow: 0px 1px 1px #bbb5b4;
+  background-color: #fff;
+}
+ul#account-list li#new-account a:hover {
+  background-color: #eee;
+}
+div#sidebar {
   position: fixed;
-  height: 36px;
-  bottom: 20px;
-  left: 220px;
-  right: 220px;
-  float: left;
-  background-color: rgba(255, 255, 255, 0.6);
+  left: 0px;
+  top: 0px;
+  bottom: 0px;
+  width: 240px;
+  background-color: #ff844f;
+  box-shadow: 0px 1px 1px #9e3c33;
 }
-#console_content {
-  position: relative;
-  margin-right: 0px;
-  margin-left: 0px;
+div#sidebar h2 {
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0px -1px 1px #85442a;
+  margin: 26px 26px 0px 26px;
+}
+div#sidebar ul {
+  list-style: none;
+  font-size: 12px;
   padding: 0px;
-  height: 100%;
-  border: 1px solid rgba(0, 0, 0, 0.5);
 }
-#console_content input {
-  margin: 0;
-  padding: 10px;
-  background: none;
-  border: none;
-  font-size: 16px;
-  width: 100%;
-  resize: none;
-  outline: none;
+div#sidebar ul > li {
+  padding: 0px 32px;
 }
-.button {
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  background-color: rgba(255, 255, 255, 0.1);
+div#sidebar ul > li.item {
+  font-size: 14px;
+  padding: 0px;
+}
+div#sidebar ul > li.item a:hover {
+  background-color: #d2613f;
+}
+div#sidebar ul > li.item a {
+  overflow: hidden;
   display: block;
   text-decoration: none;
+  padding: 8px 32px;
+  margin: 4px 0px;
+}
+div#sidebar ul > li.item a.active {
+  background-color: #d2613f;
+  color: #fff;
+}
+div#sidebar a {
   color: #000;
 }
-.selected {
-  background-color: rgba(255, 255, 255, 0.6);
+div#contents {
+  margin-left: 240px;
+  padding: 32px;
 }
-.button:hover {
-  background-color: rgba(255, 255, 255, 0.6);
+div#contents h2 {
+  text-shadow: 0px 1px 1px #85442a;
+  text-align: center;
 }
-#login-modal-wrap {
+div#input-wrap {
   position: fixed;
+  bottom: 20px;
+  left: 280px;
+  right: 40px;
+}
+ul.chatlog {
+  list-style: none;
+  margin-bottom: 40px;
+}
+input#chat-input {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #85442a;
+  resize: none;
   width: 100%;
-  top: 30%;
+  border-radius: 4px;
 }
-#login-modal {
-  position: relative;
-  width: 220px;
-  margin-top: -250px;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  margin: 0 auto;
+form#settings {
+  width: 100%;
+  margin: 20px auto;
 }
-#roster {
-  position: fixed;
-  width: 220px;
-  top: 30px;
-  bottom: 0px;
-  left: 0px;
+form#settings input {
+  width: 100%;
 }
-.node {
-  width: 200px;
-  height: 32px;
-  margin: 10px;
+form#settings input[type="text"] {
+  border: 1px solid #85442a;
+  padding: 4px;
+  border-radius: 4px;
 }
-.node-id {
-  width: 180px;
-  padding: 0px 6px;
-  line-height: 32px;
-  font-size: 8px;
-  color: black;
-  text-decoration: none;
+form#settings input[type="submit"] {
+  color: #fff;
+  padding: 12px;
+  background-color: #ff844f;
+  border-radius: 4px;
+  border: none;
+  box-shadow: 0px 1px 1px #9e3c33;
+  margin-top: 40px;
 }
-.add-node {
-  text-align: center;
-  width: 200px;
-  height: 32px;
-  margin: 10px;
-}
-.node-command {
-  padding: 8px 8px;
-  text-align: center;
-  display: block;
-  float: right;
-  color: black;
-  text-decoration: none;
-}
-.add-node i {
-  font-size: 24px;
-  margin: 6px;
-  color: rgba(255, 255, 255, 0.6);
-}
-#log {
-  position: absolute;
-  right: 220px;
-  left: 220px;
-  margin: 40px 0px 60px 0px;
-}
-#log ul {
+form#settings ul {
   list-style: none;
-  padding: 10px;
+  padding: 0px 100px;
 }
-#debuglog {
-  position: fixed;
-  width: 220px;
-  top: 30px;
-  bottom: 0px;
-  right: 0px;
-  overflow-y: auto;
-}
-#debuglog ul {
-  font-size: 10px;
-  list-style: none;
-  padding: 10px;
+form#settings ul > li {
+  margin: 12px 0px;
 }

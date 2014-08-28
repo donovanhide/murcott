@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
 	"github.com/h2so5/murcott"
 	"github.com/martini-contrib/render"
 	"net/http"
+	"reflect"
 )
 
 func main() {
@@ -16,7 +18,12 @@ func main() {
 	m.Get("/", func(r render.Render) {
 		r.HTML(200, "index", "")
 	})
-	m.Get("/ws", ws)
+
+	m.Get("/chat/:key", func(r render.Render, params martini.Params) {
+		r.HTML(200, "chat", params["key"])
+	})
+
+	m.Get("/ws/:key", ws)
 
 	m.Get("/newkey", func(r render.Render) {
 		key := murcott.GeneratePrivateKey()
@@ -80,6 +87,7 @@ func (s *Session) WriteProfile(id murcott.NodeId, profile murcott.UserProfile) {
 	})
 }
 
+/*
 func ws(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
@@ -178,4 +186,132 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c.Close()
+}
+*/
+
+type JsonRpc struct {
+	Version string        `json:"jsonrpc"`
+	Method  string        `json:"method"`
+	Params  []interface{} `json:"params"`
+	Id      int           `json:"id"`
+}
+
+type JsonRpcListener struct {
+	client *murcott.Client
+}
+
+func (r JsonRpcListener) HandleLog(c func(args []interface{})) {
+	go func() {
+		for {
+			var buf [1024]byte
+			len, err := r.client.Logger.Read(buf[:])
+			if err != nil {
+				return
+			}
+			c([]interface{}{string(buf[:len])})
+		}
+	}()
+}
+
+func (r JsonRpcListener) HandleMessage(c func(args []interface{})) {
+	r.client.HandleMessages(func(src murcott.NodeId, msg murcott.ChatMessage) {
+		c([]interface{}{src.String(), msg.Text()})
+	})
+}
+
+func (r JsonRpcListener) SendMessage(dst string, msg string, c func(args []interface{})) {
+	id, err := murcott.NewNodeIdFromString(dst)
+	if err == nil {
+		r.client.SendMessage(id, murcott.NewPlainChatMessage(msg), func(ok bool) {
+			c([]interface{}{ok})
+		})
+	} else {
+		c([]interface{}{false})
+	}
+}
+
+func (r JsonRpcListener) AddFriend(idstr string) {
+	id, err := murcott.NewNodeIdFromString(idstr)
+	if err == nil {
+		r.client.Roster.Add(id)
+	}
+}
+
+func (r JsonRpcListener) GetRoster(c func(args []interface{})) {
+	list := make([]string, 0)
+	for _, id := range r.client.Roster.List() {
+		list = append(list, id.String())
+	}
+	c([]interface{}{list})
+}
+
+func (r JsonRpcListener) SetStatus(status string) {
+	if status == murcott.StatusActive {
+		r.client.SetStatus(murcott.UserStatus{Type: murcott.StatusActive})
+	} else if status == murcott.StatusAway {
+		r.client.SetStatus(murcott.UserStatus{Type: murcott.StatusAway})
+	}
+}
+
+func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
+
+	var key *murcott.PrivateKey
+	key = murcott.PrivateKeyFromString(params["key"])
+	if key == nil {
+		key = murcott.GeneratePrivateKey()
+	}
+
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if err != nil {
+		return
+	}
+
+	storage := murcott.NewStorage(key.PublicKeyHash().String() + ".sqlite3")
+	c := murcott.NewClient(key, storage)
+	go c.Run()
+	defer c.Close()
+
+	v := reflect.ValueOf(JsonRpcListener{client: c})
+
+	for {
+		var rpc JsonRpc
+		err := ws.ReadJSON(&rpc)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
+		f := v.MethodByName(rpc.Method)
+
+		if f.IsValid() && f.Type().NumIn() == len(rpc.Params) {
+
+			var args []reflect.Value
+			for i, a := range rpc.Params {
+				var val reflect.Value
+				if f.Type().In(i).Kind() == reflect.Func {
+					if id, ok := a.(float64); ok {
+						val = reflect.ValueOf(func(args []interface{}) {
+							retrpc := struct {
+								Version string        `json:"jsonrpc"`
+								Result  []interface{} `json:"result"`
+								Id      int           `json:"id"`
+							}{
+								Version: "2.0",
+								Result:  args,
+								Id:      int(id),
+							}
+							ws.WriteJSON(retrpc)
+						})
+					} else {
+						val = reflect.ValueOf(func(args []interface{}) {})
+					}
+				} else {
+					val = reflect.ValueOf(a)
+				}
+				args = append(args, val)
+			}
+
+			f.Call(args)
+		}
+	}
 }

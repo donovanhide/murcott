@@ -11,208 +11,44 @@
   <script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
   <script>
     $(function() {
-      function startSesson(key) {
-        $('#roster').show();
-        $('#console').show();
-        var sock = new WebSocket('ws://' + location.host + '/ws?key=' + key);
-        sock.onopen = function() {
-          sock.onmessage = function(res) {
-            var data = JSON.parse(res.data);
-            console.log(data);
-            switch (data.type) {
-              case 'log':
-                var text = data.payload.what;
-                $('#debuglog ul').append($('<li>').append(text));
-                break;
-              case 'msg':
-                addMessageLog(data.src, data.payload);
-                break;
-              case 'roster':
-                for (i = 0; i < data.payload.length; i++) {
-                  addRosterButton(data.payload[i]);
-                }
-                break;
-            }
-          };
-        };
 
-        var Global = {};
-        Global.session_id = '';
-        Global.maeesage_log = {};
-
-        function setCurrentSessionID(id) {
-          Global.session_id = id;
-          $('#log ul').empty();
-          if (Global.maeesage_log[id] == undefined) {
-            Global.maeesage_log[id] = [];
-          }
-          var ary = Global.maeesage_log[id];
-          for (var i = 0; i < ary.length; ++i) {
-            $('#log ul').append($('<li>').append(ary[i]));
-          }
-          $(document).scrollTop(99999);
-        }
-
-        function addMessageLog(id, message) {
-          if (Global.maeesage_log[id] == undefined) {
-            Global.maeesage_log[id] = [];
-          }
-          Global.maeesage_log[id].push(message);
-          if (Global.session_id == id) {
-            $('#log ul').append($('<li>').append(message));
-            $(document).scrollTop(99999);
-          }
-        }
-
-        $('#console_content input').keypress(function(e) {
-          if (e.keyCode == 13) {
-            var val = $(this).val();
-            if (val.length > 0) {
-              $(this).val("");
-              addMessageLog(Global.session_id, val)
-              sock.send(JSON.stringify({
-                type: 'msg',
-                dst: Global.session_id,
-                payload: val
-              }));
-            }
-          }
-        });
-
-        function addRosterButton(id) {
-          var idlabel = $('<a>')
-            .addClass("node-id").append(id.substr(0, 20) + "...")
-            .attr('href', 'javascript:void(0)');
-          var rem = $('<a>')
-            .addClass("node-command")
-            .append('<i class="fa fa-trash-o"></i>')
-            .attr('href', 'javascript:void(0)')
-            .click(function() {
-              $(this).parent('.node').remove();
-              sock.send(JSON.stringify({
-                type: 'remove-friend',
-                payload: id
-              }));
-            });
-          var a = $('<a>')
-            .addClass('button')
-            .addClass('node')
-            .attr('href', 'javascript:void(0)')
-            .append(idlabel)
-            .append(rem)
-            .data('id', id);
-          $('#add-friend').before(a);
-          sock.send(JSON.stringify({
-            type: 'add-friend',
-            payload: id
-          }));
-        }
-
-        $('#add-friend').click(function() {
-          var id = window.prompt("Please input ID", "");
-          if (id != null) {
-            addRosterButton(id);
-          }
-        });
-
-        $(document).on('click', '#roster > .node > .node-id', function() {
-          $('.node').removeClass('selected');
-          var node = $(this).parent('.node');
-          node.addClass('selected');
-          console.log(node.data('id'))
-          setCurrentSessionID(node.data('id'));
-        });
-      }
-
-      function updateAccountList() {
-        var list = [];
-        $('#login-modal .node').each(function() {
-          list.push({
-            id: $(this).data('id'),
-            key: $(this).data('key')
-          })
-        })
-        localStorage["accounts"] = JSON.stringify(list)
-      }
-
+      var accounts = [];
       try {
-        var accounts = JSON.parse(localStorage["accounts"]);
-        console.log(accounts)
-        if (Array.isArray(accounts)) {
-          for (i = 0; i < accounts.length; i++) {
-            addAccountButton(accounts[i].id, accounts[i].key);
-          }
+        accounts = JSON.parse(localStorage["accounts"]);
+        for (i = 0; i < accounts.length; i++) {
+          addAccountButton(accounts[i].id, accounts[i].key);
         }
       } catch (e) {
         console.log(e)
       }
 
       function addAccountButton(id, key) {
-        var idlabel = $('<a>')
-          .addClass("node-id").append(id.substr(0, 20) + "...")
-          .attr('href', 'javascript:void(0)');
-        var rem = $('<a>')
-          .addClass("node-command")
-          .append('<i class="fa fa-trash-o"></i>')
-          .attr('href', 'javascript:void(0)')
-          .click(function() {
-            $(this).parent('.node').remove();
-            updateAccountList();
-          })
-        var br = $('<a>').css('clear', 'both');
-        var a = $('<a>')
-          .addClass('button')
-          .addClass('node')
-          .append(idlabel)
-          .append(rem)
-          .append(br)
-          .data('id', id)
-          .data('key', key);
-        var button = $('#add-account');
-        button.before(a);
+        $button = $('<li>')
+          .append(
+            $('<a>')
+            .attr('href', '/chat/' + key)
+            .append(id));
+        $('#new-account').before($button);
       }
 
-      $(document).on('click', '#login-modal > .node > .node-id', function() {
-        $("#login-modal").hide()
-        startSesson($(this).parent(".node").data('key'))
-      });
-
-      $('#add-account').click(function() {
+      $('#new-account a').click(function() {
         $.getJSON("/newkey", function(data) {
-          addAccountButton(data.id, data.key)
-          updateAccountList();
-        })
+          addAccountButton(data.id);
+          accounts.push(data);
+          localStorage["accounts"] = JSON.stringify(accounts);
+        });
       });
     });
   </script>
-  <div id="head">
-    <h4>murcott</h4>
-  </div>
-  <div id="login-modal-wrap">
-    <div id="login-modal">
-      <a id="add-account" class="add-node button" href="javascript:void(0)">
-        <i class="fa fa-plus"></i>
-      </a>
-    </div>
-  </div>
-  <div id="roster" style="display:none;">
-    <a id="add-friend" class="add-node button" href="javascript:void(0)">
-      <i class="fa fa-plus"></i>
-    </a>
-  </div>
-  <div id="log">
-    <ul>
-    </ul>
-  </div>
-  <div id="console">
-    <div id="console_content">
-      <input type="text" placeholder="..." autocomplete="off"></input>
-    </div>
-  </div>
-  <div id="debuglog">
-    <ul>
-    </ul>
-  </div>
+  <h1>murcott</h1>
+  <ul id="account-list">
+    <li id="new-account">
+      <a href="javascript:void(0)"><i class="fa fa-plus-circle"></i> New account</a>
+    </li>
+  </ul>
+  <a href="https://github.com/h2so5/murcott">
+    <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://bit.ly/1lgtck8" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_white_ffffff.png">
+  </a>
 </body>
 
 </html>
