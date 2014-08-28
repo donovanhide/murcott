@@ -18,12 +18,12 @@ func TestStorageRoster(t *testing.T) {
 		},
 	}
 
-	err := s.saveRoster(roster)
+	err := s.SaveRoster(roster)
 	if err != nil {
 		t.Errorf("saveRoster error: %v", err)
 	}
 
-	r, err := s.loadRoster()
+	r, err := s.LoadRoster()
 	if err != nil {
 		t.Errorf("loadRoster error: %v", err)
 	}
@@ -51,9 +51,9 @@ func TestStorageProfile(t *testing.T) {
 		},
 	}
 
-	s.saveProfile(id, profile)
+	s.SaveProfile(id, profile)
 
-	p := s.loadProfile(id)
+	p := s.LoadProfile(id)
 	if p == nil {
 		t.Errorf("profile node found")
 		return
@@ -73,9 +73,9 @@ func TestStorageProfile(t *testing.T) {
 		"Timezone": "UTC+9",
 	}
 
-	s.saveProfile(id, profile)
+	s.SaveProfile(id, profile)
 
-	p = s.loadProfile(id)
+	p = s.LoadProfile(id)
 	if p == nil {
 		t.Errorf("profile node found")
 		return
