@@ -97,6 +97,10 @@ func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
 	})
 }
 
+func (c *Client) Id() NodeId {
+	return c.id
+}
+
 func (c *Client) Status() UserStatus {
 	return c.status
 }

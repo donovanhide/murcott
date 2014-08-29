@@ -54,147 +54,6 @@ type Session struct {
 	ws     *websocket.Conn
 }
 
-func (s *Session) WriteLog(msg string) {
-	s.ws.WriteJSON(Message{
-		MsgType: "log",
-		Payload: struct {
-			What string `json:"what"`
-		}{msg},
-	})
-}
-
-func (s *Session) WriteMessage(src murcott.NodeId, payload interface{}) {
-	s.ws.WriteJSON(Message{
-		MsgType: "msg",
-		Src:     src.String(),
-		Payload: payload,
-	})
-}
-
-func (s *Session) WriteRoster(roster *murcott.Roster) {
-	list := make([]string, 0)
-	for _, id := range roster.List() {
-		list = append(list, id.String())
-	}
-	s.ws.WriteJSON(Message{
-		MsgType: "roster",
-		Payload: list,
-	})
-}
-
-func (s *Session) WriteProfile(id murcott.NodeId, profile murcott.UserProfile) {
-	s.ws.WriteJSON(Message{
-		MsgType: "profile",
-		Src:     id.String(),
-		Payload: map[string]interface{}{
-			"nickname": profile.Nickname,
-			"ext":      profile.Extension,
-		},
-	})
-}
-
-/*
-func ws(w http.ResponseWriter, r *http.Request) {
-
-	r.ParseForm()
-
-	var key *murcott.PrivateKey
-	if len(r.Form["key"]) == 1 {
-		keystr := r.Form["key"][0]
-		key = murcott.PrivateKeyFromString(keystr)
-	}
-	if key == nil {
-		key = murcott.GeneratePrivateKey()
-	}
-
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if err != nil {
-		return
-	}
-
-	storage := murcott.NewStorage(key.PublicKeyHash().String() + ".sqlite3")
-	c := murcott.NewClient(key, storage)
-
-	s := Session{
-		client: c,
-		ws:     ws,
-	}
-
-	go func() {
-		for {
-			var buf [1024]byte
-			len, _ := c.Logger.Read(buf[:])
-			s.WriteLog(string(buf[:len]))
-		}
-	}()
-
-	c.HandleMessages(func(src murcott.NodeId, msg murcott.ChatMessage) {
-		s.WriteMessage(src, msg.Text())
-	})
-
-	go c.Run()
-
-	c.SetStatus(murcott.UserStatus{
-		Type:    murcott.StatusActive,
-		Message: ":-)",
-	})
-
-	s.WriteRoster(s.client.Roster)
-
-	for _, id := range c.Roster.List() {
-		c.RequestProfile(id, func(p *murcott.UserProfile) {
-			if p != nil {
-				s.WriteProfile(id, *p)
-			}
-		})
-	}
-
-	for {
-		var msg Message
-		err := s.ws.ReadJSON(&msg)
-		if err != nil {
-			break
-		}
-		switch msg.MsgType {
-		case "add-friend":
-			if str, ok := msg.Payload.(string); ok {
-				id, err := murcott.NewNodeIdFromString(str)
-				if err == nil {
-					s.client.Roster.Add(id)
-					c.RequestProfile(id, func(p *murcott.UserProfile) {
-						if p != nil {
-							s.WriteProfile(id, *p)
-						}
-					})
-				}
-			}
-		case "remove-friend":
-			if str, ok := msg.Payload.(string); ok {
-				id, err := murcott.NewNodeIdFromString(str)
-				if err == nil {
-					s.client.Roster.Remove(id)
-				}
-			}
-		case "msg":
-			id, err := murcott.NewNodeIdFromString(msg.Dst)
-			if err == nil {
-				if body, ok := msg.Payload.(string); ok {
-					s.client.SendMessage(id, murcott.NewPlainChatMessage(body), func(ok bool) {
-						if ok {
-							s.WriteLog("ok")
-						} else {
-							s.WriteLog("timeout")
-						}
-					})
-				}
-			}
-		}
-	}
-
-	c.Close()
-}
-*/
-
 type JsonRpc struct {
 	Version string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
@@ -258,11 +117,28 @@ func (r JsonRpcListener) GetProfile(c func(args []interface{})) {
 	if profile.Avatar.Image != nil {
 		png.Encode(encoder, profile.Avatar.Image)
 	}
-	c([]interface{}{profile.Nickname, string(buf.Bytes())})
+	c([]interface{}{r.client.Id().String(), profile.Nickname, string(buf.Bytes())})
+}
+
+func (r JsonRpcListener) GetFriendProfile(idstr string, c func(args []interface{})) {
+	id, err := murcott.NewNodeIdFromString(idstr)
+	if err != nil {
+		return
+	}
+	r.client.RequestProfile(id, func(profile *murcott.UserProfile) {
+		if profile != nil {
+			var buf bytes.Buffer
+			encoder := base64.NewEncoder(base64.StdEncoding, &buf)
+			if profile.Avatar.Image != nil {
+				png.Encode(encoder, profile.Avatar.Image)
+			}
+			c([]interface{}{profile.Nickname, string(buf.Bytes())})
+		}
+	})
 }
 
 func (r JsonRpcListener) SetProfile(nickname string, avatar string) {
-	var profile murcott.UserProfile
+	profile := r.client.Profile()
 	profile.Nickname = nickname
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(avatar))
 	m, _, err := image.Decode(reader)

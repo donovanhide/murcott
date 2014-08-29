@@ -35,12 +35,16 @@
           addChatLog(dst, msg);
         });
 
-        invoke("GetProfile", function(nickname, avatar) {
-          $('#settings input[name=nickname]').val(nickname);
+        invoke("GetProfile", function(id, nickname, avatar) {
+          $('#settings input[name=nickname]').val(nickname)
+          $("li.item a[page=settings]").css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
+          $('.my-id').empty().append(id);
           $('.my-nickname').empty().append(nickname);
-          $('.my-avatar')
-            .attr('src', 'data:image/png;base64,' + avatar)
-            .data('src', 'data:image/png;base64,' + avatar);
+          if (avatar.length > 0) {
+            $('.my-avatar')
+              .attr('src', 'data:image/png;base64,' + avatar)
+              .data('src', 'data:image/png;base64,' + avatar);
+          }
         });
 
         invoke("GetRoster", function(r) {
@@ -125,6 +129,13 @@
           .append($('<div>').attr('id', 'input-wrap').append($input));
 
         $('#contents').append($c);
+
+        invoke("GetFriendProfile", id, function(nickname, avatar) {
+          $("li.item a[page=" + id + "]")
+            .empty()
+            .append(nickname)
+            .css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
+        });
       }
 
       $('#add-friend a').click(function() {
@@ -187,12 +198,6 @@
     </ul>
     <h2><i class="fa fa-cogs"></i> Account</h2>
     <ul>
-      <li style="vertical-align: middle;">
-        <img class="my-avatar" width="32" height="32">
-        <a class="my-nickname"></a>
-      </li>
-      <li>Status: <a id="toggle-status" href="javascript:void(0)">Active</a>
-      </li>
       <li class="item"><a href="javascript:void(0)" page="settings">Settings</a>
       </li>
     </ul>
