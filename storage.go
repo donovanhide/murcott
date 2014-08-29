@@ -126,7 +126,7 @@ func (s *Storage) LoadProfile(id NodeId) *UserProfile {
 		return nil
 	} else {
 		var profile UserProfile
-		var data string
+		var data []byte
 		row.Scan(&data)
 		err := msgpack.Unmarshal([]byte(data), &profile)
 		if err != nil {
@@ -143,10 +143,10 @@ func (s *Storage) SaveProfile(id NodeId, profile UserProfile) error {
 		return err
 	}
 	if s.LoadProfile(id) == nil {
-		_, err := s.exec(insertProfileStmt, id.String(), profile.Nickname, string(data))
+		_, err := s.exec(insertProfileStmt, id.String(), profile.Nickname, data)
 		return err
 	} else {
-		_, err := s.exec(updateProfileStmt, profile.Nickname, string(data), id.String())
+		_, err := s.exec(updateProfileStmt, profile.Nickname, data, id.String())
 		return err
 	}
 }
