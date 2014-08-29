@@ -150,7 +150,7 @@ form#settings input[type="submit"] {
 }
 form#settings ul {
   list-style: none;
-  padding: 0px 100px;
+  padding: 0px 120px;
 }
 form#settings ul > li {
   margin: 12px 0px;

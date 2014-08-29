@@ -35,6 +35,14 @@
           addChatLog(dst, msg);
         });
 
+        invoke("GetProfile", function(nickname, avatar) {
+          $('#settings input[name=nickname]').val(nickname);
+          $('.my-nickname').empty().append(nickname);
+          $('.my-avatar')
+            .attr('src', 'data:image/png;base64,' + avatar)
+            .data('src', 'data:image/png;base64,' + avatar);
+        });
+
         invoke("GetRoster", function(r) {
           for (i = 0; i < r.length; i++) {
             addChatPage(r[i]);
@@ -139,11 +147,31 @@
       });
 
       $('#settings').submit(function() {
+        var nickname = $('#settings input[name=nickname]').val();
+        var data = $('#settings .my-avatar').data('src');
+        var avatar = data.substr(data.indexOf(',') + 1);
+        invoke('SetProfile', nickname, avatar);
         return false;
       });
 
-      $('input[name=avatar]').change(function(e) {
+      $('#settings input[name=avatar]').change(function(e) {
         var files = e.target.files;
+        for (var i = 0, f; f = files[i]; i++) {
+          if (f.type.match('image.*')) {
+            var reader = new FileReader();
+
+            var $input = $(this);
+            reader.onload = (function(theFile) {
+              return function(e) {
+                var data = e.target.result;
+                $('#settings .my-avatar').attr('src', data);
+                $('#settings .my-avatar').data('src', data);
+              };
+            })(f);
+
+            reader.readAsDataURL(f);
+          }
+        }
       });
 
       $('div.page').hide();
@@ -159,6 +187,10 @@
     </ul>
     <h2><i class="fa fa-cogs"></i> Account</h2>
     <ul>
+      <li style="vertical-align: middle;">
+        <img class="my-avatar" width="32" height="32">
+        <a class="my-nickname"></a>
+      </li>
       <li>Status: <a id="toggle-status" href="javascript:void(0)">Active</a>
       </li>
       <li class="item"><a href="javascript:void(0)" page="settings">Settings</a>
@@ -176,6 +208,7 @@
           </li>
           <li>
             <label>Avatar:
+              <img class="my-avatar" width="16" height="16">
               <input type="file" name="avatar">
             </label>
           </li>

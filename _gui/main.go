@@ -1,13 +1,19 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/base64"
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
 	"github.com/h2so5/murcott"
 	"github.com/martini-contrib/render"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	"image/png"
 	"net/http"
 	"reflect"
+	"strings"
 )
 
 func main() {
@@ -245,6 +251,27 @@ func (r JsonRpcListener) GetRoster(c func(args []interface{})) {
 	c([]interface{}{list})
 }
 
+func (r JsonRpcListener) GetProfile(c func(args []interface{})) {
+	profile := r.client.Profile()
+	var buf bytes.Buffer
+	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
+	if profile.Avatar.Image != nil {
+		png.Encode(encoder, profile.Avatar.Image)
+	}
+	c([]interface{}{profile.Nickname, string(buf.Bytes())})
+}
+
+func (r JsonRpcListener) SetProfile(nickname string, avatar string) {
+	var profile murcott.UserProfile
+	profile.Nickname = nickname
+	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(avatar))
+	m, _, err := image.Decode(reader)
+	if err == nil {
+		profile.Avatar = murcott.UserAvatar{m}
+	}
+	r.client.SetProfile(profile)
+}
+
 func (r JsonRpcListener) SetStatus(status string) {
 	if status == murcott.StatusActive {
 		r.client.SetStatus(murcott.UserStatus{Type: murcott.StatusActive})
@@ -277,7 +304,6 @@ func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
 		var rpc JsonRpc
 		err := ws.ReadJSON(&rpc)
 		if err != nil {
-			fmt.Println(err)
 			break
 		}
 
