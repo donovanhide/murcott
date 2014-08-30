@@ -13,7 +13,9 @@
       var funcid = 0;
       var func = [];
 
-      var sock = new WebSocket('ws://' + location.host + '/ws/{{.}}');
+      var info = JSON.parse('{{.}}');
+
+      var sock = new WebSocket('ws://' + location.host + '/ws/' + info.key);
       sock.onopen = function() {
         sock.onmessage = function(res) {
           var data = JSON.parse(res.data);
@@ -32,20 +34,10 @@
         });
 
         invoke("HandleMessage", function(dst, msg) {
-          addChatLog(dst, msg);
+          addChatLog(dst, dst, msg);
         });
 
-        invoke("GetProfile", function(id, nickname, avatar) {
-          $('#settings input[name=nickname]').val(nickname)
-          $("li.item a[page=settings]").css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
-          $('.my-id').empty().append(id);
-          $('.my-nickname').empty().append(nickname);
-          if (avatar.length > 0) {
-            $('.my-avatar')
-              .attr('src', 'data:image/png;base64,' + avatar)
-              .data('src', 'data:image/png;base64,' + avatar);
-          }
-        });
+        updateSelfProfile();
 
         invoke("GetRoster", function(r) {
           for (i = 0; i < r.length; i++) {
@@ -53,6 +45,21 @@
           }
         });
       };
+
+      function updateSelfProfile() {
+        invoke("GetProfile", function(id, nickname, avatar) {
+          $('#settings input[name=nickname]').val(nickname)
+          $("li.item a[page=settings]").css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
+          $('a.nickname[user-id=self]')
+            .empty()
+            .append(nickname)
+          if (avatar.length > 0) {
+            $('.my-avatar')
+              .attr('src', 'data:image/png;base64,' + avatar)
+              .data('src', 'data:image/png;base64,' + avatar);
+          }
+        });
+      }
 
       function invoke() {
         var args = Array.prototype.slice.call(arguments);
@@ -86,9 +93,24 @@
         activatePage($(this).attr('page'));
       });
 
-      function addChatLog(id, msg) {
+      function addChatLog(id, from, msg) {
         var $chatlog = $('div.page[page=' + id + '] ul.chatlog');
+        var lastid = $chatlog.find('h4:last').data('id');
+        var name = from;
+        if (info.id == from) {
+          name = $('a.nickname[user-id=self]:first').text();
+        } else {
+          name = $('a.nickname[user-id=' + from + ']:first').text();
+        }
+        if (lastid != from) {
+          $chatlog.append(
+            $('<li>').append(
+              $('<h4>').append(name).data('id', from)
+            )
+          );
+        }
         $chatlog.append($('<li>').append(msg));
+        $(document).scrollTop(9999999);
       }
 
       function addChatPage(id) {
@@ -98,7 +120,12 @@
             $('<a>')
             .attr('href', 'javascript:void(0)')
             .attr('page', id)
-            .append(id)
+            .append(
+              $('<a>')
+              .addClass('nickname')
+              .attr('user-id', id)
+              .append(id)
+            )
           );
         $('#add-friend').before($li);
 
@@ -112,9 +139,9 @@
               $(this).val("");
               invoke('SendMessage', id, val, function(ok) {
                 if (ok) {
-                  addChatLog(id, val);
+                  addChatLog(id, info.id, val);
                 } else {
-                  addChatLog(id, '[Not Delivered] ' + val);
+                  addChatLog(id, info.id, '[Not Delivered] ' + val);
                 }
               });
             }
@@ -125,15 +152,25 @@
           .hide()
           .addClass('page')
           .attr('page', id)
+          .append($('<h3>')
+            .append('Conversation with ')
+            .append(
+              $('<a>')
+              .addClass('nickname')
+              .attr('user-id', id)
+              .append(id)
+            )
+          )
           .append($('<ul>').addClass('chatlog'))
           .append($('<div>').attr('id', 'input-wrap').append($input));
 
         $('#contents').append($c);
 
         invoke("GetFriendProfile", id, function(nickname, avatar) {
-          $("li.item a[page=" + id + "]")
+          $('a.nickname[user-id=' + id + ']')
             .empty()
             .append(nickname)
+          $("li.item a[page=" + id + "]")
             .css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
         });
       }
@@ -161,7 +198,14 @@
         var nickname = $('#settings input[name=nickname]').val();
         var data = $('#settings .my-avatar').data('src');
         var avatar = data.substr(data.indexOf(',') + 1);
-        invoke('SetProfile', nickname, avatar);
+        invoke('SetProfile', nickname, avatar, function() {
+          updateSelfProfile();
+          var $button = $('#submit-profile');
+          $button.val('OK');
+          setTimeout(function() {
+            $button.val('Update');
+          }, 500);
+        });
         return false;
       });
 
@@ -198,12 +242,16 @@
     </ul>
     <h2><i class="fa fa-cogs"></i> Account</h2>
     <ul>
+      <li>
+        <a class="nickname" user-id="self"></a>
+      </li>
       <li class="item"><a href="javascript:void(0)" page="settings">Settings</a>
       </li>
     </ul>
   </div>
   <div id="contents">
     <div class="page" page="settings">
+      <h3>Settings</h3>
       <form id="settings">
         <ul>
           <li>

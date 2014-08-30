@@ -26,7 +26,7 @@
         $button = $('<li>')
           .append(
             $('<a>')
-            .attr('href', '/chat/' + key)
+            .attr('href', '/chat/' + id + '/' + key)
             .append(id));
         $('#new-account').before($button);
       }

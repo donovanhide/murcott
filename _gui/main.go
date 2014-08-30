@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
 	"github.com/h2so5/murcott"
@@ -25,8 +26,9 @@ func main() {
 		r.HTML(200, "index", "")
 	})
 
-	m.Get("/chat/:key", func(r render.Render, params martini.Params) {
-		r.HTML(200, "chat", params["key"])
+	m.Get("/chat/:id/:key", func(r render.Render, params martini.Params) {
+		j, _ := json.Marshal(params)
+		r.HTML(200, "chat", string(j))
 	})
 
 	m.Get("/ws/:key", ws)
@@ -137,7 +139,7 @@ func (r JsonRpcListener) GetFriendProfile(idstr string, c func(args []interface{
 	})
 }
 
-func (r JsonRpcListener) SetProfile(nickname string, avatar string) {
+func (r JsonRpcListener) SetProfile(nickname string, avatar string, c func(args []interface{})) {
 	profile := r.client.Profile()
 	profile.Nickname = nickname
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(avatar))
@@ -146,6 +148,7 @@ func (r JsonRpcListener) SetProfile(nickname string, avatar string) {
 		profile.Avatar = murcott.UserAvatar{m}
 	}
 	r.client.SetProfile(profile)
+	c([]interface{}{})
 }
 
 func (r JsonRpcListener) SetStatus(status string) {
