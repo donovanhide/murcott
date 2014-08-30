@@ -13,6 +13,11 @@ const (
 	insertIdToRosterStmt
 	clearRosterStmt
 
+	createBlockListTableStmt
+	loadBlockListStmt
+	insertIdToBlockListStmt
+	clearBlockListStmt
+
 	createProfileTableStmt
 	loadProfileStmt
 	insertProfileStmt
@@ -45,6 +50,13 @@ func (s *Storage) init() {
 	s.prepare(loadRosterStmt, "SELECT id FROM roster")
 	s.prepare(insertIdToRosterStmt, "INSERT INTO roster (id) VALUES(?)")
 	s.prepare(clearRosterStmt, "DELETE FROM roster")
+
+	s.prepare(createBlockListTableStmt, "CREATE TABLE blocklist (id TEXT)")
+	s.exec(createBlockListTableStmt)
+
+	s.prepare(loadBlockListStmt, "SELECT id FROM blocklist")
+	s.prepare(insertIdToBlockListStmt, "INSERT INTO blocklist (id) VALUES(?)")
+	s.prepare(clearBlockListStmt, "DELETE FROM blocklist")
 
 	s.prepare(createProfileTableStmt, "CREATE TABLE profile (id TEXT, nickname TEXT, data BLOB)")
 	s.exec(createProfileTableStmt)
@@ -149,6 +161,39 @@ func (s *Storage) SaveProfile(id NodeId, profile UserProfile) error {
 		_, err := s.exec(updateProfileStmt, profile.Nickname, data, id.String())
 		return err
 	}
+}
+
+func (s *Storage) LoadBlockList() (*BlockList, error) {
+	var list []NodeId
+	rows, err := s.query(loadBlockListStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		rows.Scan(&id)
+		nodeid, err := NewNodeIdFromString(id)
+		if err == nil {
+			list = append(list, nodeid)
+		}
+	}
+	return &BlockList{list: list}, nil
+}
+
+func (s *Storage) SaveBlockList(blocklist *BlockList) error {
+	_, err := s.exec(clearBlockListStmt)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range blocklist.list {
+		_, err := s.exec(insertIdToBlockListStmt, id.String())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Storage) close() {

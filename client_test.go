@@ -53,6 +53,37 @@ func TestClientMessage(t *testing.T) {
 	client2.Close()
 }
 
+func TestClientBlockList(t *testing.T) {
+	key1 := GeneratePrivateKey()
+	key2 := GeneratePrivateKey()
+	client1 := NewClient(key1, NewStorage(":memory:"))
+	client2 := NewClient(key2, NewStorage(":memory:"))
+
+	success := make(chan bool)
+	plainmsg := NewPlainChatMessage("Hello")
+
+	client2.BlockList.Add(key1.PublicKeyHash())
+
+	client1.SendMessage(key2.PublicKeyHash(), plainmsg, func(ok bool) {
+		if ok {
+			t.Errorf("BlockList does not work")
+			success <- false
+		} else {
+			success <- true
+		}
+	})
+
+	go client1.Run()
+	go client2.Run()
+
+	if !<-success {
+		return
+	}
+
+	client1.Close()
+	client2.Close()
+}
+
 func TestClientProfile(t *testing.T) {
 	const data = `iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAADw0lEQVRIx+1WXU
 xTZxjuhTe7UTMSMy6mA5wttJRz+p2/7/yXnpYON3SAP9MRiBFZwtgWxcRE1Bm3sC0jcz+GLLohm8sM
