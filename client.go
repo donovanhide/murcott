@@ -54,7 +54,6 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 			if c.statusHandler != nil {
 				c.statusHandler(src, msg.(userPresence).Status)
 			}
-			c.node.send(src, userPresence{Status: c.status}, nil)
 		}
 		return nil
 	})
