@@ -125,6 +125,8 @@ div#input-wrap {
 ul.chatlog {
   list-style: none;
   margin-bottom: 40px;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 input#chat-input {
   padding: 8px;
@@ -145,6 +147,13 @@ form#settings input[type="text"] {
   border: 1px solid #85442a;
   padding: 4px;
   border-radius: 4px;
+}
+form#settings textarea {
+  border: 1px solid #85442a;
+  padding: 4px;
+  border-radius: 4px;
+  width: 100%;
+  height: 100px;
 }
 form#settings input[type="submit"] {
   color: #fff;

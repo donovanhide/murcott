@@ -8,6 +8,7 @@
 
 <body>
   <script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+  <script src='//cdnjs.cloudflare.com/ajax/libs/sugar/1.4.1/sugar.min.js'></script>
   <script>
     $(function() {
       var funcid = 0;
@@ -48,11 +49,11 @@
 
       function updateSelfProfile() {
         invoke("GetProfile", function(id, nickname, avatar) {
-          $('#settings input[name=nickname]').val(nickname)
+          $('#settings input[name=nickname]').val(nickname);
           $("li.item a[page=settings]").css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
           $('a.nickname[user-id=self]')
             .empty()
-            .append(nickname)
+            .append(nickname.escapeHTML())
           if (avatar.length > 0) {
             $('.my-avatar')
               .attr('src', 'data:image/png;base64,' + avatar)
@@ -109,7 +110,7 @@
             )
           );
         }
-        $chatlog.append($('<li>').append(msg));
+        $chatlog.append($('<li>').append(msg.escapeHTML()));
         $(document).scrollTop(9999999);
       }
 
