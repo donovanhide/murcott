@@ -11,6 +11,40 @@
   <script src='//cdnjs.cloudflare.com/ajax/libs/sugar/1.4.1/sugar.min.js'></script>
   <script>
     $(function() {
+      var subscribers = {};
+      var queue = {};
+
+      window.publish = function(key, data) {
+        var ary = subscribers[key];
+        if (Array.isArray(ary)) {
+          for (var i = 0; i < ary.length; i++) {
+            var c = ary[i];
+            if (typeof c == 'function') {
+              c(data);
+            }
+          }
+        }
+        if (!Array.isArray(queue[key])) {
+          queue[key] = [];
+        }
+        queue[key].push(data);
+      }
+
+      window.subscribe = function(key, callback) {
+        if (!Array.isArray(subscribers[key])) {
+          subscribers[key] = new Array();
+        }
+        if (Array.isArray(queue[key])) {
+          var ary = queue[key];
+          for (var i = 0; i < ary.length; i++) {
+            callback(ary[i]);
+          }
+        }
+        subscribers[key].push(callback);
+      }
+    });
+
+    $(function() {
       var funcid = 0;
       var func = [];
 
@@ -49,18 +83,31 @@
 
       function updateSelfProfile() {
         invoke("GetProfile", function(id, nickname, avatar) {
-          $('#settings input[name=nickname]').val(nickname);
-          $("li.item a[page=settings]").css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
-          $('a.nickname[user-id=self]')
-            .empty()
-            .append(nickname.escapeHTML())
-          if (avatar.length > 0) {
-            $('.my-avatar')
-              .attr('src', 'data:image/png;base64,' + avatar)
-              .data('src', 'data:image/png;base64,' + avatar);
-          }
+          publish('nickname_' + id, nickname);
+          publish('avatar_' + id, avatar);
         });
       }
+
+      function updateFriendProfile(id) {
+        invoke("GetFriendProfile", id, function(nickname, avatar) {
+          publish('nickname_' + id, nickname);
+          publish('avatar_' + id, avatar);
+        });
+      }
+
+      subscribe('nickname_' + info.id, function(nickname) {
+        $('#settings input[name=nickname]').val(nickname);
+      });
+
+      subscribe('avatar_' + info.id, function(avatar) {
+        $("li.item a[page=settings]")
+          .css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
+        if (avatar.length > 0) {
+          $('.my-avatar')
+            .attr('src', 'data:image/png;base64,' + avatar)
+            .data('src', 'data:image/png;base64,' + avatar);
+        }
+      });
 
       function invoke() {
         var args = Array.prototype.slice.call(arguments);
@@ -97,44 +144,56 @@
       function addChatLog(id, from, msg) {
         var $chatlog = $('div.page[page=' + id + '] ul.chatlog');
         var lastid = $chatlog.find('h4:last').data('id');
-        var name = from;
-        if (info.id == from) {
-          name = $('a.nickname[user-id=self]:first').text();
-        } else {
-          name = $('a.nickname[user-id=' + from + ']:first').text();
-        }
+
         if (lastid != from) {
-          $chatlog.append(
-            $('<li>').append(
-              $('<h4>').append(name).data('id', from)
-            )
-          );
+          $image = $('<img>').attr('width', '32').attr('height', '32');
+          $from = $('<h4>').append($image).append(from).data('id', from);
+
+          subscribe('nickname_' + from, function(nickname) {
+            $from.empty().append($image).append(nickname.escapeHTML());
+          });
+
+          subscribe('avatar_' + from, function(avatar) {
+            if (avatar.length > 0) {
+              $image.attr('src', 'data:image/png;base64,' + avatar);
+            }
+          });
+
+          $chatlog.append($('<li>').append($from));
         }
         $chatlog.append($('<li>').append(msg.escapeHTML()));
         $(document).scrollTop(9999999);
       }
 
       function addChatPage(id) {
+        var $nick = $('<a>')
+          .addClass('nickname')
+          .attr('user-id', id)
+          .append(id);
+
         var $li = $('<li>')
           .addClass('item')
           .append(
             $('<a>')
             .attr('href', 'javascript:void(0)')
             .attr('page', id)
-            .append(
-              $('<a>')
-              .addClass('nickname')
-              .attr('user-id', id)
-              .append(id)
-            )
+            .append($nick)
           );
+
         $('#add-friend').before($li);
+
+        subscribe('nickname_' + id, function(nickname) {
+          $nick.empty().append(nickname.escapeHTML());
+        });
+        subscribe('avatar_' + id, function(avatar) {
+          $li.children('a').css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
+        });
 
         var $input = $('<input>')
           .attr('id', 'chat-input')
           .attr('type', 'text');
         $input.keypress(function(e) {
-          if (e.keyCode == 13) {
+          if (e.keyCode == 13 && !e.shiftKey) {
             var val = $(this).val();
             if (val.length > 0) {
               $(this).val("");
@@ -146,7 +205,17 @@
                 }
               });
             }
+            return false;
           }
+        });
+
+        var $nickname = $('<a>')
+          .addClass('nickname')
+          .attr('user-id', id)
+          .append(id);
+
+        subscribe('nickname_' + id, function(nickname) {
+          $nickname.empty().append(nickname.escapeHTML());
         });
 
         var $c = $('<div>')
@@ -155,25 +224,13 @@
           .attr('page', id)
           .append($('<h3>')
             .append('Conversation with ')
-            .append(
-              $('<a>')
-              .addClass('nickname')
-              .attr('user-id', id)
-              .append(id)
-            )
+            .append($nickname)
           )
           .append($('<ul>').addClass('chatlog'))
           .append($('<div>').attr('id', 'input-wrap').append($input));
 
         $('#contents').append($c);
-
-        invoke("GetFriendProfile", id, function(nickname, avatar) {
-          $('a.nickname[user-id=' + id + ']')
-            .empty()
-            .append(nickname)
-          $("li.item a[page=" + id + "]")
-            .css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
-        });
+        updateFriendProfile(id);
       }
 
       $('#add-friend a').click(function() {
@@ -243,9 +300,6 @@
     </ul>
     <h2><i class="fa fa-cogs"></i> Account</h2>
     <ul>
-      <li>
-        <a class="nickname" user-id="self"></a>
-      </li>
       <li class="item"><a href="javascript:void(0)" page="settings">Settings</a>
       </li>
     </ul>

@@ -22,6 +22,10 @@ h1 {
   margin-bottom: 80px;
   font-size: 72px;
 }
+h4 img {
+  vertical-align: middle;
+  margin-right: 8px;
+}
 ul#account-list {
   list-style: none;
   width: 320px;
