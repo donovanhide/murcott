@@ -120,6 +120,9 @@ div#contents h3 {
   text-align: center;
   color: #aaa;
 }
+div#contents a {
+  color: #aaa;
+}
 div#input-wrap {
   position: fixed;
   bottom: 20px;

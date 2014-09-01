@@ -85,6 +85,10 @@
             return [];
           }
         }
+        window.clearRecordedLog = function(id) {
+          log[id] = [];
+          localStorage["chatlog_" + info.id] = JSON.stringify(log);
+        }
       })(info);
 
       var sock = new WebSocket('ws://' + location.host + '/ws/' + info.key);
@@ -113,8 +117,10 @@
         updateSelfProfile();
 
         invoke("GetRoster", function(r) {
-          for (i = 0; i < r.length; i++) {
-            addChatPage(r[i]);
+          for (var i = 0; i < r.length; i++) {
+            if (r[i] != info.id) {
+              addChatPage(r[i]);
+            }
           }
         });
       };
@@ -176,6 +182,7 @@
         setTimeout(function() {
           $(document).scrollTop(9999999);
         }, 10);
+        location.hash = page;
       }
 
       $(document).on("click", "li.item a[page]", function() {
@@ -298,6 +305,16 @@
           $nickname.empty().append(nickname.escapeHTML());
         });
 
+        var $chatlog = $('<ul>').addClass('chatlog');
+
+        var $clear_log = $('<a>')
+          .attr('href', 'javascript:void(0)')
+          .append('Clear log')
+          .click(function() {
+            clearRecordedLog(id);
+            $chatlog.empty();
+          });
+
         var $c = $('<div>')
           .hide()
           .addClass('page')
@@ -306,7 +323,8 @@
             .append('Conversation with ')
             .append($nickname)
           )
-          .append($('<ul>').addClass('chatlog'))
+          .append($clear_log)
+          .append($chatlog)
           .append(
             $('<div>')
             .attr('id', 'input-wrap')
@@ -321,6 +339,10 @@
         log = loadRecordedLog(id);
         for (var i = 0; i < log.length; i++) {
           addChatLog(id, log[i].from, log[i].msg, log[i].date);
+        }
+
+        if (location.hash == "#" + id) {
+          activatePage(id);
         }
       }
 
@@ -379,7 +401,10 @@
       });
 
       $('div.page').hide();
+
+      var hash = location.hash;
       activatePage('settings');
+      location.hash = hash;
 
     });
   </script>
