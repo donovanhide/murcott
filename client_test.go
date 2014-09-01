@@ -169,7 +169,6 @@ func TestClientStatus(t *testing.T) {
 	client2 := NewClient(key2, NewStorage(":memory:"))
 
 	status1 := UserStatus{Type: StatusActive, Message: ":-("}
-	status2 := UserStatus{Type: StatusAway, Message: "zzz"}
 
 	client1.Roster.Add(key2.PublicKeyHash())
 	client2.Roster.Add(key1.PublicKeyHash())
@@ -177,13 +176,13 @@ func TestClientStatus(t *testing.T) {
 	success := make(chan bool)
 
 	client1.HandleStatuses(func(src NodeId, p UserStatus) {
-		if p.Type != status2.Type {
-			t.Errorf("wrong Type: %s; expects %s", p.Type, status2.Type)
+		if p.Type != StatusOffline {
+			t.Errorf("wrong Type: %s; expects %s", p.Type, StatusOffline)
 			success <- false
 			return
 		}
-		if p.Message != status2.Message {
-			t.Errorf("wrong Message: %s; expects %s", p.Message, status2.Message)
+		if p.Message != "" {
+			t.Errorf("wrong Message: %s; expects %s", p.Message, "")
 			success <- false
 			return
 		}
@@ -208,7 +207,6 @@ func TestClientStatus(t *testing.T) {
 	go client2.Run()
 
 	client1.SetStatus(status1)
-	client2.SetStatus(status2)
 
 	for i := 0; i < 2; i++ {
 		if !<-success {
