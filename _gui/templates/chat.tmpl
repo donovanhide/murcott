@@ -109,9 +109,10 @@
           }
         });
 
-        invoke("HandleMessage", function(src, msg) {
-          addChatLog(src, src, msg, Date.create());
-          recordChatlog(src, src, msg, Date.create());
+        invoke("HandleMessage", function(src, msg, time) {
+          var date = Date.create(time);
+          addChatLog(src, src, msg, date);
+          recordChatlog(src, src, msg, date);
         });
 
         invoke("HandleStatus", function(src, type) {
@@ -216,12 +217,27 @@
         }
 
         var $date = $('<span>').addClass('date').append(date.format('{12hr}:{mm}{tt}')).data('date', date);
-        $li = $('<li>').append($date);
+        $li = $('<li>').append($date).data('date', date);
         msg = msg.replace(/\[img\](.+)\[\/img\]/g, function(str, data) {
           $li.append($('<img>').attr('src', data));
           return '';
         });
-        $chatlog.append($li.append(msg.escapeHTML()));
+        $li.append(msg.escapeHTML());
+
+        var $anchor;
+        $chatlog.children('li').each(function() {
+          var d = $(this).data('date');
+          if (typeof d == 'object' && d.isAfter(date)) {
+            $anchor = $(this);
+            return false;
+          }
+        });
+        if (typeof $anchor == 'object') {
+          $anchor.before($li);
+        } else {
+          $chatlog.append($li);
+        }
+
         $(document).scrollTop(9999999);
       }
 

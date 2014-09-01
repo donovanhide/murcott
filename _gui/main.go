@@ -83,7 +83,7 @@ func (r JsonRpcListener) HandleLog(c func(args []interface{})) {
 
 func (r JsonRpcListener) HandleMessage(c func(args []interface{})) {
 	r.client.HandleMessages(func(src murcott.NodeId, msg murcott.ChatMessage) {
-		c([]interface{}{src.String(), msg.Text()})
+		c([]interface{}{src.String(), msg.Text(), msg.Time})
 	})
 }
 

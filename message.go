@@ -3,6 +3,7 @@ package murcott
 import (
 	"errors"
 	"mime"
+	"time"
 )
 
 type Content struct {
@@ -12,6 +13,7 @@ type Content struct {
 
 type ChatMessage struct {
 	Contents []Content `msgpack:"contents"`
+	Time     time.Time `msgpack:"time"`
 }
 
 // NewPlainChatMessage generates a new ChatMessage with a plain text.
@@ -33,7 +35,7 @@ func NewMimeChatMessage(mimetype string, data string) ChatMessage {
 
 // NewChatMessage generates a new ChatMessage with the given Content array.
 func NewChatMessage(contents []Content) ChatMessage {
-	return ChatMessage{Contents: contents}
+	return ChatMessage{Contents: contents, Time: time.Now()}
 }
 
 // Text returns the first text/plain content.
