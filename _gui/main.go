@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/h2so5/murcott"
 	"github.com/martini-contrib/render"
+	"github.com/nfnt/resize"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -145,6 +146,7 @@ func (r JsonRpcListener) SetProfile(nickname string, avatar string, c func(args 
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(avatar))
 	m, _, err := image.Decode(reader)
 	if err == nil {
+		m = resize.Thumbnail(32, 32, m, resize.Lanczos3)
 		profile.Avatar = murcott.UserAvatar{m}
 	}
 	r.client.SetProfile(profile)
