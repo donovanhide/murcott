@@ -74,7 +74,9 @@ func (c *Client) Run() {
 func (c *Client) Close() {
 	status := c.status
 	status.Type = StatusOffline
-	c.SetStatus(status)
+	for _, n := range c.Roster.List() {
+		c.node.send(n, userPresence{Status: status, Ack: false}, nil)
+	}
 
 	c.storage.SaveRoster(c.Roster)
 	c.storage.SaveBlockList(c.BlockList)
