@@ -50,6 +50,43 @@
 
       var info = JSON.parse('{{.}}');
 
+      (function(info) {
+        var log = {};
+        try {
+          log = JSON.parse(localStorage["chatlog_" + info.id]);
+        } catch (e) {
+          console.log(e)
+        }
+        window.recordChatlog = function(id, from, msg, date) {
+          if (!Array.isArray(log[id])) {
+            log[id] = [];
+          }
+          log[id].push({
+            id: id,
+            from: from,
+            msg: msg,
+            date: date.toJSON()
+          });
+          localStorage["chatlog_" + info.id] = JSON.stringify(log);
+        }
+        window.loadRecordedLog = function(id) {
+          if (Array.isArray(log[id])) {
+            var ary = [];
+            for (var i = 0; i < log[id].length; i++) {
+              var l = log[id][i];
+              l.date = Date.create(l.date);
+              ary.push(l);
+            }
+            ary.sortBy(function(n) {
+              return n.date.getTime();
+            });
+            return ary;
+          } else {
+            return [];
+          }
+        }
+      })(info);
+
       var sock = new WebSocket('ws://' + location.host + '/ws/' + info.key);
       sock.onopen = function() {
         sock.onmessage = function(res) {
@@ -69,7 +106,8 @@
         });
 
         invoke("HandleMessage", function(dst, msg) {
-          addChatLog(dst, dst, msg);
+          addChatLog(dst, dst, msg, Date.create());
+          recordChatlog(dst, dst, msg, Date.create());
         });
 
         updateSelfProfile();
@@ -135,19 +173,22 @@
         $('li.item a').removeClass('active');
         $('div.page[page=' + page + ']').show();
         $('li.item a[page=' + page + ']').addClass('active');
+        setTimeout(function() {
+          $(document).scrollTop(9999999);
+        }, 10);
       }
 
       $(document).on("click", "li.item a[page]", function() {
         activatePage($(this).attr('page'));
       });
 
-      function addChatLog(id, from, msg) {
+      function addChatLog(id, from, msg, date) {
         var $chatlog = $('div.page[page=' + id + '] ul.chatlog');
         var lastid = $chatlog.find('h4:last').data('id');
 
         if (lastid != from) {
-          $image = $('<img>').attr('width', '32').attr('height', '32');
-          $from = $('<h4>').append($image).append(from).data('id', from);
+          var $image = $('<img>').attr('width', '32').attr('height', '32');
+          var $from = $('<h4>').append($image).append(from).data('id', from);
 
           subscribe('nickname_' + from, function(nickname) {
             $from.empty().append($image).append(nickname.escapeHTML());
@@ -161,7 +202,9 @@
 
           $chatlog.append($('<li>').append($from));
         }
-        $chatlog.append($('<li>').append(msg.escapeHTML()));
+
+        var $date = $('<span>').addClass('date').append(date.format('{12hr}:{mm}{tt}')).data('date', date);
+        $chatlog.append($('<li>').append($date).append(msg.escapeHTML()));
         $(document).scrollTop(9999999);
       }
 
@@ -197,13 +240,9 @@
             var val = $(this).val();
             if (val.length > 0) {
               $(this).val("");
-              invoke('SendMessage', id, val, function(ok) {
-                if (ok) {
-                  addChatLog(id, info.id, val);
-                } else {
-                  addChatLog(id, info.id, '[Not Delivered] ' + val);
-                }
-              });
+              invoke('SendMessage', id, val, function(ok) {});
+              addChatLog(id, info.id, val, Date.create());
+              recordChatlog(id, info.id, val, Date.create());
             }
             return false;
           }
@@ -231,6 +270,11 @@
 
         $('#contents').append($c);
         updateFriendProfile(id);
+
+        log = loadRecordedLog(id);
+        for (var i = 0; i < log.length; i++) {
+          addChatLog(id, log[i].from, log[i].msg, log[i].date);
+        }
       }
 
       $('#add-friend a').click(function() {
