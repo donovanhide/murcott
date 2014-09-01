@@ -72,6 +72,10 @@ func (c *Client) Run() {
 
 // Stops the current mainloop.
 func (c *Client) Close() {
+	status := c.status
+	status.Type = StatusOffline
+	c.SetStatus(status)
+
 	c.storage.SaveRoster(c.Roster)
 	c.storage.SaveBlockList(c.BlockList)
 	c.node.close()
