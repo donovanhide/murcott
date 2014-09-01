@@ -110,7 +110,7 @@ div#sidebar li > a {
 }
 div#contents {
   margin-left: 240px;
-  padding: 12px 32px 32px 32px;
+  padding: 12px 32px 64px 32px;
 }
 div#contents h2 {
   text-shadow: 0px 1px 1px #85442a;
@@ -124,7 +124,7 @@ div#input-wrap {
   position: fixed;
   bottom: 20px;
   left: 320px;
-  right: 40px;
+  right: 60px;
 }
 ul.chatlog {
   list-style: none;
@@ -139,6 +139,13 @@ input#chat-input {
   resize: none;
   width: 100%;
   border-radius: 4px;
+}
+a.add-image {
+  position: absolute;
+  top: 10px;
+  right: -36px;
+  color: #000;
+  font-size: 20px;
 }
 form#settings {
   width: 100%;

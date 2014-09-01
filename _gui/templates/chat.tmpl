@@ -204,7 +204,12 @@
         }
 
         var $date = $('<span>').addClass('date').append(date.format('{12hr}:{mm}{tt}')).data('date', date);
-        $chatlog.append($('<li>').append($date).append(msg.escapeHTML()));
+        $li = $('<li>').append($date);
+        msg = msg.replace(/\[img\](.+)\[\/img\]/g, function(str, data) {
+          $li.append($('<img>').attr('src', data));
+          return '';
+        });
+        $chatlog.append($li.append(msg.escapeHTML()));
         $(document).scrollTop(9999999);
       }
 
@@ -235,6 +240,42 @@
         var $input = $('<input>')
           .attr('id', 'chat-input')
           .attr('type', 'text');
+
+        var $file = $('<input>')
+          .attr('type', 'file')
+          .css('position', 'fixed')
+          .css('opacity', '0');
+
+        var $addimage = $('<a>')
+          .addClass('add-image')
+          .attr('href', 'javascript:void(0)')
+          .append('<i class="fa fa-camera"></i>');
+
+        $addimage.click(function() {
+          $file.trigger('click');
+          return false;
+        });
+
+        $file.change(function(e) {
+          var files = e.target.files;
+          for (var i = 0, f; f = files[i]; i++) {
+            if (f.type.match('image.*')) {
+              var reader = new FileReader();
+              reader.onload = (function(theFile) {
+                return function(e) {
+                  var data = e.target.result;
+                  var msg = '[img]' + data + '[/img]';
+                  invoke('SendMessage', id, msg, function(ok) {});
+                  addChatLog(id, info.id, msg, Date.create());
+                  recordChatlog(id, info.id, msg, Date.create());
+                };
+              })(f);
+
+              reader.readAsDataURL(f);
+            }
+          }
+        });
+
         $input.keypress(function(e) {
           if (e.keyCode == 13 && !e.shiftKey) {
             var val = $(this).val();
@@ -266,7 +307,13 @@
             .append($nickname)
           )
           .append($('<ul>').addClass('chatlog'))
-          .append($('<div>').attr('id', 'input-wrap').append($input));
+          .append(
+            $('<div>')
+            .attr('id', 'input-wrap')
+            .append($input)
+            .append($addimage)
+            .append($file)
+          );
 
         $('#contents').append($c);
         updateFriendProfile(id);
