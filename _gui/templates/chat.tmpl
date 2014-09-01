@@ -109,12 +109,17 @@
           }
         });
 
-        invoke("HandleMessage", function(dst, msg) {
-          addChatLog(dst, dst, msg, Date.create());
-          recordChatlog(dst, dst, msg, Date.create());
+        invoke("HandleMessage", function(src, msg) {
+          addChatLog(src, src, msg, Date.create());
+          recordChatlog(src, src, msg, Date.create());
+        });
+
+        invoke("HandleStatus", function(src, type) {
+          publish('status_' + src, type);
         });
 
         updateSelfProfile();
+        invoke("SetStatus", "active");
 
         invoke("GetRoster", function(r) {
           for (var i = 0; i < r.length; i++) {
@@ -233,6 +238,7 @@
             .attr('href', 'javascript:void(0)')
             .attr('page', id)
             .append($nick)
+            .css('border-left', '5px solid transparent')
           );
 
         $('#add-friend').before($li);
@@ -242,6 +248,10 @@
         });
         subscribe('avatar_' + id, function(avatar) {
           $li.children('a').css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
+        });
+        subscribe('status_' + id, function(status) {
+          var color = (status == 'active') ? '#73d529' : 'transparent';
+          $li.children('a').css('border-left', '5px solid ' + color);
         });
 
         var $input = $('<input>')

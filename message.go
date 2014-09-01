@@ -90,4 +90,5 @@ type userProfileResponse struct {
 
 type userPresence struct {
 	Status UserStatus `msgpack:"status"`
+	Ack    bool       `msgpack:"ack"`
 }

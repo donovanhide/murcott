@@ -51,8 +51,12 @@ func NewClient(key *PrivateKey, storage *Storage) *Client {
 		case userProfileRequest:
 			return userProfileResponse{Profile: c.profile}
 		case userPresence:
+			p := msg.(userPresence)
 			if c.statusHandler != nil {
-				c.statusHandler(src, msg.(userPresence).Status)
+				c.statusHandler(src, p.Status)
+			}
+			if !p.Ack {
+				c.node.send(src, userPresence{Status: c.status, Ack: true}, nil)
 			}
 		}
 		return nil
@@ -114,7 +118,7 @@ func (c *Client) Status() UserStatus {
 func (c *Client) SetStatus(status UserStatus) {
 	c.status = status
 	for _, n := range c.Roster.List() {
-		c.node.send(n, userPresence{Status: c.status}, nil)
+		c.node.send(n, userPresence{Status: c.status, Ack: false}, nil)
 	}
 }
 

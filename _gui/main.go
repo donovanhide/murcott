@@ -87,6 +87,12 @@ func (r JsonRpcListener) HandleMessage(c func(args []interface{})) {
 	})
 }
 
+func (r JsonRpcListener) HandleStatus(c func(args []interface{})) {
+	r.client.HandleStatuses(func(src murcott.NodeId, status murcott.UserStatus) {
+		c([]interface{}{src.String(), status.Type})
+	})
+}
+
 func (r JsonRpcListener) SendMessage(dst string, msg string, c func(args []interface{})) {
 	id, err := murcott.NewNodeIdFromString(dst)
 	if err == nil {
