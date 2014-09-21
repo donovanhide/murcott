@@ -7,8 +7,9 @@
 </head>
 
 <body>
-  <script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
-  <script src='//cdnjs.cloudflare.com/ajax/libs/sugar/1.4.1/sugar.min.js'></script>
+  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/sugar/1.4.1/sugar.min.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min.js"></script>
   <script>
     $(function() {
       var subscribers = {};
@@ -131,10 +132,18 @@
         });
       };
 
+      var userProfileViewModel = {
+        nickName: ko.observable(),
+        avatar: ko.observable(),
+      };
+      ko.applyBindings(userProfileViewModel);
+
       function updateSelfProfile() {
         invoke("GetProfile", function(id, nickname, avatar) {
-          publish('nickname_' + id, nickname);
-          publish('avatar_' + id, avatar);
+          userProfileViewModel.nickName(nickname);
+          if (avatar.length > 0) {
+            userProfileViewModel.avatar(avatar);
+          }
         });
       }
 
@@ -144,20 +153,6 @@
           publish('avatar_' + id, avatar);
         });
       }
-
-      subscribe('nickname_' + info.id, function(nickname) {
-        $('#settings input[name=nickname]').val(nickname);
-      });
-
-      subscribe('avatar_' + info.id, function(avatar) {
-        $("li.item a[page=settings]")
-          .css('background-image', 'url(data:image/gif;base64,' + avatar + ')');
-        if (avatar.length > 0) {
-          $('.my-avatar')
-            .attr('src', 'data:image/png;base64,' + avatar)
-            .data('src', 'data:image/png;base64,' + avatar);
-        }
-      });
 
       function invoke() {
         var args = Array.prototype.slice.call(arguments);
@@ -393,8 +388,7 @@
 
       $('#settings').submit(function() {
         var nickname = $('#settings input[name=nickname]').val();
-        var data = $('#settings .my-avatar').data('src');
-        var avatar = data.substr(data.indexOf(',') + 1);
+        var avatar = userProfileViewModel.avatar();
         invoke('SetProfile', nickname, avatar, function() {
           updateSelfProfile();
           var $button = $('#submit-profile');
@@ -416,8 +410,7 @@
             reader.onload = (function(theFile) {
               return function(e) {
                 var data = e.target.result;
-                $('#settings .my-avatar').attr('src', data);
-                $('#settings .my-avatar').data('src', data);
+                userProfileViewModel.avatar(data.substr(data.indexOf(',') + 1));
               };
             })(f);
 
@@ -442,7 +435,7 @@
     </ul>
     <h2><i class="fa fa-cogs"></i> Account</h2>
     <ul>
-      <li class="item"><a href="javascript:void(0)" page="settings">Settings</a>
+      <li class="item"><a href="javascript:void(0)" page="settings" data-bind="style: {'background-image': 'url(data:image/png;base64,' + avatar() + ')'}">Settings</a>
       </li>
     </ul>
   </div>
@@ -453,12 +446,12 @@
         <ul>
           <li>
             <label>Nickname:
-              <input type="text" name="nickname">
+              <input type="text" name="nickname" data-bind="value: nickName">
             </label>
           </li>
           <li>
             <label>Avatar:
-              <img class="my-avatar" width="16" height="16">
+              <img class="my-avatar" width="16" height="16" data-bind="attr: { src: 'data:image/png;base64,' + avatar() }">
               <input type="file" name="avatar">
             </label>
           </li>
