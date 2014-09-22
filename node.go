@@ -39,7 +39,7 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 		idmap:     make(map[string]func(interface{})),
 		name2type: make(map[string]reflect.Type),
 		type2name: make(map[reflect.Type]string),
-		register:  make(chan msghandler),
+		register:  make(chan msghandler, 2),
 		timeout:   make(chan string),
 		logger:    logger,
 		exit:      make(chan struct{}),
