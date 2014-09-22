@@ -14,12 +14,18 @@ type msgpair struct {
 	msg interface{}
 }
 
+type msghandler struct {
+	id       string
+	callback func(interface{})
+}
+
 type node struct {
 	router    *router
 	handler   func(NodeId, interface{}) interface{}
 	idmap     map[string]func(interface{})
 	name2type map[string]reflect.Type
 	type2name map[reflect.Type]string
+	register  chan msghandler
 	timeout   chan string
 	logger    *Logger
 	exit      chan struct{}
@@ -33,6 +39,7 @@ func newNode(key *PrivateKey, logger *Logger) *node {
 		idmap:     make(map[string]func(interface{})),
 		name2type: make(map[string]reflect.Type),
 		type2name: make(map[reflect.Type]string),
+		register:  make(chan msghandler),
 		timeout:   make(chan string),
 		logger:    logger,
 		exit:      make(chan struct{}),
@@ -70,6 +77,9 @@ func (p *node) run() {
 			if err == nil {
 				p.parseMessage(t.Type, m.payload, m.id)
 			}
+
+		case h := <-p.register:
+			p.idmap[h.id] = h.callback
 
 		case id := <-p.timeout:
 			if h, ok := p.idmap[id]; ok {
@@ -133,7 +143,7 @@ func (p *node) sendWithId(dst NodeId, msg interface{}, handler func(interface{})
 		r := make([]byte, 10)
 		rand.Read(r)
 		t.Id = string(r)
-		p.idmap[t.Id] = handler
+		p.register <- msghandler{t.Id, handler}
 		go func() {
 			<-time.After(time.Second)
 			p.timeout <- t.Id
