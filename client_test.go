@@ -131,27 +131,30 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 	go client2.Run()
 
 	client1.RequestProfile(key2.PublicKeyHash(), func(p *UserProfile) {
-		if p.Nickname != profile.Nickname {
+		if p == nil {
+			t.Errorf("UserProfile should not be nil")
+			success <- false
+		} else if p.Nickname != profile.Nickname {
 			t.Errorf("wrong Nickname: %s; expects %s", p.Nickname, profile.Nickname)
 			success <- false
-		}
-		if !reflect.DeepEqual(p.Extension, profile.Extension) {
+		} else if !reflect.DeepEqual(p.Extension, profile.Extension) {
 			t.Errorf("wrong Extension: %v; expects %v", p.Extension, profile.Extension)
 			success <- false
-		}
-	loop:
-		for x := 0; x < p.Avatar.Image.Bounds().Max.X; x++ {
-			for y := 0; y < p.Avatar.Image.Bounds().Max.Y; y++ {
-				r1, g1, b1, a1 := p.Avatar.Image.At(x, y).RGBA()
-				r2, g2, b2, a2 := profile.Avatar.Image.At(x, y).RGBA()
-				if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
-					t.Errorf("avatar image color mismatch at (%d, %d)", x, y)
-					success <- false
-					break loop
+		} else {
+		loop:
+			for x := 0; x < p.Avatar.Image.Bounds().Max.X; x++ {
+				for y := 0; y < p.Avatar.Image.Bounds().Max.Y; y++ {
+					r1, g1, b1, a1 := p.Avatar.Image.At(x, y).RGBA()
+					r2, g2, b2, a2 := profile.Avatar.Image.At(x, y).RGBA()
+					if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
+						t.Errorf("avatar image color mismatch at (%d, %d)", x, y)
+						success <- false
+						break loop
+					}
 				}
 			}
+			success <- true
 		}
-		success <- true
 	})
 
 	if !<-success {

@@ -18,6 +18,11 @@ type message struct {
 	payload []byte
 }
 
+type queuedPacket struct {
+	id     int
+	packet *packet
+}
+
 type router struct {
 	info        nodeInfo
 	dht         *dht
@@ -25,11 +30,12 @@ type router struct {
 	key         *PrivateKey
 	keycache    map[string]PublicKey
 	keyWaiting  []packet
-	addrWaiting []packet
+	addrWaiting map[int]packet
 	logger      *Logger
+	packetId    chan int
 	recv        chan message
-	send        chan packet
-	exit        chan struct{}
+	send        chan queuedPacket
+	exit        chan int
 }
 
 func getOpenPortConn() (*net.UDPConn, int) {
@@ -49,7 +55,7 @@ func getOpenPortConn() (*net.UDPConn, int) {
 func newRouter(key *PrivateKey, logger *Logger) *router {
 	info := nodeInfo{Id: key.PublicKeyHash()}
 	dht := newDht(10, info, logger)
-	exit := make(chan struct{})
+	exit := make(chan int)
 	conn, selfport := getOpenPortConn()
 
 	logger.info("Node ID: %s", info.Id.String())
@@ -61,34 +67,48 @@ func newRouter(key *PrivateKey, logger *Logger) *router {
 		panic(err)
 	}
 
-	node := router{
-		info:     info,
-		conn:     conn,
-		key:      key,
-		keycache: make(map[string]PublicKey),
-		dht:      dht,
-		logger:   logger,
-		recv:     make(chan message, 100),
-		send:     make(chan packet, 100),
-		exit:     exit,
+	r := router{
+		info:        info,
+		conn:        conn,
+		key:         key,
+		keycache:    make(map[string]PublicKey),
+		dht:         dht,
+		addrWaiting: make(map[int]packet),
+		logger:      logger,
+		packetId:    make(chan int),
+		recv:        make(chan message, 100),
+		send:        make(chan queuedPacket, 100),
+		exit:        exit,
 	}
+
+	go func() {
+		packetId := 0
+		for {
+			r.packetId <- packetId
+			packetId++
+		}
+	}()
 
 	// portscan
 	for port := portBegin; port <= portEnd; port++ {
 		if port != selfport {
 			addr := &net.UDPAddr{Port: port, IP: host[0]}
-			node.sendPacket(NodeId{}, addr, "disco", nil)
+			r.sendPacket(NodeId{}, addr, "disco", nil)
 		}
 	}
 
 	logger.info("Sent discovery packet to %v:%d-%d", host[0], portBegin, portEnd)
-	go node.run()
+	go r.run()
 
-	return &node
+	return &r
 }
 
-func (p *router) sendMessage(dst NodeId, payload []byte) {
-	p.sendPacket(dst, nil, "msg", payload)
+func (p *router) sendMessage(dst NodeId, payload []byte) int {
+	return p.sendPacket(dst, nil, "msg", payload)
+}
+
+func (p *router) cancelMessage(id int) {
+	p.send <- queuedPacket{id: id, packet: nil}
 }
 
 func (p *router) recvMessage() (message, error) {
@@ -136,25 +156,24 @@ func (p *router) run() {
 
 	for {
 		select {
-		case packet := <-p.send:
-			packet.sign(p.key)
-			addr := packet.addr
-			if addr == nil {
-				node := p.dht.getNodeInfo(packet.Dst)
-				if node != nil {
-					addr = node.Addr
-				}
-			}
-			if addr != nil {
-				data, err := msgpack.Marshal(packet)
-				if err == nil {
-					p.conn.WriteToUDP(data, addr)
-				} else {
-					p.logger.error("packet marshal error")
-				}
+		case q := <-p.send:
+			if q.packet == nil {
+				// cancel queued packet
+				delete(p.addrWaiting, q.id)
 			} else {
-				p.logger.error("route not found: %s", packet.Dst.String())
-				p.addrWaiting = append(p.addrWaiting, packet)
+				q.packet.sign(p.key)
+				addr := q.packet.addr
+				if addr != nil {
+					data, err := msgpack.Marshal(q.packet)
+					if err == nil {
+						p.conn.WriteToUDP(data, addr)
+					} else {
+						p.logger.error("packet marshal error")
+					}
+				} else {
+					p.logger.error("route not found: %s", q.packet.Dst.String())
+					p.addrWaiting[q.id] = *q.packet
+				}
 			}
 
 		case packet := <-recv:
@@ -177,11 +196,11 @@ func (p *router) run() {
 					p.keyWaiting = append(p.keyWaiting, packet)
 				}
 			}
-			p.processWaitingRoutePackets()
 
 		case <-p.exit:
 			return
 		}
+		p.processWaitingRoutePackets()
 	}
 }
 
@@ -231,8 +250,7 @@ func (p *router) processWaitingKeyPackets() {
 
 // process packets waiting addresses
 func (p *router) processWaitingRoutePackets() {
-	rest := make([]packet, 0, len(p.addrWaiting))
-	for _, packet := range p.addrWaiting {
+	for id, packet := range p.addrWaiting {
 		node := p.dht.getNodeInfo(packet.Dst)
 		if node != nil {
 			data, err := msgpack.Marshal(packet)
@@ -241,14 +259,12 @@ func (p *router) processWaitingRoutePackets() {
 			} else {
 				p.logger.error("packet marshal error")
 			}
-		} else {
-			rest = append(rest, packet)
+			delete(p.addrWaiting, id)
 		}
 	}
-	p.addrWaiting = rest
 }
 
-func (p *router) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []byte) {
+func (p *router) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload []byte) int {
 	packet := packet{
 		Dst:     dst,
 		Src:     p.info.Id,
@@ -256,15 +272,19 @@ func (p *router) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload [
 		Payload: payload,
 		addr:    addr,
 	}
-	p.send <- packet
 
-	if id := dst.String(); len(id) > 0 {
-		p.logger.info("Send %s packet to %s", packet.Type, id)
+	id := <-p.packetId
+	p.send <- queuedPacket{id: id, packet: &packet}
+
+	if d := dst.String(); len(d) > 0 {
+		p.logger.info("Send %s packet to %s", packet.Type, d)
 	}
+
+	return id
 }
 
 func (p *router) close() {
-	p.exit <- struct{}{}
+	p.exit <- 0
 	close(p.recv)
 	p.dht.close()
 	p.conn.Close()
