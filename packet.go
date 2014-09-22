@@ -2,8 +2,9 @@ package murcott
 
 import (
 	"errors"
-	"github.com/vmihailenco/msgpack"
 	"net"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 type packet struct {

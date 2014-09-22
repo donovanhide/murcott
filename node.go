@@ -3,9 +3,10 @@ package murcott
 import (
 	"crypto/rand"
 	"errors"
-	"github.com/vmihailenco/msgpack"
 	"reflect"
 	"time"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 type msgpair struct {

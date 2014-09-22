@@ -5,10 +5,11 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha1"
-	"github.com/tv42/base58"
-	"github.com/vmihailenco/msgpack"
 	"math/big"
 	"reflect"
+
+	"github.com/tv42/base58"
+	"github.com/vmihailenco/msgpack"
 )
 
 // PublicKey represents an ECDSA public key.

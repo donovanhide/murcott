@@ -1,8 +1,9 @@
 package murcott
 
 import (
-	"github.com/vmihailenco/msgpack"
 	"testing"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 func TestNodeIdMsgpack(t *testing.T) {

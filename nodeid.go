@@ -2,10 +2,11 @@ package murcott
 
 import (
 	"crypto/rand"
-	"github.com/tv42/base58"
-	"github.com/vmihailenco/msgpack"
 	"math/big"
 	"reflect"
+
+	"github.com/tv42/base58"
+	"github.com/vmihailenco/msgpack"
 )
 
 func init() {

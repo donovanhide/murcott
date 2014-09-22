@@ -1,9 +1,10 @@
 package murcott
 
 import (
-	"github.com/vmihailenco/msgpack"
 	"sort"
 	"testing"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 func TestNodeInfoMsgpack(t *testing.T) {

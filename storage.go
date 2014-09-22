@@ -3,6 +3,7 @@ package murcott
 import (
 	"database/sql"
 	"errors"
+
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vmihailenco/msgpack"
 )

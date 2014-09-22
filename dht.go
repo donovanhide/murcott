@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"errors"
-	"github.com/vmihailenco/msgpack"
 	"net"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 type dhtRpcCallback func(*dhtRpcCommand, *net.UDPAddr)

@@ -1,9 +1,10 @@
 package murcott
 
 import (
-	"github.com/vmihailenco/msgpack"
 	"net"
 	"reflect"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 type nodeInfo struct {

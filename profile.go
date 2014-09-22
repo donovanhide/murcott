@@ -3,10 +3,11 @@ package murcott
 import (
 	"bytes"
 	"errors"
-	"github.com/vmihailenco/msgpack"
 	"image"
 	"image/png"
 	"reflect"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 type UserProfile struct {
