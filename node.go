@@ -20,29 +20,31 @@ type msghandler struct {
 }
 
 type node struct {
-	router    *router
-	handler   func(NodeId, interface{}) interface{}
-	idmap     map[string]func(interface{})
-	name2type map[string]reflect.Type
-	type2name map[reflect.Type]string
-	register  chan msghandler
-	timeout   chan string
-	logger    *Logger
-	exit      chan struct{}
+	router        *router
+	handler       func(NodeId, interface{}) interface{}
+	idmap         map[string]func(interface{})
+	name2type     map[string]reflect.Type
+	type2name     map[reflect.Type]string
+	register      chan msghandler
+	cancelHandler chan string
+	cancelMessage chan int
+	logger        *Logger
+	exit          chan struct{}
 }
 
 func newNode(key *PrivateKey, logger *Logger) *node {
 	router := newRouter(key, logger)
 
 	n := &node{
-		router:    router,
-		idmap:     make(map[string]func(interface{})),
-		name2type: make(map[string]reflect.Type),
-		type2name: make(map[reflect.Type]string),
-		register:  make(chan msghandler, 2),
-		timeout:   make(chan string),
-		logger:    logger,
-		exit:      make(chan struct{}),
+		router:        router,
+		idmap:         make(map[string]func(interface{})),
+		name2type:     make(map[string]reflect.Type),
+		type2name:     make(map[reflect.Type]string),
+		register:      make(chan msghandler, 2),
+		cancelHandler: make(chan string),
+		cancelMessage: make(chan int),
+		logger:        logger,
+		exit:          make(chan struct{}),
 	}
 
 	n.registerMessageType("chat", ChatMessage{})
@@ -81,11 +83,15 @@ func (p *node) run() {
 		case h := <-p.register:
 			p.idmap[h.id] = h.callback
 
-		case id := <-p.timeout:
+		case id := <-p.cancelHandler:
 			if h, ok := p.idmap[id]; ok {
 				h(nil)
 				delete(p.idmap, id)
 			}
+
+		case id := <-p.cancelMessage:
+			p.router.cancelMessage(id)
+
 		case <-p.exit:
 			return
 		}
@@ -144,10 +150,6 @@ func (p *node) sendWithId(dst NodeId, msg interface{}, handler func(interface{})
 		rand.Read(r)
 		t.Id = string(r)
 		p.register <- msghandler{t.Id, handler}
-		go func() {
-			<-time.After(time.Second)
-			p.timeout <- t.Id
-		}()
 	}
 
 	if n, ok := p.type2name[reflect.TypeOf(msg)]; ok {
@@ -160,7 +162,14 @@ func (p *node) sendWithId(dst NodeId, msg interface{}, handler func(interface{})
 	if err != nil {
 		return err
 	}
-	p.router.sendMessage(dst, data)
+	packetId := p.router.sendMessage(dst, data)
+
+	go func(msgId string, packetId int) {
+		<-time.After(time.Second)
+		p.cancelHandler <- msgId
+		p.cancelMessage <- packetId
+	}(t.Id, packetId)
+
 	return nil
 }
 
