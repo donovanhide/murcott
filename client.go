@@ -18,13 +18,13 @@ type messageHandler func(src NodeId, msg ChatMessage)
 type statusHandler func(src NodeId, status UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
-func NewClient(key *PrivateKey, storage *Storage) *Client {
+func NewClient(key *PrivateKey, storage *Storage, config Config) *Client {
 	logger := newLogger()
 	roster, _ := storage.LoadRoster()
 	blocklist, _ := storage.LoadBlockList()
 
 	c := &Client{
-		node:      newNode(key, logger),
+		node:      newNode(key, logger, config),
 		storage:   storage,
 		status:    UserStatus{Type: StatusOffline},
 		id:        key.PublicKeyHash(),

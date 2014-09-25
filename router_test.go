@@ -9,10 +9,10 @@ func TestRouterMessageExchange(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
 
-	router1 := newRouter(key1, logger)
+	router1 := newRouter(key1, logger, DefaultConfig)
 	router1.sendMessage(key2.PublicKeyHash(), []byte(msg))
 
-	router2 := newRouter(key2, logger)
+	router2 := newRouter(key2, logger, DefaultConfig)
 	m, err := router2.recvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
@@ -49,12 +49,12 @@ func TestRouterCancelMessage(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
 
-	router1 := newRouter(key1, logger)
+	router1 := newRouter(key1, logger, DefaultConfig)
 	id := router1.sendMessage(key2.PublicKeyHash(), []byte(msg1))
 	router1.sendMessage(key2.PublicKeyHash(), []byte(msg2))
 	router1.cancelMessage(id)
 
-	router2 := newRouter(key2, logger)
+	router2 := newRouter(key2, logger, DefaultConfig)
 
 	m, err := router2.recvMessage()
 	if err != nil {

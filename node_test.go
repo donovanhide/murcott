@@ -8,8 +8,8 @@ func TestNodeChatMessage(t *testing.T) {
 	logger := newLogger()
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	node1 := newNode(key1, logger)
-	node2 := newNode(key2, logger)
+	node1 := newNode(key1, logger, DefaultConfig)
+	node2 := newNode(key2, logger, DefaultConfig)
 	plainmsg := NewPlainChatMessage("Hello")
 
 	success := make(chan bool)

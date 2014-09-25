@@ -11,8 +11,8 @@ import (
 func TestClientMessage(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	client1 := NewClient(key1, NewStorage(":memory:"))
-	client2 := NewClient(key2, NewStorage(":memory:"))
+	client1 := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
+	client2 := NewClient(key2, NewStorage(":memory:"), DefaultConfig)
 
 	success := make(chan bool)
 	plainmsg := NewPlainChatMessage("Hello")
@@ -56,8 +56,8 @@ func TestClientMessage(t *testing.T) {
 func TestClientBlockList(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	client1 := NewClient(key1, NewStorage(":memory:"))
-	client2 := NewClient(key2, NewStorage(":memory:"))
+	client1 := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
+	client2 := NewClient(key2, NewStorage(":memory:"), DefaultConfig)
 
 	success := make(chan bool)
 	plainmsg := NewPlainChatMessage("Hello")
@@ -106,8 +106,8 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	client1 := NewClient(key1, NewStorage(":memory:"))
-	client2 := NewClient(key2, NewStorage(":memory:"))
+	client1 := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
+	client2 := NewClient(key2, NewStorage(":memory:"), DefaultConfig)
 
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(data))
 	img, _, err := image.Decode(reader)
@@ -168,8 +168,8 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 func TestClientStatus(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	client1 := NewClient(key1, NewStorage(":memory:"))
-	client2 := NewClient(key2, NewStorage(":memory:"))
+	client1 := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
+	client2 := NewClient(key2, NewStorage(":memory:"), DefaultConfig)
 
 	status1 := UserStatus{Type: StatusActive, Message: ":-("}
 

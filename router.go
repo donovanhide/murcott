@@ -52,7 +52,7 @@ func getOpenPortConn() (*net.UDPConn, int) {
 	return nil, 0
 }
 
-func newRouter(key *PrivateKey, logger *Logger) *router {
+func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
 	info := nodeInfo{Id: key.PublicKeyHash()}
 	dht := newDht(10, info, logger)
 	exit := make(chan int)

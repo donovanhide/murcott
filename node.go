@@ -32,8 +32,8 @@ type node struct {
 	exit          chan struct{}
 }
 
-func newNode(key *PrivateKey, logger *Logger) *node {
-	router := newRouter(key, logger)
+func newNode(key *PrivateKey, logger *Logger, config Config) *node {
+	router := newRouter(key, logger, config)
 
 	n := &node{
 		router:        router,

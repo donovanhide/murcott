@@ -4,11 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/go-martini/martini"
-	"github.com/gorilla/websocket"
-	"github.com/h2so5/murcott"
-	"github.com/martini-contrib/render"
-	"github.com/nfnt/resize"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -16,6 +11,12 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/go-martini/martini"
+	"github.com/gorilla/websocket"
+	"github.com/h2so5/murcott"
+	"github.com/martini-contrib/render"
+	"github.com/nfnt/resize"
 )
 
 func main() {
@@ -181,7 +182,7 @@ func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
 	}
 
 	storage := murcott.NewStorage(key.PublicKeyHash().String() + ".sqlite3")
-	c := murcott.NewClient(key, storage)
+	c := murcott.NewClient(key, storage, murcott.DefaultConfig)
 	go c.Run()
 	defer c.Close()
 
