@@ -77,11 +77,9 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
 
 	// portscan
 	for _, addr := range config.getBootstrap() {
-		if addr.Port != selfport {
-			a := addr
-			r.sendPacket(NodeId{}, &a, "disco", nil)
-			logger.info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
-		}
+		a := addr
+		r.sendPacket(NodeId{}, &a, "disco", nil)
+		logger.info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
 	}
 
 	go r.run()
@@ -123,6 +121,11 @@ func (p *router) run() {
 			if err != nil {
 				continue
 			}
+
+			if packet.Src.cmp(p.info.Id) == 0 {
+				continue
+			}
+
 			p.logger.info("Receive %s packet from %s", packet.Type, packet.Src.String())
 			packet.addr = addr
 
