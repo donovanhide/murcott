@@ -160,7 +160,6 @@ func (p *router) run() {
 						p.logger.error("packet marshal error")
 					}
 				} else {
-					p.logger.error("route not found: %s", q.packet.Dst.String())
 					p.addrWaiting[q.id] = *q.packet
 				}
 			}
