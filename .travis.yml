@@ -9,4 +9,5 @@ install:
 script:
  - go test -v -race
  - go build _gui/main.go
+ - go build _bootstrap/main.go
  - $HOME/gopath/bin/goveralls -repotoken KGrXLi6QeZ3e6rIPghP6Yc0zJXqbn0XZg

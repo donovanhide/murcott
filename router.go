@@ -3,14 +3,9 @@ package murcott
 import (
 	"errors"
 	"net"
+	"strconv"
 
 	"github.com/vmihailenco/msgpack"
-)
-
-const (
-	portBegin = 9200
-	portEnd   = 9220
-	bootstrap = "127.0.0.1"
 )
 
 type message struct {
@@ -38,13 +33,10 @@ type router struct {
 	exit        chan int
 }
 
-func getOpenPortConn() (*net.UDPConn, int) {
-	for port := portBegin; port <= portEnd; port++ {
-		addr := net.UDPAddr{
-			Port: port,
-			IP:   net.ParseIP("127.0.0.1"),
-		}
-		conn, err := net.ListenUDP("udp", &addr)
+func getOpenPortConn(config Config) (*net.UDPConn, int) {
+	for _, port := range config.getPorts() {
+		addr, err := net.ResolveUDPAddr("udp4", ":"+strconv.Itoa(port))
+		conn, err := net.ListenUDP("udp", addr)
 		if err == nil {
 			return conn, port
 		}
@@ -56,16 +48,10 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
 	info := nodeInfo{Id: key.PublicKeyHash()}
 	dht := newDht(10, info, logger)
 	exit := make(chan int)
-	conn, selfport := getOpenPortConn()
+	conn, selfport := getOpenPortConn(config)
 
 	logger.info("Node ID: %s", info.Id.String())
 	logger.info("Node UDP port: %d", selfport)
-
-	// lookup bootstrap
-	host, err := net.LookupIP(bootstrap)
-	if err != nil {
-		panic(err)
-	}
 
 	r := router{
 		info:        info,
@@ -90,14 +76,14 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
 	}()
 
 	// portscan
-	for port := portBegin; port <= portEnd; port++ {
-		if port != selfport {
-			addr := &net.UDPAddr{Port: port, IP: host[0]}
-			r.sendPacket(NodeId{}, addr, "disco", nil)
+	for _, addr := range config.getBootstrap() {
+		if addr.Port != selfport {
+			a := addr
+			r.sendPacket(NodeId{}, &a, "disco", nil)
+			logger.info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
 		}
 	}
 
-	logger.info("Sent discovery packet to %v:%d-%d", host[0], portBegin, portEnd)
 	go r.run()
 
 	return &r
