@@ -7,6 +7,7 @@ install:
  - go get code.google.com/p/go.tools/cmd/cover
 
 script:
+ - go test -v
  - go test -v -race
  - go build _gui/main.go
  - go build _bootstrap/main.go
