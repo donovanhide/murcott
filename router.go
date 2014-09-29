@@ -271,6 +271,10 @@ func (p *router) sendPacket(dst NodeId, addr *net.UDPAddr, typ string, payload [
 	return id
 }
 
+func (p *router) addNode(info nodeInfo) {
+	p.dht.addNode(info)
+}
+
 func (p *router) close() {
 	p.exit <- 0
 	close(p.recv)

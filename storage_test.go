@@ -1,12 +1,14 @@
 package murcott
 
 import (
+	"net"
 	"reflect"
 	"testing"
 )
 
 func TestStorageRoster(t *testing.T) {
 	s := NewStorage(":memory:")
+	defer s.close()
 
 	roster := &Roster{
 		list: []NodeId{
@@ -37,12 +39,11 @@ func TestStorageRoster(t *testing.T) {
 			t.Errorf("wrong NodeId: %s; expects %s", id.String(), roster.list[i].String())
 		}
 	}
-
-	s.close()
 }
 
 func TestStorageBlockList(t *testing.T) {
 	s := NewStorage(":memory:")
+	defer s.close()
 
 	roster := &BlockList{
 		list: []NodeId{
@@ -73,12 +74,11 @@ func TestStorageBlockList(t *testing.T) {
 			t.Errorf("wrong NodeId: %s; expects %s", id.String(), roster.list[i].String())
 		}
 	}
-
-	s.close()
 }
 
 func TestStorageProfile(t *testing.T) {
 	s := NewStorage(":memory:")
+	defer s.close()
 	id := newRandomNodeId()
 	profile := UserProfile{
 		Nickname: "nick",
@@ -124,6 +124,42 @@ func TestStorageProfile(t *testing.T) {
 	if !reflect.DeepEqual(p.Extension, profile.Extension) {
 		t.Errorf("wrong Extension: %v; expects %v", p.Extension, profile.Extension)
 	}
+}
 
-	s.close()
+func TestStorageKnownNodes(t *testing.T) {
+	s := NewStorage(":memory:")
+	defer s.close()
+
+	addr1, _ := net.ResolveUDPAddr("udp", "192.168.0.1:2345")
+	addr2, _ := net.ResolveUDPAddr("udp", "127.0.0.1:34567")
+	addr3, _ := net.ResolveUDPAddr("udp", "19.94.244.34:1234")
+
+	nodes := []nodeInfo{
+		nodeInfo{Id: newRandomNodeId(), Addr: addr1},
+		nodeInfo{Id: newRandomNodeId(), Addr: addr2},
+		nodeInfo{Id: newRandomNodeId(), Addr: addr3},
+	}
+
+	err := s.saveKnownNodes(nodes)
+	if err != nil {
+		t.Errorf("saveKnownNodes failed: %v", err)
+	}
+
+	nodes2, err := s.loadKnownNodes()
+	if err != nil {
+		t.Errorf("loadKnownNodes failed: %v", err)
+	}
+
+	if len(nodes2) != len(nodes) {
+		t.Errorf("wrong length: %d; expects %d", len(nodes2), len(nodes))
+	}
+
+	for i := range nodes2 {
+		if nodes2[i].Id.cmp(nodes[i].Id) != 0 {
+			t.Errorf("nodeInfo.Id mismatch: %s; expects %s", nodes2[i].Id.String(), nodes[i].Id.String())
+		}
+		if nodes2[i].Addr.String() != nodes[i].Addr.String() {
+			t.Errorf("nodeInfo.Addr mismatch: %s; expects %s", nodes2[i].Addr.String(), nodes[i].Addr.String())
+		}
+	}
 }

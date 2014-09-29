@@ -3,6 +3,7 @@ package murcott
 import (
 	"database/sql"
 	"errors"
+	"net"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vmihailenco/msgpack"
@@ -23,6 +24,10 @@ const (
 	loadProfileStmt
 	insertProfileStmt
 	updateProfileStmt
+
+	createKnownNodesTableStmt
+	loadKnownNodesStmt
+	replaceKnownNodesStmt
 )
 
 // Storage represents a persistent storage.
@@ -65,6 +70,12 @@ func (s *Storage) init() {
 	s.prepare(loadProfileStmt, "SELECT data FROM profile WHERE id = ?")
 	s.prepare(insertProfileStmt, "INSERT INTO profile (id, nickname, data) VALUES(?, ?, ?)")
 	s.prepare(updateProfileStmt, "UPDATE profile SET nickname = ?, data = ? WHERE id = ?")
+
+	s.prepare(createKnownNodesTableStmt, "CREATE TABLE known_nodes (id TEXT, addr TEXT PRIMARY KEY, updated TIMESTAMP DEFAULT (DATETIME('now','localtime')))")
+	s.exec(createKnownNodesTableStmt)
+
+	s.prepare(loadKnownNodesStmt, "SELECT id, addr FROM known_nodes")
+	s.prepare(replaceKnownNodesStmt, "REPLACE INTO known_nodes (id, addr) VALUES(?, ?)")
 }
 
 func (s *Storage) prepare(t int, query string) error {
@@ -193,6 +204,34 @@ func (s *Storage) SaveBlockList(blocklist *BlockList) error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (s *Storage) loadKnownNodes() ([]nodeInfo, error) {
+	var list []nodeInfo
+	rows, err := s.query(loadKnownNodesStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, addrstr string
+		rows.Scan(&id, &addrstr)
+		nodeid, err := NewNodeIdFromString(id)
+		if err == nil {
+			addr, err := net.ResolveUDPAddr("udp", addrstr)
+			if err == nil {
+				list = append(list, nodeInfo{Id: nodeid, Addr: addr})
+			}
+		}
+	}
+	return list, nil
+}
+
+func (s *Storage) saveKnownNodes(nodes []nodeInfo) error {
+	for _, n := range nodes {
+		s.exec(replaceKnownNodesStmt, n.Id.String(), n.Addr.String())
 	}
 	return nil
 }

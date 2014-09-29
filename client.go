@@ -23,8 +23,14 @@ func NewClient(key *PrivateKey, storage *Storage, config Config) *Client {
 	roster, _ := storage.LoadRoster()
 	blocklist, _ := storage.LoadBlockList()
 
+	node := newNode(key, logger, config)
+	knownNodes, _ := storage.loadKnownNodes()
+	for _, n := range knownNodes {
+		node.addNode(n)
+	}
+
 	c := &Client{
-		node:      newNode(key, logger, config),
+		node:      node,
 		storage:   storage,
 		status:    UserStatus{Type: StatusOffline},
 		id:        key.PublicKeyHash(),

@@ -173,6 +173,10 @@ func (p *node) sendWithId(dst NodeId, msg interface{}, handler func(interface{})
 	return nil
 }
 
+func (p *node) addNode(info nodeInfo) {
+	p.router.addNode(info)
+}
+
 func (p *node) handle(handler func(NodeId, interface{}) interface{}) {
 	p.handler = handler
 }
