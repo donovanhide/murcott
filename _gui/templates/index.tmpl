@@ -34,7 +34,7 @@
 
       $('#new-account a').click(function() {
         $.getJSON("/newkey", function(data) {
-          addAccountButton(data.id);
+          addAccountButton(data.id, data.key);
           accounts.push(data);
           localStorage["accounts"] = JSON.stringify(accounts);
         });

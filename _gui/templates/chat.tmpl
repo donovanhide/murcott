@@ -393,7 +393,7 @@
 
       $('#settings').submit(function() {
         var nickname = $('#settings input[name=nickname]').val();
-        var data = $('#settings .my-avatar').data('src');
+        var data = $('#settings .my-avatar').data('src') || '';
         var avatar = data.substr(data.indexOf(',') + 1);
         invoke('SetProfile', nickname, avatar, function() {
           updateSelfProfile();
