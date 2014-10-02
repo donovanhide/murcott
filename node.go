@@ -28,6 +28,7 @@ type node struct {
 	register      chan msghandler
 	cancelHandler chan string
 	cancelMessage chan int
+	config        Config
 	logger        *Logger
 	exit          chan struct{}
 }
@@ -43,6 +44,7 @@ func newNode(key *PrivateKey, logger *Logger, config Config) *node {
 		register:      make(chan msghandler, 2),
 		cancelHandler: make(chan string),
 		cancelMessage: make(chan int),
+		config:        config,
 		logger:        logger,
 		exit:          make(chan struct{}),
 	}
@@ -58,6 +60,9 @@ func newNode(key *PrivateKey, logger *Logger, config Config) *node {
 
 func (p *node) run() {
 	msg := make(chan message)
+
+	// Discover bootstrap nodes
+	p.router.discover(p.config.getBootstrap())
 
 	go func() {
 		for {

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"errors"
+	"fmt"
 	"net"
 	"sort"
 	"sync"
@@ -300,6 +301,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 				copy(idary[:], []byte(id)[:20])
 				args["nodes"] = p.table.nearestNodes(NewNodeId(idary))
 				p.sendPacket(src.Id, newRpcReturnCommand(command.Id, args))
+				fmt.Println(args)
 			}
 
 		case "store":
@@ -327,6 +329,8 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 			id := string(command.Id)
 			if ch := p.rpcRet.pop(id); ch != nil {
 				ch <- &dhtRpcReturn{command: command, addr: src.Addr}
+			} else {
+				fmt.Println("callback", string(command.Id))
 			}
 		}
 	}
@@ -383,14 +387,12 @@ func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
 
 	p.rpcRet.push(id, ch)
 	p.rpc <- dhtPacket{dst: dst, payload: data}
-
 	go func(id string) {
 		<-time.After(time.Second)
 		if c := p.rpcRet.pop(id); c != nil {
 			c <- nil
 		}
 	}(id)
-
 	return ch
 }
 

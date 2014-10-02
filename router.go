@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/vmihailenco/msgpack"
 )
@@ -19,18 +20,19 @@ type queuedPacket struct {
 }
 
 type router struct {
-	info        nodeInfo
-	dht         *dht
-	conn        *net.UDPConn
-	key         *PrivateKey
-	keycache    map[string]PublicKey
-	keyWaiting  []packet
-	addrWaiting map[int]packet
-	logger      *Logger
-	packetId    chan int
-	recv        chan message
-	send        chan queuedPacket
-	exit        chan int
+	info           nodeInfo
+	dht            *dht
+	conn           *net.UDPConn
+	key            *PrivateKey
+	keycache       map[string]PublicKey
+	keyWaiting     []packet
+	addrWaiting    map[int]packet
+	requestedNodes map[string]time.Time
+	logger         *Logger
+	packetId       chan int
+	recv           chan message
+	send           chan queuedPacket
+	exit           chan int
 }
 
 func getOpenPortConn(config Config) (*net.UDPConn, int) {
@@ -54,17 +56,18 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
 	logger.info("Node UDP port: %d", selfport)
 
 	r := router{
-		info:        info,
-		conn:        conn,
-		key:         key,
-		keycache:    make(map[string]PublicKey),
-		dht:         dht,
-		addrWaiting: make(map[int]packet),
-		logger:      logger,
-		packetId:    make(chan int),
-		recv:        make(chan message, 100),
-		send:        make(chan queuedPacket, 100),
-		exit:        exit,
+		info:           info,
+		conn:           conn,
+		key:            key,
+		keycache:       make(map[string]PublicKey),
+		dht:            dht,
+		addrWaiting:    make(map[int]packet),
+		requestedNodes: make(map[string]time.Time),
+		logger:         logger,
+		packetId:       make(chan int),
+		recv:           make(chan message, 100),
+		send:           make(chan queuedPacket, 100),
+		exit:           exit,
 	}
 
 	go func() {
@@ -75,16 +78,17 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
 		}
 	}()
 
-	// portscan
-	for _, addr := range config.getBootstrap() {
-		a := addr
-		r.sendPacket(NodeId{}, &a, "disco", nil)
-		logger.info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
-	}
-
 	go r.run()
 
 	return &r
+}
+
+func (p *router) discover(addrs []net.UDPAddr) {
+	for _, addr := range addrs {
+		a := addr
+		p.sendPacket(NodeId{}, &a, "disco", nil)
+		p.logger.info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
+	}
 }
 
 func (p *router) sendMessage(dst NodeId, payload []byte) int {
@@ -238,6 +242,7 @@ func (p *router) processWaitingKeyPackets() {
 
 // process packets waiting addresses
 func (p *router) processWaitingRoutePackets() {
+	var unknownNodes []NodeId
 	for id, packet := range p.addrWaiting {
 		node := p.dht.getNodeInfo(packet.Dst)
 		if node != nil {
@@ -248,6 +253,22 @@ func (p *router) processWaitingRoutePackets() {
 				p.logger.error("packet marshal error")
 			}
 			delete(p.addrWaiting, id)
+		} else {
+			unknownNodes = append(unknownNodes, packet.Dst)
+		}
+	}
+
+	// Remove old entries.
+	for k, v := range p.requestedNodes {
+		if time.Since(v).Minutes() >= 5 {
+			delete(p.requestedNodes, k)
+		}
+	}
+
+	for _, n := range unknownNodes {
+		if _, ok := p.requestedNodes[n.String()]; !ok {
+			p.dht.findNearestNode(n)
+			p.requestedNodes[n.String()] = time.Now()
 		}
 	}
 }
