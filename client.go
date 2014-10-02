@@ -86,6 +86,7 @@ func (c *Client) Close() {
 
 	c.storage.SaveRoster(c.Roster)
 	c.storage.SaveBlockList(c.BlockList)
+	c.storage.saveKnownNodes(c.node.knownNodes())
 	c.node.close()
 }
 

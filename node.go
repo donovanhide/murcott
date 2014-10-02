@@ -177,6 +177,10 @@ func (p *node) addNode(info nodeInfo) {
 	p.router.addNode(info)
 }
 
+func (p *node) knownNodes() []nodeInfo {
+	return p.router.knownNodes()
+}
+
 func (p *node) handle(handler func(NodeId, interface{}) interface{}) {
 	p.handler = handler
 }

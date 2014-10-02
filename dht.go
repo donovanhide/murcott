@@ -114,6 +114,10 @@ func (p *dht) addNode(node nodeInfo) {
 	p.sendPing(node.Id)
 }
 
+func (p *dht) knownNodes() []nodeInfo {
+	return p.table.nodes()
+}
+
 func (p *dht) getNodeInfo(id NodeId) *nodeInfo {
 	return p.table.find(id)
 }

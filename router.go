@@ -275,6 +275,10 @@ func (p *router) addNode(info nodeInfo) {
 	p.dht.addNode(info)
 }
 
+func (p *router) knownNodes() []nodeInfo {
+	return p.dht.knownNodes()
+}
+
 func (p *router) close() {
 	p.exit <- 0
 	close(p.recv)

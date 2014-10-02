@@ -1,8 +1,6 @@
 package murcott
 
-import (
-	"sync"
-)
+import "sync"
 
 type bucket struct {
 	zero  *bucket
@@ -61,6 +59,21 @@ func (p *nodeTable) remove(id NodeId) {
 			b.nodes = append(b.nodes[:i], b.nodes[i+1:]...)
 		}
 	}
+}
+
+func collectNodes(b *bucket) []nodeInfo {
+	l := append([]nodeInfo(nil), b.nodes...)
+	if b.zero != nil {
+		l = append(l, collectNodes(b.zero)...)
+	}
+	if b.one != nil {
+		l = append(l, collectNodes(b.one)...)
+	}
+	return l
+}
+
+func (p *nodeTable) nodes() []nodeInfo {
+	return collectNodes(p.root)
 }
 
 func (p *nodeTable) nearestNodes(id NodeId) []nodeInfo {
