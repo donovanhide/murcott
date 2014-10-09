@@ -188,7 +188,7 @@ func (p *router) run() {
 					p.keyWaiting = append(p.keyWaiting, packet)
 				}
 			}
-
+		case <-time.After(time.Second):
 		case <-p.exit:
 			return
 		}
