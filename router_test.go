@@ -93,12 +93,12 @@ func TestRouterRouteExchange(t *testing.T) {
 	router2 := newRouter(key2, logger, DefaultConfig)
 	router2.discover(DefaultConfig.getBootstrap())
 
-	router3 := newRouter(key3, logger, DefaultConfig)
-
-	addr, _ := net.ResolveUDPAddr("udp", router2.conn.LocalAddr().String())
-	router3.discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
 	time.Sleep(100 * time.Millisecond)
+	router3 := newRouter(key3, logger, DefaultConfig)
+	addr, _ := net.ResolveUDPAddr("udp", router1.conn.LocalAddr().String())
+	router3.discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
 
+	time.Sleep(100 * time.Millisecond)
 	router3.sendMessage(key2.PublicKeyHash(), []byte(msg))
 
 	m, err := router2.recvMessage()

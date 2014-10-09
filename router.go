@@ -267,7 +267,7 @@ func (p *router) processWaitingRoutePackets() {
 
 	for _, n := range unknownNodes {
 		if _, ok := p.requestedNodes[n.String()]; !ok {
-			p.dht.findNearestNode(n)
+			go p.dht.findNearestNode(n)
 			p.requestedNodes[n.String()] = time.Now()
 		}
 	}
