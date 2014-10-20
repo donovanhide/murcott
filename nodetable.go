@@ -42,6 +42,7 @@ func (p *nodeTable) remove(id NodeID) {
 	for i, n := range p.buckets[b] {
 		if n.ID.cmp(id) == 0 {
 			p.buckets[b] = append(p.buckets[b][:i], p.buckets[b][i+1:]...)
+			return
 		}
 	}
 }
@@ -59,8 +60,26 @@ func (p *nodeTable) nodes() []nodeInfo {
 }
 
 func (p *nodeTable) nearestNodes(id NodeID) []nodeInfo {
+	var n []nodeInfo
 	b := id.xor(p.selfid).log2int()
-	return p.buckets[b]
+	n = append(n, p.buckets[b]...)
+	if len(n) > p.k {
+		return n[len(n)-p.k:]
+	}
+	for i := 0; i < 160; i++ {
+		rb := b + i
+		if rb < 160 {
+			n = append(n, p.buckets[rb]...)
+		}
+		lb := b - i
+		if lb >= 0 {
+			n = append(n, p.buckets[lb]...)
+		}
+	}
+	if len(n) > p.k {
+		return n[len(n)-p.k:]
+	}
+	return n
 }
 
 func (p *nodeTable) find(id NodeID) *nodeInfo {
