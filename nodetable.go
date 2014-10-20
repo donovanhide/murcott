@@ -60,6 +60,8 @@ func (p *nodeTable) nodes() []nodeInfo {
 }
 
 func (p *nodeTable) nearestNodes(id NodeID) []nodeInfo {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 	var n []nodeInfo
 	b := id.xor(p.selfid).log2int()
 	n = append(n, p.buckets[b]...)
