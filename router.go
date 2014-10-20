@@ -35,22 +35,25 @@ type router struct {
 	exit           chan int
 }
 
-func getOpenPortConn(config Config) (*net.UDPConn, int) {
+func getOpenPortConn(config Config) (*net.UDPConn, int, error) {
 	for _, port := range config.getPorts() {
 		addr, err := net.ResolveUDPAddr("udp4", ":"+strconv.Itoa(port))
 		conn, err := net.ListenUDP("udp", addr)
 		if err == nil {
-			return conn, port
+			return conn, port, nil
 		}
 	}
-	return nil, 0
+	return nil, 0, errors.New("fail to bind port")
 }
 
-func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
+func newRouter(key *PrivateKey, logger *Logger, config Config) (*router, error) {
 	info := nodeInfo{ID: key.PublicKeyHash()}
 	dht := newDht(10, info, logger)
 	exit := make(chan int)
-	conn, selfport := getOpenPortConn(config)
+	conn, selfport, err := getOpenPortConn(config)
+	if err != nil {
+		return nil, err
+	}
 
 	logger.info("Node ID: %s", info.ID.String())
 	logger.info("Node UDP port: %d", selfport)
@@ -80,7 +83,7 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) *router {
 
 	go r.run()
 
-	return &r
+	return &r, nil
 }
 
 func (p *router) discover(addrs []net.UDPAddr) {

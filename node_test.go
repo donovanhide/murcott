@@ -10,8 +10,14 @@ func TestNodeChatMessage(t *testing.T) {
 	logger := newLogger()
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
-	node1 := newNode(key1, logger, DefaultConfig)
-	node2 := newNode(key2, logger, DefaultConfig)
+	node1, err := newNode(key1, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node2, err := newNode(key2, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	plainmsg := NewPlainChatMessage("Hello")
 
 	success := make(chan bool)

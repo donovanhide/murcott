@@ -33,8 +33,11 @@ type node struct {
 	exit          chan struct{}
 }
 
-func newNode(key *PrivateKey, logger *Logger, config Config) *node {
-	router := newRouter(key, logger, config)
+func newNode(key *PrivateKey, logger *Logger, config Config) (*node, error) {
+	router, err := newRouter(key, logger, config)
+	if err != nil {
+		return nil, err
+	}
 
 	n := &node{
 		router:        router,
@@ -55,7 +58,7 @@ func newNode(key *PrivateKey, logger *Logger, config Config) *node {
 	n.registerMessageType("profile-res", userProfileResponse{})
 	n.registerMessageType("presence", userPresence{})
 
-	return n
+	return n, nil
 }
 
 func (p *node) run() {

@@ -18,12 +18,16 @@ type messageHandler func(src NodeID, msg ChatMessage)
 type statusHandler func(src NodeID, status UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
-func NewClient(key *PrivateKey, storage *Storage, config Config) *Client {
+func NewClient(key *PrivateKey, storage *Storage, config Config) (*Client, error) {
 	logger := newLogger()
 	roster, _ := storage.LoadRoster()
 	blocklist, _ := storage.LoadBlockList()
 
-	node := newNode(key, logger, config)
+	node, err := newNode(key, logger, config)
+	if err != nil {
+		return nil, err
+	}
+
 	knownNodes, _ := storage.loadKnownNodes()
 	for _, n := range knownNodes {
 		node.addNode(n)
@@ -68,7 +72,7 @@ func NewClient(key *PrivateKey, storage *Storage, config Config) *Client {
 		return nil
 	})
 
-	return c
+	return c, nil
 }
 
 // Starts a mainloop in the current goroutine.

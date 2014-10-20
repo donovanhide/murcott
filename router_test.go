@@ -13,11 +13,17 @@ func TestRouterMessageExchange(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
 
-	router1 := newRouter(key1, logger, DefaultConfig)
+	router1, err := newRouter(key1, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	router1.discover(DefaultConfig.getBootstrap())
 	router1.sendMessage(key2.PublicKeyHash(), []byte(msg))
 
-	router2 := newRouter(key2, logger, DefaultConfig)
+	router2, err := newRouter(key2, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	router2.discover(DefaultConfig.getBootstrap())
 	m, err := router2.recvMessage()
 	if err != nil {
@@ -55,13 +61,19 @@ func TestRouterCancelMessage(t *testing.T) {
 	key1 := GeneratePrivateKey()
 	key2 := GeneratePrivateKey()
 
-	router1 := newRouter(key1, logger, DefaultConfig)
+	router1, err := newRouter(key1, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	router1.discover(DefaultConfig.getBootstrap())
 	id := router1.sendMessage(key2.PublicKeyHash(), []byte(msg1))
 	router1.sendMessage(key2.PublicKeyHash(), []byte(msg2))
 	router1.cancelMessage(id)
 
-	router2 := newRouter(key2, logger, DefaultConfig)
+	router2, err := newRouter(key2, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	router2.discover(DefaultConfig.getBootstrap())
 
 	m, err := router2.recvMessage()
@@ -87,14 +99,23 @@ func TestRouterRouteExchange(t *testing.T) {
 	key2 := GeneratePrivateKey()
 	key3 := GeneratePrivateKey()
 
-	router1 := newRouter(key1, logger, DefaultConfig)
+	router1, err := newRouter(key1, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	router1.discover(DefaultConfig.getBootstrap())
 
-	router2 := newRouter(key2, logger, DefaultConfig)
+	router2, err := newRouter(key2, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	router2.discover(DefaultConfig.getBootstrap())
 
 	time.Sleep(100 * time.Millisecond)
-	router3 := newRouter(key3, logger, DefaultConfig)
+	router3, err := newRouter(key3, logger, DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	addr, _ := net.ResolveUDPAddr("udp", router1.conn.LocalAddr().String())
 	router3.discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
 
