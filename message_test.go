@@ -12,9 +12,9 @@ func TestChatMessage(t *testing.T) {
 	}
 
 	html := "<html></html>"
-	htmlmsg := NewHtmlChatMessage(html)
-	if htmlmsg.Html() != html {
-		t.Errorf("Html() returns wrong value: %s; expects %s", htmlmsg.Text(), html)
+	htmlmsg := NewHTMLChatMessage(html)
+	if htmlmsg.HTML() != html {
+		t.Errorf("HTML() returns wrong value: %s; expects %s", htmlmsg.Text(), html)
 	}
 
 	contents := []Content{

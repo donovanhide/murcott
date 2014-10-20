@@ -21,8 +21,8 @@ func NewPlainChatMessage(text string) ChatMessage {
 	return NewMimeChatMessage("text/plain", text)
 }
 
-// NewHtmlChatMessage generates a new ChatMessage with a html text.
-func NewHtmlChatMessage(html string) ChatMessage {
+// NewHTMLChatMessage generates a new ChatMessage with a html text.
+func NewHTMLChatMessage(html string) ChatMessage {
 	return NewMimeChatMessage("text/html", html)
 }
 
@@ -44,8 +44,8 @@ func (m *ChatMessage) Text() string {
 	return c
 }
 
-// Html returns the first text/html content.
-func (m *ChatMessage) Html() string {
+// HTML returns the first text/html content.
+func (m *ChatMessage) HTML() string {
 	c, _ := m.First("text/html")
 	return c
 }
