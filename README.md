@@ -34,7 +34,7 @@ func main() {
 	storage := murcott.NewStorage("storage.sqlite3")
 
 	// Create a client with the private key and the storage.
-	client := murcott.NewClient(key, storage, murcott.DefaultConfig)
+	client, _ := murcott.NewClient(key, storage, murcott.DefaultConfig)
 
 	// Handle incoming messages.
 	client.HandleMessages(func(src murcott.NodeID, msg murcott.ChatMessage) {
