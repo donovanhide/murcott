@@ -42,7 +42,7 @@ func TestDhtTimeout(t *testing.T) {
 	node2 := nodeInfo{ID: newRandomNodeID(), Addr: nil}
 	dht1 := newDht(10, node1, newLogger())
 	dht1.addNode(node2)
-	ch := dht1.sendPacket(node2.ID, dhtRpcCommand{})
+	ch := dht1.sendPacket(node2.ID, dhtRPCCommand{})
 	select {
 	case r := <-ch:
 		if r != nil {

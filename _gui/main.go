@@ -58,18 +58,18 @@ type Session struct {
 	ws     *websocket.Conn
 }
 
-type JsonRpc struct {
+type JsonRPC struct {
 	Version string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
 	Params  []interface{} `json:"params"`
 	ID      int           `json:"id"`
 }
 
-type JsonRpcListener struct {
+type JsonRPCListener struct {
 	client *murcott.Client
 }
 
-func (r JsonRpcListener) HandleLog(c func(args []interface{})) {
+func (r JsonRPCListener) HandleLog(c func(args []interface{})) {
 	go func() {
 		for {
 			var buf [1024]byte
@@ -82,19 +82,19 @@ func (r JsonRpcListener) HandleLog(c func(args []interface{})) {
 	}()
 }
 
-func (r JsonRpcListener) HandleMessage(c func(args []interface{})) {
+func (r JsonRPCListener) HandleMessage(c func(args []interface{})) {
 	r.client.HandleMessages(func(src murcott.NodeID, msg murcott.ChatMessage) {
 		c([]interface{}{src.String(), msg.Text(), msg.Time})
 	})
 }
 
-func (r JsonRpcListener) HandleStatus(c func(args []interface{})) {
+func (r JsonRPCListener) HandleStatus(c func(args []interface{})) {
 	r.client.HandleStatuses(func(src murcott.NodeID, status murcott.UserStatus) {
 		c([]interface{}{src.String(), status.Type})
 	})
 }
 
-func (r JsonRpcListener) SendMessage(dst string, msg string, c func(args []interface{})) {
+func (r JsonRPCListener) SendMessage(dst string, msg string, c func(args []interface{})) {
 	id, err := murcott.NewNodeIDFromString(dst)
 	if err == nil {
 		r.client.SendMessage(id, murcott.NewPlainChatMessage(msg), func(ok bool) {
@@ -105,14 +105,14 @@ func (r JsonRpcListener) SendMessage(dst string, msg string, c func(args []inter
 	}
 }
 
-func (r JsonRpcListener) AddFriend(idstr string) {
+func (r JsonRPCListener) AddFriend(idstr string) {
 	id, err := murcott.NewNodeIDFromString(idstr)
 	if err == nil {
 		r.client.Roster.Add(id)
 	}
 }
 
-func (r JsonRpcListener) GetRoster(c func(args []interface{})) {
+func (r JsonRPCListener) GetRoster(c func(args []interface{})) {
 	list := make([]string, 0)
 	for _, id := range r.client.Roster.List() {
 		list = append(list, id.String())
@@ -120,7 +120,7 @@ func (r JsonRpcListener) GetRoster(c func(args []interface{})) {
 	c([]interface{}{list})
 }
 
-func (r JsonRpcListener) GetProfile(c func(args []interface{})) {
+func (r JsonRPCListener) GetProfile(c func(args []interface{})) {
 	profile := r.client.Profile()
 	var buf bytes.Buffer
 	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
@@ -130,7 +130,7 @@ func (r JsonRpcListener) GetProfile(c func(args []interface{})) {
 	c([]interface{}{r.client.ID().String(), profile.Nickname, string(buf.Bytes())})
 }
 
-func (r JsonRpcListener) GetFriendProfile(idstr string, c func(args []interface{})) {
+func (r JsonRPCListener) GetFriendProfile(idstr string, c func(args []interface{})) {
 	id, err := murcott.NewNodeIDFromString(idstr)
 	if err != nil {
 		return
@@ -147,7 +147,7 @@ func (r JsonRpcListener) GetFriendProfile(idstr string, c func(args []interface{
 	})
 }
 
-func (r JsonRpcListener) SetProfile(nickname string, avatar string, c func(args []interface{})) {
+func (r JsonRPCListener) SetProfile(nickname string, avatar string, c func(args []interface{})) {
 	profile := r.client.Profile()
 	profile.Nickname = nickname
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(avatar))
@@ -160,7 +160,7 @@ func (r JsonRpcListener) SetProfile(nickname string, avatar string, c func(args 
 	c([]interface{}{})
 }
 
-func (r JsonRpcListener) SetStatus(status string) {
+func (r JsonRPCListener) SetStatus(status string) {
 	if status == murcott.StatusActive {
 		r.client.SetStatus(murcott.UserStatus{Type: murcott.StatusActive})
 	} else if status == murcott.StatusAway {
@@ -186,10 +186,10 @@ func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
 	go c.Run()
 	defer c.Close()
 
-	v := reflect.ValueOf(JsonRpcListener{client: c})
+	v := reflect.ValueOf(JsonRPCListener{client: c})
 
 	for {
-		var rpc JsonRpc
+		var rpc JsonRPC
 		err := ws.ReadJSON(&rpc)
 		if err != nil {
 			break
