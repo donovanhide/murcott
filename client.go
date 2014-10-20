@@ -102,7 +102,7 @@ func (c *Client) HandleMessages(handler func(src NodeID, msg ChatMessage)) {
 	c.msgHandler = handler
 }
 
-// HandleMessages registers the given function as a status handler.
+// HandleStatuses registers the given function as a status handler.
 func (c *Client) HandleStatuses(handler func(src NodeID, status UserStatus)) {
 	c.statusHandler = handler
 }

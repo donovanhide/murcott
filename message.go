@@ -65,12 +65,11 @@ func (m *ChatMessage) First(mimetype string) (string, error) {
 func (m *ChatMessage) At(i int) (Content, error) {
 	if i >= 0 && i < m.Len() {
 		return m.Contents[i], nil
-	} else {
-		return Content{}, errors.New("out of bounds")
 	}
+	return Content{}, errors.New("out of bounds")
 }
 
-// PushBack adds a new content to the message.
+// Push adds a new content to the message.
 func (m *ChatMessage) Push(c Content) {
 	m.Contents = append(m.Contents, c)
 }

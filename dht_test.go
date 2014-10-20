@@ -123,7 +123,7 @@ func TestDhtGroup(t *testing.T) {
 	}
 
 	for _, d := range dhtmap {
-		for k, _ := range kvs {
+		for k := range kvs {
 			val := d.loadValue(k)
 			if val == nil {
 				t.Errorf("key not found: %s", k)

@@ -102,9 +102,8 @@ func (p *router) cancelMessage(id int) {
 func (p *router) recvMessage() (message, error) {
 	if m, ok := <-p.recv; ok {
 		return m, nil
-	} else {
-		return message{}, errors.New("Node closed")
 	}
+	return message{}, errors.New("Node closed")
 }
 
 func (p *router) run() {

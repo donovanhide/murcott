@@ -74,7 +74,7 @@ func TestNodeInfoSort(t *testing.T) {
 	}
 
 	ary := make([]nodeInfo, len(ids))
-	for i, _ := range ary {
+	for i := range ary {
 		id, _ := NewNodeIDFromString(ids[i])
 		ary[i] = nodeInfo{ID: id}
 	}

@@ -90,25 +90,22 @@ func (s *Storage) prepare(t int, query string) error {
 func (s *Storage) exec(t int, args ...interface{}) (sql.Result, error) {
 	if stmt, ok := s.stmt[t]; ok {
 		return stmt.Exec(args...)
-	} else {
-		return nil, errors.New("unregistered stmt")
 	}
+	return nil, errors.New("unregistered stmt")
 }
 
 func (s *Storage) query(t int, args ...interface{}) (*sql.Rows, error) {
 	if stmt, ok := s.stmt[t]; ok {
 		return stmt.Query(args...)
-	} else {
-		return nil, errors.New("unregistered stmt")
 	}
+	return nil, errors.New("unregistered stmt")
 }
 
 func (s *Storage) queryRow(t int, args ...interface{}) *sql.Row {
 	if stmt, ok := s.stmt[t]; ok {
 		return stmt.QueryRow(args...)
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (s *Storage) LoadRoster() (*Roster, error) {
@@ -148,17 +145,15 @@ func (s *Storage) LoadProfile(id NodeID) *UserProfile {
 	row := s.queryRow(loadProfileStmt, id.String())
 	if row == nil {
 		return nil
-	} else {
-		var profile UserProfile
-		var data []byte
-		row.Scan(&data)
-		err := msgpack.Unmarshal([]byte(data), &profile)
-		if err != nil {
-			return nil
-		} else {
-			return &profile
-		}
 	}
+	var profile UserProfile
+	var data []byte
+	row.Scan(&data)
+	err := msgpack.Unmarshal([]byte(data), &profile)
+	if err != nil {
+		return nil
+	}
+	return &profile
 }
 
 func (s *Storage) SaveProfile(id NodeID, profile UserProfile) error {
@@ -169,10 +164,9 @@ func (s *Storage) SaveProfile(id NodeID, profile UserProfile) error {
 	if s.LoadProfile(id) == nil {
 		_, err := s.exec(insertProfileStmt, id.String(), profile.Nickname, data)
 		return err
-	} else {
-		_, err := s.exec(updateProfileStmt, profile.Nickname, data, id.String())
-		return err
 	}
+	_, err = s.exec(updateProfileStmt, profile.Nickname, data, id.String())
+	return err
 }
 
 func (s *Storage) LoadBlockList() (*BlockList, error) {

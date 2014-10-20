@@ -40,9 +40,8 @@ func GeneratePrivateKey() *PrivateKey {
 			PublicKey: PublicKey{x: key.X, y: key.Y},
 			d:         key.D,
 		}
-	} else {
-		return nil
 	}
+	return nil
 }
 
 // PrivateKeyFromString generates PrivateKey from the given base58-encoded string.
@@ -82,9 +81,8 @@ func (p *PrivateKey) sign(data []byte) *signature {
 	r, s, err := ecdsa.Sign(rand.Reader, &key, hash[:])
 	if err == nil {
 		return &signature{r: r, s: s}
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (p *PublicKey) verify(data []byte, sign *signature) bool {

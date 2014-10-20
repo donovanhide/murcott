@@ -41,9 +41,8 @@ func (p *rpcReturnMap) pop(id string) chan *dhtRPCReturn {
 	if c, ok := p.chmap[id]; ok {
 		delete(p.chmap, id)
 		return c
-	} else {
-		return nil
 	}
+	return nil
 }
 
 type keyValueStore struct {
@@ -62,9 +61,8 @@ func (p *keyValueStore) get(key string) (string, bool) {
 	defer p.mutex.Unlock()
 	if v, ok := p.storage[key]; ok {
 		return v, true
-	} else {
-		return "", false
 	}
+	return "", false
 }
 
 type dht struct {
@@ -157,7 +155,7 @@ func (p *dht) findNearestNode(findid NodeID) []nodeInfo {
 		endch <- struct{}{}
 	}
 
-	res := make([]nodeInfo, 0)
+	var res []nodeInfo
 	nodes := p.table.nearestNodes(findid)
 
 	if len(nodes) == 0 {
@@ -200,9 +198,8 @@ loop:
 
 	if len(sorter.nodes) > p.k {
 		return sorter.nodes[:p.k]
-	} else {
-		return sorter.nodes
 	}
+	return sorter.nodes
 }
 
 func (p *dht) loadValue(key string) *string {
@@ -335,9 +332,8 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 func (p *dht) nextPacket() (NodeID, []byte, error) {
 	if c, ok := <-p.rpc; ok {
 		return c.dst, c.payload, nil
-	} else {
-		return NodeID{}, nil, errors.New("DHT closed")
 	}
+	return NodeID{}, nil, errors.New("DHT closed")
 }
 
 func newRPCCommand(method string, args map[string]interface{}) dhtRPCCommand {
