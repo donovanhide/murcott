@@ -77,9 +77,9 @@ func (p *nodeTable) nearestNodes(id NodeID) []nodeInfo {
 		if lb >= 0 {
 			n = append(n, p.buckets[lb]...)
 		}
-	}
-	if len(n) > p.k {
-		return n[len(n)-p.k:]
+		if len(n) >= p.k {
+			return n[len(n)-p.k:]
+		}
 	}
 	return n
 }
