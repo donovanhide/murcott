@@ -137,22 +137,24 @@ func (p *dht) findNearestNode(findid NodeID) []nodeInfo {
 	endch := make(chan struct{}, 100)
 
 	f := func(id NodeID, command dhtRPCCommand) {
-		ch := p.sendPacket(id, command)
+		defer func() { endch <- struct{}{} }()
 
-		ret := <-ch
-		if ret != nil {
-			if _, ok := ret.command.Args["nodes"]; ok {
-				var nodes []nodeInfo
-				ret.command.getArgs("nodes", &nodes)
-				for _, n := range nodes {
-					if n.ID.cmp(p.info.ID) != 0 {
-						p.table.insert(n)
-						reqch <- n
+		select {
+		case ret := <-p.sendPacket(id, command):
+			if ret != nil {
+				if _, ok := ret.command.Args["nodes"]; ok {
+					var nodes []nodeInfo
+					ret.command.getArgs("nodes", &nodes)
+					for _, n := range nodes {
+						if n.ID.cmp(p.info.ID) != 0 {
+							p.table.insert(n)
+							reqch <- n
+						}
 					}
 				}
 			}
+		case <-time.After(time.Second):
 		}
-		endch <- struct{}{}
 	}
 
 	var res []nodeInfo

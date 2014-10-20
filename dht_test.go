@@ -1,6 +1,7 @@
 package murcott
 
 import (
+	"net"
 	"testing"
 	"time"
 )
@@ -52,7 +53,6 @@ func TestDhtTimeout(t *testing.T) {
 	}
 }
 
-/*
 func TestDhtGroup(t *testing.T) {
 	logger := newLogger()
 
@@ -135,4 +135,3 @@ func TestDhtGroup(t *testing.T) {
 
 	// TODO: close dhts correctly
 }
-*/
