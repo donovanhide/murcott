@@ -78,6 +78,18 @@ func (id NodeID) cmp(n NodeID) int {
 	return id.i.Cmp(&n.i)
 }
 
+func (id NodeID) log2int() int {
+	l := 159
+	b := big.NewInt(0).Add(&id.i, big.NewInt(1))
+	for i := 160; i >= 0 && b.Bit(i) == 0; i-- {
+		l--
+	}
+	if l < 0 {
+		return 0
+	}
+	return l
+}
+
 // Bytes returns identifier as a big-endian byte array.
 func (id NodeID) Bytes() []byte {
 	return id.i.Bytes()

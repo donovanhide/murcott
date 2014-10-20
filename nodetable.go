@@ -2,137 +2,75 @@ package murcott
 
 import "sync"
 
-type bucket struct {
-	zero  *bucket
-	one   *bucket
-	nodes []nodeInfo
-}
-
 type nodeTable struct {
-	root   *bucket
-	selfid NodeID
-	k      int
-	mutex  *sync.Mutex
+	buckets [][]nodeInfo
+	selfid  NodeID
+	k       int
+	mutex   *sync.RWMutex
 }
 
 func newNodeTable(k int, id NodeID) nodeTable {
+	buckets := make([][]nodeInfo, 160)
+
 	return nodeTable{
-		root:   &bucket{},
-		selfid: id,
-		k:      k,
-		mutex:  &sync.Mutex{},
+		buckets: buckets,
+		selfid:  id,
+		k:       k,
+		mutex:   &sync.RWMutex{},
 	}
 }
 
 func (p *nodeTable) insert(node nodeInfo) {
+	p.remove(node.ID)
+
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if p.selfid.cmp(node.ID) == 0 {
-		return
-	}
+	b := node.ID.xor(p.selfid).log2int()
 
-	b := p.nearestBucket(node.ID)
-
-	for i, v := range b.nodes {
-		if v.ID.cmp(node.ID) == 0 {
-			b.nodes = append(append(b.nodes[:i], b.nodes[i+1:]...), node)
-			return
-		}
-	}
-
-	if len(b.nodes) < p.k {
-		b.nodes = append(b.nodes, node)
+	if len(p.buckets[b]) < p.k {
+		p.buckets[b] = append(p.buckets[b], node)
 	} else {
-		b.nodes[len(b.nodes)-1] = node
+		p.buckets[b][len(p.buckets[b])-1] = node
 	}
-
-	p.devideTree()
 }
 
 func (p *nodeTable) remove(id NodeID) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	b := p.nearestBucket(id)
-	for i, n := range b.nodes {
+	b := id.xor(p.selfid).log2int()
+	for i, n := range p.buckets[b] {
 		if n.ID.cmp(id) == 0 {
-			b.nodes = append(b.nodes[:i], b.nodes[i+1:]...)
+			p.buckets[b] = append(p.buckets[b][:i], p.buckets[b][i+1:]...)
 		}
 	}
-}
-
-func collectNodes(b *bucket) []nodeInfo {
-	l := append([]nodeInfo(nil), b.nodes...)
-	if b.zero != nil {
-		l = append(l, collectNodes(b.zero)...)
-	}
-	if b.one != nil {
-		l = append(l, collectNodes(b.one)...)
-	}
-	return l
 }
 
 func (p *nodeTable) nodes() []nodeInfo {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	return collectNodes(p.root)
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+	var i []nodeInfo
+	for _, b := range p.buckets {
+		for _, n := range b {
+			i = append(i, n)
+		}
+	}
+	return i
 }
 
 func (p *nodeTable) nearestNodes(id NodeID) []nodeInfo {
-	return p.nodes()
-	/*
-		p.mutex.Lock()
-		defer p.mutex.Unlock()
-		b := p.nearestBucket(id)
-		return append([]nodeInfo(nil), b.nodes...)
-	*/
+	b := id.xor(p.selfid).log2int()
+	return p.buckets[b]
 }
 
 func (p *nodeTable) find(id NodeID) *nodeInfo {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	b := p.nearestBucket(id)
-	for _, v := range b.nodes {
-		if v.ID.cmp(id) == 0 {
-			return &v
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+	b := id.xor(p.selfid).log2int()
+	for _, n := range p.buckets[b] {
+		if n.ID.cmp(id) == 0 {
+			return &n
 		}
 	}
 	return nil
-}
-
-func (p *nodeTable) nearestBucket(id NodeID) *bucket {
-	dist := p.selfid.xor(id)
-	b := p.root
-	for i := 0; i < dist.bitLen() && b.zero != nil; i++ {
-		if dist.bit(i) == 0 {
-			b = b.zero
-		} else {
-			b = b.one
-		}
-	}
-	return b
-}
-
-func (p *nodeTable) devideTree() {
-	b := p.root
-	i := 0
-	for ; b.zero != nil; i++ {
-		b = b.zero
-	}
-	if len(b.nodes) == p.k {
-		b.zero = &bucket{}
-		b.one = &bucket{}
-		for _, n := range b.nodes {
-			dist := p.selfid.xor(n.ID)
-			if dist.bit(i) == 0 {
-				b.zero.nodes = append(b.zero.nodes, n)
-			} else {
-				b.one.nodes = append(b.one.nodes, n)
-			}
-		}
-		b.nodes = b.nodes[:0]
-		if len(b.zero.nodes) == p.k {
-			p.devideTree()
-		}
-	}
 }
