@@ -6,24 +6,24 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
-func TestNodeIdMsgpack(t *testing.T) {
-	id := newRandomNodeId()
+func TestNodeIDMsgpack(t *testing.T) {
+	id := newRandomNodeID()
 	data, err := msgpack.Marshal(id)
 	if err != nil {
-		t.Errorf("cannot marshal NodeId")
+		t.Errorf("cannot marshal NodeID")
 	}
-	var id2 NodeId
+	var id2 NodeID
 	err = msgpack.Unmarshal(data, &id2)
 	if err != nil {
-		t.Errorf("cannot unmarshal NodeId")
+		t.Errorf("cannot unmarshal NodeID")
 	}
 }
 
-func TestNodeIdString(t *testing.T) {
-	id := newRandomNodeId()
+func TestNodeIDString(t *testing.T) {
+	id := newRandomNodeID()
 	str := id.String()
-	id2, err := NewNodeIdFromString(str)
+	id2, err := NewNodeIDFromString(str)
 	if err != nil || id.cmp(id2) != 0 {
-		t.Errorf("failed to generate NodeId from string")
+		t.Errorf("failed to generate NodeID from string")
 	}
 }

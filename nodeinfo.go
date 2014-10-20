@@ -8,13 +8,13 @@ import (
 )
 
 type nodeInfo struct {
-	Id   NodeId
+	ID   NodeID
 	Addr *net.UDPAddr
 }
 
 type nodeInfoSorter struct {
 	nodes []nodeInfo
-	id    NodeId
+	id    NodeID
 }
 
 func (p nodeInfoSorter) Len() int {
@@ -26,8 +26,8 @@ func (p nodeInfoSorter) Swap(i, j int) {
 }
 
 func (p nodeInfoSorter) Less(i, j int) bool {
-	disti := p.nodes[i].Id.xor(p.id)
-	distj := p.nodes[j].Id.xor(p.id)
+	disti := p.nodes[i].ID.xor(p.id)
+	distj := p.nodes[j].ID.xor(p.id)
 	return (disti.cmp(distj) == -1)
 }
 
@@ -36,7 +36,7 @@ func init() {
 		func(e *msgpack.Encoder, v reflect.Value) error {
 			info := v.Interface().(nodeInfo)
 			return e.Encode(map[string]string{
-				"id":   string(info.Id.Bytes()),
+				"id":   string(info.ID.Bytes()),
 				"addr": info.Addr.String(),
 			})
 		},
@@ -55,7 +55,7 @@ func init() {
 						return nil
 					}
 					v.Set(reflect.ValueOf(nodeInfo{
-						Id:   NewNodeId(idbuf),
+						ID:   NewNodeID(idbuf),
 						Addr: addr,
 					}))
 				}

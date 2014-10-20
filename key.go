@@ -28,8 +28,8 @@ type signature struct {
 }
 
 // PublicKeyHash returns a SHA-1 digest for the public key.
-func (p *PublicKey) PublicKeyHash() NodeId {
-	return NewNodeId(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
+func (p *PublicKey) PublicKeyHash() NodeID {
+	return NewNodeID(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
 }
 
 // GeneratePrivateKey generates new ECDSA key pair.

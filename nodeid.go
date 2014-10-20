@@ -10,9 +10,9 @@ import (
 )
 
 func init() {
-	msgpack.Register(reflect.TypeOf(NodeId{}),
+	msgpack.Register(reflect.TypeOf(NodeID{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {
-			id := v.Interface().(NodeId)
+			id := v.Interface().(NodeID)
 			return e.EncodeBytes(id.i.Bytes())
 		},
 		func(d *msgpack.Decoder, v reflect.Value) error {
@@ -25,65 +25,65 @@ func init() {
 			if i.BitLen() > 160 {
 				return nil
 			}
-			v.Set(reflect.ValueOf(NodeId{*i}))
+			v.Set(reflect.ValueOf(NodeID{*i}))
 			return nil
 		})
 }
 
-// NodeId represents a 160-bit node identifier.
-type NodeId struct {
+// NodeID represents a 160-bit node identifier.
+type NodeID struct {
 	i big.Int
 }
 
-// NewNodeId generates NodeId from the given big-endian byte array.
-func NewNodeId(data [20]byte) NodeId {
+// NewNodeID generates NodeID from the given big-endian byte array.
+func NewNodeID(data [20]byte) NodeID {
 	i := big.NewInt(0)
 	i.SetBytes(data[:])
-	return NodeId{*i}
+	return NodeID{*i}
 }
 
-// NewNodeIdFromString generates NodeId from the given base58-encoded string.
-func NewNodeIdFromString(str string) (NodeId, error) {
+// NewNodeIDFromString generates NodeID from the given base58-encoded string.
+func NewNodeIDFromString(str string) (NodeID, error) {
 	i, err := base58.DecodeToBig([]byte(str))
 	if err != nil {
-		return NodeId{}, err
+		return NodeID{}, err
 	}
-	return NodeId{*i}, nil
+	return NodeID{*i}, nil
 }
 
-func newRandomNodeId() NodeId {
+func newRandomNodeID() NodeID {
 	var data [20]byte
 	_, err := rand.Read(data[:])
 	if err != nil {
 		panic(err)
 	} else {
-		return NewNodeId(data)
+		return NewNodeID(data)
 	}
 }
 
-func (id NodeId) xor(n NodeId) NodeId {
+func (id NodeID) xor(n NodeID) NodeID {
 	d := big.NewInt(0)
-	return NodeId{i: *d.Xor(&id.i, &n.i)}
+	return NodeID{i: *d.Xor(&id.i, &n.i)}
 }
 
-func (id NodeId) bitLen() int {
+func (id NodeID) bitLen() int {
 	return 160
 }
 
-func (id NodeId) bit(i int) uint {
+func (id NodeID) bit(i int) uint {
 	return id.i.Bit(159 - i)
 }
 
-func (id NodeId) cmp(n NodeId) int {
+func (id NodeID) cmp(n NodeID) int {
 	return id.i.Cmp(&n.i)
 }
 
 // Bytes returns identifier as a big-endian byte array.
-func (id NodeId) Bytes() []byte {
+func (id NodeID) Bytes() []byte {
 	return id.i.Bytes()
 }
 
 // String returns identifier as a base58-encoded byte array.
-func (id NodeId) String() string {
+func (id NodeID) String() string {
 	return string(base58.EncodeBig(nil, &id.i))
 }

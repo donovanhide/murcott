@@ -62,7 +62,7 @@ type JsonRpc struct {
 	Version string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
 	Params  []interface{} `json:"params"`
-	Id      int           `json:"id"`
+	ID      int           `json:"id"`
 }
 
 type JsonRpcListener struct {
@@ -83,19 +83,19 @@ func (r JsonRpcListener) HandleLog(c func(args []interface{})) {
 }
 
 func (r JsonRpcListener) HandleMessage(c func(args []interface{})) {
-	r.client.HandleMessages(func(src murcott.NodeId, msg murcott.ChatMessage) {
+	r.client.HandleMessages(func(src murcott.NodeID, msg murcott.ChatMessage) {
 		c([]interface{}{src.String(), msg.Text(), msg.Time})
 	})
 }
 
 func (r JsonRpcListener) HandleStatus(c func(args []interface{})) {
-	r.client.HandleStatuses(func(src murcott.NodeId, status murcott.UserStatus) {
+	r.client.HandleStatuses(func(src murcott.NodeID, status murcott.UserStatus) {
 		c([]interface{}{src.String(), status.Type})
 	})
 }
 
 func (r JsonRpcListener) SendMessage(dst string, msg string, c func(args []interface{})) {
-	id, err := murcott.NewNodeIdFromString(dst)
+	id, err := murcott.NewNodeIDFromString(dst)
 	if err == nil {
 		r.client.SendMessage(id, murcott.NewPlainChatMessage(msg), func(ok bool) {
 			c([]interface{}{ok})
@@ -106,7 +106,7 @@ func (r JsonRpcListener) SendMessage(dst string, msg string, c func(args []inter
 }
 
 func (r JsonRpcListener) AddFriend(idstr string) {
-	id, err := murcott.NewNodeIdFromString(idstr)
+	id, err := murcott.NewNodeIDFromString(idstr)
 	if err == nil {
 		r.client.Roster.Add(id)
 	}
@@ -127,11 +127,11 @@ func (r JsonRpcListener) GetProfile(c func(args []interface{})) {
 	if profile.Avatar.Image != nil {
 		png.Encode(encoder, profile.Avatar.Image)
 	}
-	c([]interface{}{r.client.Id().String(), profile.Nickname, string(buf.Bytes())})
+	c([]interface{}{r.client.ID().String(), profile.Nickname, string(buf.Bytes())})
 }
 
 func (r JsonRpcListener) GetFriendProfile(idstr string, c func(args []interface{})) {
-	id, err := murcott.NewNodeIdFromString(idstr)
+	id, err := murcott.NewNodeIDFromString(idstr)
 	if err != nil {
 		return
 	}
@@ -208,11 +208,11 @@ func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
 							retrpc := struct {
 								Version string        `json:"jsonrpc"`
 								Result  []interface{} `json:"result"`
-								Id      int           `json:"id"`
+								ID      int           `json:"id"`
 							}{
 								Version: "2.0",
 								Result:  args,
-								Id:      int(id),
+								ID:      int(id),
 							}
 							ws.WriteJSON(retrpc)
 						})

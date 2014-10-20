@@ -11,12 +11,12 @@ func TestStorageRoster(t *testing.T) {
 	defer s.close()
 
 	roster := &Roster{
-		list: []NodeId{
-			newRandomNodeId(),
-			newRandomNodeId(),
-			newRandomNodeId(),
-			newRandomNodeId(),
-			newRandomNodeId(),
+		list: []NodeID{
+			newRandomNodeID(),
+			newRandomNodeID(),
+			newRandomNodeID(),
+			newRandomNodeID(),
+			newRandomNodeID(),
 		},
 	}
 
@@ -36,7 +36,7 @@ func TestStorageRoster(t *testing.T) {
 
 	for i, id := range r.list {
 		if id.cmp(roster.list[i]) != 0 {
-			t.Errorf("wrong NodeId: %s; expects %s", id.String(), roster.list[i].String())
+			t.Errorf("wrong NodeID: %s; expects %s", id.String(), roster.list[i].String())
 		}
 	}
 }
@@ -46,12 +46,12 @@ func TestStorageBlockList(t *testing.T) {
 	defer s.close()
 
 	roster := &BlockList{
-		list: []NodeId{
-			newRandomNodeId(),
-			newRandomNodeId(),
-			newRandomNodeId(),
-			newRandomNodeId(),
-			newRandomNodeId(),
+		list: []NodeID{
+			newRandomNodeID(),
+			newRandomNodeID(),
+			newRandomNodeID(),
+			newRandomNodeID(),
+			newRandomNodeID(),
 		},
 	}
 
@@ -71,7 +71,7 @@ func TestStorageBlockList(t *testing.T) {
 
 	for i, id := range r.list {
 		if id.cmp(roster.list[i]) != 0 {
-			t.Errorf("wrong NodeId: %s; expects %s", id.String(), roster.list[i].String())
+			t.Errorf("wrong NodeID: %s; expects %s", id.String(), roster.list[i].String())
 		}
 	}
 }
@@ -79,7 +79,7 @@ func TestStorageBlockList(t *testing.T) {
 func TestStorageProfile(t *testing.T) {
 	s := NewStorage(":memory:")
 	defer s.close()
-	id := newRandomNodeId()
+	id := newRandomNodeID()
 	profile := UserProfile{
 		Nickname: "nick",
 		Extension: map[string]string{
@@ -135,9 +135,9 @@ func TestStorageKnownNodes(t *testing.T) {
 	addr3, _ := net.ResolveUDPAddr("udp", "19.94.244.34:1234")
 
 	nodes := []nodeInfo{
-		nodeInfo{Id: newRandomNodeId(), Addr: addr1},
-		nodeInfo{Id: newRandomNodeId(), Addr: addr2},
-		nodeInfo{Id: newRandomNodeId(), Addr: addr3},
+		nodeInfo{ID: newRandomNodeID(), Addr: addr1},
+		nodeInfo{ID: newRandomNodeID(), Addr: addr2},
+		nodeInfo{ID: newRandomNodeID(), Addr: addr3},
 	}
 
 	err := s.saveKnownNodes(nodes)
@@ -155,8 +155,8 @@ func TestStorageKnownNodes(t *testing.T) {
 	}
 
 	for i := range nodes2 {
-		if nodes2[i].Id.cmp(nodes[i].Id) != 0 {
-			t.Errorf("nodeInfo.Id mismatch: %s; expects %s", nodes2[i].Id.String(), nodes[i].Id.String())
+		if nodes2[i].ID.cmp(nodes[i].ID) != 0 {
+			t.Errorf("nodeInfo.ID mismatch: %s; expects %s", nodes2[i].ID.String(), nodes[i].ID.String())
 		}
 		if nodes2[i].Addr.String() != nodes[i].Addr.String() {
 			t.Errorf("nodeInfo.Addr mismatch: %s; expects %s", nodes2[i].Addr.String(), nodes[i].Addr.String())

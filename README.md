@@ -37,7 +37,7 @@ func main() {
 	client := murcott.NewClient(key, storage, murcott.DefaultConfig)
 
 	// Handle incoming messages.
-	client.HandleMessages(func(src murcott.NodeId, msg murcott.ChatMessage) {
+	client.HandleMessages(func(src murcott.NodeID, msg murcott.ChatMessage) {
 		fmt.Println(msg.Text() + " from " + src.String())
 	})
 
@@ -45,7 +45,7 @@ func main() {
 	go client.Run()
 
 	// Parse a base58-encoded node identifier of your friend.
-	dst, _ := murcott.NewNodeIdFromString("3CjjdZLV4DqXkc3KtPZPTfBU1AAY")
+	dst, _ := murcott.NewNodeIDFromString("3CjjdZLV4DqXkc3KtPZPTfBU1AAY")
 
 	for {
 		b := make([]byte, 1024)

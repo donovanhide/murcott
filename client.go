@@ -8,14 +8,14 @@ type Client struct {
 	storage       *Storage
 	status        UserStatus
 	profile       UserProfile
-	id            NodeId
+	id            NodeID
 	Roster        *Roster
 	BlockList     *BlockList
 	Logger        *Logger
 }
 
-type messageHandler func(src NodeId, msg ChatMessage)
-type statusHandler func(src NodeId, status UserStatus)
+type messageHandler func(src NodeID, msg ChatMessage)
+type statusHandler func(src NodeID, status UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
 func NewClient(key *PrivateKey, storage *Storage, config Config) *Client {
@@ -44,7 +44,7 @@ func NewClient(key *PrivateKey, storage *Storage, config Config) *Client {
 		c.profile = *profile
 	}
 
-	c.node.handle(func(src NodeId, msg interface{}) interface{} {
+	c.node.handle(func(src NodeID, msg interface{}) interface{} {
 		if c.BlockList.contains(src) {
 			return nil
 		}
@@ -91,25 +91,25 @@ func (c *Client) Close() {
 }
 
 // Sends the given message to the destination node.
-func (c *Client) SendMessage(dst NodeId, msg ChatMessage, ack func(ok bool)) {
+func (c *Client) SendMessage(dst NodeID, msg ChatMessage, ack func(ok bool)) {
 	c.node.send(dst, msg, func(r interface{}) {
 		ack(r != nil)
 	})
 }
 
 // HandleMessages registers the given function as a massage handler.
-func (c *Client) HandleMessages(handler func(src NodeId, msg ChatMessage)) {
+func (c *Client) HandleMessages(handler func(src NodeID, msg ChatMessage)) {
 	c.msgHandler = handler
 }
 
 // HandleMessages registers the given function as a status handler.
-func (c *Client) HandleStatuses(handler func(src NodeId, status UserStatus)) {
+func (c *Client) HandleStatuses(handler func(src NodeID, status UserStatus)) {
 	c.statusHandler = handler
 }
 
 // Requests a user profile to the destination node.
 // If no response is received from the node, RequestProfile tries to load a profile from the cache.
-func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
+func (c *Client) RequestProfile(dst NodeID, f func(profile *UserProfile)) {
 	c.node.send(dst, userProfileRequest{}, func(r interface{}) {
 		if p, ok := r.(userProfileResponse); ok {
 			c.storage.SaveProfile(dst, p.Profile)
@@ -120,7 +120,7 @@ func (c *Client) RequestProfile(dst NodeId, f func(profile *UserProfile)) {
 	})
 }
 
-func (c *Client) Id() NodeId {
+func (c *Client) ID() NodeID {
 	return c.id
 }
 

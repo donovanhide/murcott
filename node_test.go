@@ -16,7 +16,7 @@ func TestNodeChatMessage(t *testing.T) {
 
 	success := make(chan bool)
 
-	node2.handle(func(src NodeId, msg interface{}) interface{} {
+	node2.handle(func(src NodeID, msg interface{}) interface{} {
 		if m, ok := msg.(ChatMessage); ok {
 			if m.Text() == plainmsg.Text() {
 				if src.cmp(key1.PublicKeyHash()) == 0 {

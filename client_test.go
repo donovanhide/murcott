@@ -19,7 +19,7 @@ func TestClientMessage(t *testing.T) {
 	success := make(chan bool)
 	plainmsg := NewPlainChatMessage("Hello")
 
-	client2.HandleMessages(func(src NodeId, msg ChatMessage) {
+	client2.HandleMessages(func(src NodeID, msg ChatMessage) {
 		if src.cmp(key1.PublicKeyHash()) == 0 {
 			if msg.Text() == plainmsg.Text() {
 				success <- true
@@ -180,7 +180,7 @@ func TestClientStatus(t *testing.T) {
 
 	success := make(chan bool)
 
-	client1.HandleStatuses(func(src NodeId, p UserStatus) {
+	client1.HandleStatuses(func(src NodeID, p UserStatus) {
 		if p.Type != StatusOffline {
 			t.Errorf("wrong Type: %s; expects %s", p.Type, StatusOffline)
 			success <- false
@@ -194,7 +194,7 @@ func TestClientStatus(t *testing.T) {
 		success <- true
 	})
 
-	client2.HandleStatuses(func(src NodeId, p UserStatus) {
+	client2.HandleStatuses(func(src NodeID, p UserStatus) {
 		if p.Type != status1.Type {
 			t.Errorf("wrong Type: %s; expects %s", p.Type, status1.Type)
 			success <- false

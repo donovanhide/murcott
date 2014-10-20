@@ -23,20 +23,20 @@ func TestRouterMessageExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.cmp(router1.info.Id) != 0 {
+	if m.id.cmp(router1.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.payload) != msg {
 		t.Errorf("router2: wrong message body")
 	}
 
-	router2.sendMessage(router1.info.Id, []byte(msg))
+	router2.sendMessage(router1.info.ID, []byte(msg))
 
 	m, err = router1.recvMessage()
 	if err != nil {
 		t.Errorf("router1: recvMessage() returns error")
 	}
-	if m.id.cmp(router2.info.Id) != 0 {
+	if m.id.cmp(router2.info.ID) != 0 {
 		t.Errorf("router1: wrong source id")
 	}
 	if string(m.payload) != msg {
@@ -68,7 +68,7 @@ func TestRouterCancelMessage(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.cmp(router1.info.Id) != 0 {
+	if m.id.cmp(router1.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.payload) != msg2 {
@@ -105,7 +105,7 @@ func TestRouterRouteExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.cmp(router3.info.Id) != 0 {
+	if m.id.cmp(router3.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.payload) != msg {

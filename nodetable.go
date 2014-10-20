@@ -10,12 +10,12 @@ type bucket struct {
 
 type nodeTable struct {
 	root   *bucket
-	selfid NodeId
+	selfid NodeID
 	k      int
 	mutex  *sync.Mutex
 }
 
-func newNodeTable(k int, id NodeId) nodeTable {
+func newNodeTable(k int, id NodeID) nodeTable {
 	return nodeTable{
 		root:   &bucket{},
 		selfid: id,
@@ -28,14 +28,14 @@ func (p *nodeTable) insert(node nodeInfo) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if p.selfid.cmp(node.Id) == 0 {
+	if p.selfid.cmp(node.ID) == 0 {
 		return
 	}
 
-	b := p.nearestBucket(node.Id)
+	b := p.nearestBucket(node.ID)
 
 	for i, v := range b.nodes {
-		if v.Id.cmp(node.Id) == 0 {
+		if v.ID.cmp(node.ID) == 0 {
 			b.nodes = append(append(b.nodes[:i], b.nodes[i+1:]...), node)
 			return
 		}
@@ -50,12 +50,12 @@ func (p *nodeTable) insert(node nodeInfo) {
 	p.devideTree()
 }
 
-func (p *nodeTable) remove(id NodeId) {
+func (p *nodeTable) remove(id NodeID) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	b := p.nearestBucket(id)
 	for i, n := range b.nodes {
-		if n.Id.cmp(id) == 0 {
+		if n.ID.cmp(id) == 0 {
 			b.nodes = append(b.nodes[:i], b.nodes[i+1:]...)
 		}
 	}
@@ -78,7 +78,7 @@ func (p *nodeTable) nodes() []nodeInfo {
 	return collectNodes(p.root)
 }
 
-func (p *nodeTable) nearestNodes(id NodeId) []nodeInfo {
+func (p *nodeTable) nearestNodes(id NodeID) []nodeInfo {
 	return p.nodes()
 	/*
 		p.mutex.Lock()
@@ -88,19 +88,19 @@ func (p *nodeTable) nearestNodes(id NodeId) []nodeInfo {
 	*/
 }
 
-func (p *nodeTable) find(id NodeId) *nodeInfo {
+func (p *nodeTable) find(id NodeID) *nodeInfo {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	b := p.nearestBucket(id)
 	for _, v := range b.nodes {
-		if v.Id.cmp(id) == 0 {
+		if v.ID.cmp(id) == 0 {
 			return &v
 		}
 	}
 	return nil
 }
 
-func (p *nodeTable) nearestBucket(id NodeId) *bucket {
+func (p *nodeTable) nearestBucket(id NodeID) *bucket {
 	dist := p.selfid.xor(id)
 	b := p.root
 	for i := 0; i < dist.bitLen() && b.zero != nil; i++ {
@@ -123,7 +123,7 @@ func (p *nodeTable) devideTree() {
 		b.zero = &bucket{}
 		b.one = &bucket{}
 		for _, n := range b.nodes {
-			dist := p.selfid.xor(n.Id)
+			dist := p.selfid.xor(n.ID)
 			if dist.bit(i) == 0 {
 				b.zero.nodes = append(b.zero.nodes, n)
 			} else {

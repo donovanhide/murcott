@@ -15,7 +15,7 @@ import (
 type dhtRpcCallback func(*dhtRpcCommand, *net.UDPAddr)
 
 type dhtPacket struct {
-	dst     NodeId
+	dst     NodeID
 	payload []byte
 }
 
@@ -78,7 +78,7 @@ type dht struct {
 }
 
 type dhtRpcCommand struct {
-	Id     []byte                 `msgpack:"id"`
+	ID     []byte                 `msgpack:"id"`
 	Method string                 `msgpack:"method"`
 	Args   map[string]interface{} `msgpack:"args"`
 }
@@ -93,7 +93,7 @@ func (p *dhtRpcCommand) getArgs(k string, v ...interface{}) {
 func newDht(k int, info nodeInfo, logger *Logger) *dht {
 	d := dht{
 		info:  info,
-		table: newNodeTable(k, info.Id),
+		table: newNodeTable(k, info.ID),
 		k:     k,
 		kvs: keyValueStore{
 			storage: make(map[string]string),
@@ -111,14 +111,14 @@ func newDht(k int, info nodeInfo, logger *Logger) *dht {
 
 func (p *dht) addNode(node nodeInfo) {
 	p.table.insert(node)
-	p.sendPing(node.Id)
+	p.sendPing(node.ID)
 }
 
 func (p *dht) knownNodes() []nodeInfo {
 	return p.table.nodes()
 }
 
-func (p *dht) getNodeInfo(id NodeId) *nodeInfo {
+func (p *dht) getNodeInfo(id NodeID) *nodeInfo {
 	return p.table.find(id)
 }
 
@@ -128,17 +128,17 @@ func (p *dht) storeValue(key string, value string) {
 		"key":   key,
 		"value": value,
 	})
-	for _, n := range p.findNearestNode(NewNodeId(hash)) {
-		p.sendPacket(n.Id, c)
+	for _, n := range p.findNearestNode(NewNodeID(hash)) {
+		p.sendPacket(n.ID, c)
 	}
 }
 
-func (p *dht) findNearestNode(findid NodeId) []nodeInfo {
+func (p *dht) findNearestNode(findid NodeID) []nodeInfo {
 
 	reqch := make(chan nodeInfo, 100)
 	endch := make(chan struct{}, 100)
 
-	f := func(id NodeId, command dhtRpcCommand) {
+	f := func(id NodeID, command dhtRpcCommand) {
 		ch := p.sendPacket(id, command)
 
 		ret := <-ch
@@ -147,7 +147,7 @@ func (p *dht) findNearestNode(findid NodeId) []nodeInfo {
 				var nodes []nodeInfo
 				ret.command.getArgs("nodes", &nodes)
 				for _, n := range nodes {
-					if n.Id.cmp(p.info.Id) != 0 {
+					if n.ID.cmp(p.info.ID) != 0 {
 						p.table.insert(n)
 						reqch <- n
 					}
@@ -175,12 +175,12 @@ loop:
 	for {
 		select {
 		case node := <-reqch:
-			if _, ok := requested[node.Id.String()]; !ok {
-				requested[node.Id.String()] = node
+			if _, ok := requested[node.ID.String()]; !ok {
+				requested[node.ID.String()] = node
 				c := newRpcCommand("find-node", map[string]interface{}{
 					"id": string(findid.Bytes()),
 				})
-				go f(node.Id, c)
+				go f(node.ID, c)
 				count++
 			}
 		case <-endch:
@@ -212,15 +212,15 @@ func (p *dht) loadValue(key string) *string {
 	}
 
 	hash := sha1.Sum([]byte(key))
-	keyid := NewNodeId(hash)
+	keyid := NewNodeID(hash)
 
 	retch := make(chan *string, 2)
-	reqch := make(chan NodeId, 100)
+	reqch := make(chan NodeID, 100)
 	endch := make(chan struct{}, 100)
 
-	nodes := p.table.nearestNodes(NewNodeId(hash))
+	nodes := p.table.nearestNodes(NewNodeID(hash))
 
-	f := func(id NodeId, keyid NodeId, command dhtRpcCommand) {
+	f := func(id NodeID, keyid NodeID, command dhtRpcCommand) {
 		ch := p.sendPacket(id, command)
 
 		ret := <-ch
@@ -233,8 +233,8 @@ func (p *dht) loadValue(key string) *string {
 				dist := id.xor(keyid)
 				for _, n := range nodes {
 					p.table.insert(n)
-					if dist.cmp(n.Id.xor(keyid)) == 1 {
-						reqch <- n.Id
+					if dist.cmp(n.ID.xor(keyid)) == 1 {
+						reqch <- n.ID
 					}
 				}
 			}
@@ -247,7 +247,7 @@ func (p *dht) loadValue(key string) *string {
 	}
 
 	for _, n := range nodes {
-		reqch <- n.Id
+		reqch <- n.ID
 	}
 
 	count := 0
@@ -289,21 +289,21 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 
 		switch command.Method {
 		case "ping":
-			p.logger.info("Receive DHT Ping from %s", src.Id.String())
-			p.sendPacket(src.Id, newRpcReturnCommand(command.Id, nil))
+			p.logger.info("Receive DHT Ping from %s", src.ID.String())
+			p.sendPacket(src.ID, newRpcReturnCommand(command.ID, nil))
 
 		case "find-node":
-			p.logger.info("Receive DHT Find-Node from %s", src.Id.String())
+			p.logger.info("Receive DHT Find-Node from %s", src.ID.String())
 			if id, ok := command.Args["id"].(string); ok {
 				args := map[string]interface{}{}
 				var idary [20]byte
 				copy(idary[:], []byte(id)[:20])
-				args["nodes"] = p.table.nearestNodes(NewNodeId(idary))
-				p.sendPacket(src.Id, newRpcReturnCommand(command.Id, args))
+				args["nodes"] = p.table.nearestNodes(NewNodeID(idary))
+				p.sendPacket(src.ID, newRpcReturnCommand(command.ID, args))
 			}
 
 		case "store":
-			p.logger.info("Receive DHT Store from %s", src.Id.String())
+			p.logger.info("Receive DHT Store from %s", src.ID.String())
 			if key, ok := command.Args["key"].(string); ok {
 				if val, ok := command.Args["value"].(string); ok {
 					p.kvs.set(key, val)
@@ -311,20 +311,20 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 			}
 
 		case "find-value":
-			p.logger.info("Receive DHT Find-Node from %s", src.Id.String())
+			p.logger.info("Receive DHT Find-Node from %s", src.ID.String())
 			if key, ok := command.Args["key"].(string); ok {
 				args := map[string]interface{}{}
 				if val, ok := p.kvs.get(key); ok {
 					args["value"] = val
 				} else {
 					hash := sha1.Sum([]byte(key))
-					args["nodes"] = p.table.nearestNodes(NewNodeId(hash))
+					args["nodes"] = p.table.nearestNodes(NewNodeID(hash))
 				}
-				p.sendPacket(src.Id, newRpcReturnCommand(command.Id, args))
+				p.sendPacket(src.ID, newRpcReturnCommand(command.ID, args))
 			}
 
 		case "": // callback
-			id := string(command.Id)
+			id := string(command.ID)
 			if ch := p.rpcRet.pop(id); ch != nil {
 				ch <- &dhtRpcReturn{command: command, addr: src.Addr}
 			}
@@ -332,11 +332,11 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 	}
 }
 
-func (p *dht) nextPacket() (NodeId, []byte, error) {
+func (p *dht) nextPacket() (NodeID, []byte, error) {
 	if c, ok := <-p.rpc; ok {
 		return c.dst, c.payload, nil
 	} else {
-		return NodeId{}, nil, errors.New("DHT closed")
+		return NodeID{}, nil, errors.New("DHT closed")
 	}
 }
 
@@ -347,7 +347,7 @@ func newRpcCommand(method string, args map[string]interface{}) dhtRpcCommand {
 		panic(err)
 	}
 	return dhtRpcCommand{
-		Id:     id,
+		ID:     id,
 		Method: method,
 		Args:   args,
 	}
@@ -355,13 +355,13 @@ func newRpcCommand(method string, args map[string]interface{}) dhtRpcCommand {
 
 func newRpcReturnCommand(id []byte, args map[string]interface{}) dhtRpcCommand {
 	return dhtRpcCommand{
-		Id:     id,
+		ID:     id,
 		Method: "",
 		Args:   args,
 	}
 }
 
-func (p *dht) sendPing(dst NodeId) {
+func (p *dht) sendPing(dst NodeID) {
 	c := newRpcCommand("ping", nil)
 	ch := p.sendPacket(dst, c)
 	go func() {
@@ -372,13 +372,13 @@ func (p *dht) sendPing(dst NodeId) {
 	}()
 }
 
-func (p *dht) sendPacket(dst NodeId, command dhtRpcCommand) chan *dhtRpcReturn {
+func (p *dht) sendPacket(dst NodeID, command dhtRpcCommand) chan *dhtRpcReturn {
 	data, err := msgpack.Marshal(command)
 	if err != nil {
 		panic(err)
 	}
 
-	id := string(command.Id)
+	id := string(command.ID)
 	ch := make(chan *dhtRpcReturn, 2)
 
 	p.rpcRet.push(id, ch)

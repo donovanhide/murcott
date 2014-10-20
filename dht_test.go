@@ -7,8 +7,8 @@ import (
 )
 
 func TestDhtPing(t *testing.T) {
-	node1 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
-	node2 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
+	node1 := nodeInfo{ID: newRandomNodeID(), Addr: nil}
+	node2 := nodeInfo{ID: newRandomNodeID(), Addr: nil}
 
 	dht1 := newDht(10, node1, newLogger())
 	dht2 := newDht(10, node2, newLogger())
@@ -19,17 +19,17 @@ func TestDhtPing(t *testing.T) {
 	if err != nil {
 		return
 	}
-	if dst.cmp(node2.Id) != 0 {
+	if dst.cmp(node2.ID) != 0 {
 		t.Errorf("wrong packet destination: %s", dst.String())
 	} else {
 		dht2.processPacket(node1, payload)
 	}
 
-	if dht1.getNodeInfo(node2.Id) == nil {
+	if dht1.getNodeInfo(node2.ID) == nil {
 		t.Errorf("dht1 doesn't know node2")
 	}
 
-	if dht2.getNodeInfo(node1.Id) == nil {
+	if dht2.getNodeInfo(node1.ID) == nil {
 		t.Errorf("dht2 doesn't know node1")
 	}
 
@@ -38,11 +38,11 @@ func TestDhtPing(t *testing.T) {
 }
 
 func TestDhtTimeout(t *testing.T) {
-	node1 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
-	node2 := nodeInfo{Id: newRandomNodeId(), Addr: nil}
+	node1 := nodeInfo{ID: newRandomNodeID(), Addr: nil}
+	node2 := nodeInfo{ID: newRandomNodeID(), Addr: nil}
 	dht1 := newDht(10, node1, newLogger())
 	dht1.addNode(node2)
-	ch := dht1.sendPacket(node2.Id, dhtRpcCommand{})
+	ch := dht1.sendPacket(node2.ID, dhtRpcCommand{})
 	select {
 	case r := <-ch:
 		if r != nil {
@@ -84,9 +84,9 @@ func TestDhtGroup(t *testing.T) {
 	}
 
 	for i := 0; i < n; i++ {
-		id, _ := NewNodeIdFromString(ids[i])
+		id, _ := NewNodeIDFromString(ids[i])
 		addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4000")
-		node := nodeInfo{Id: id, Addr: addr}
+		node := nodeInfo{ID: id, Addr: addr}
 		d := newDht(20, node, logger)
 		idary[i] = node
 		dhtmap[id.String()] = d
@@ -104,11 +104,11 @@ func TestDhtGroup(t *testing.T) {
 	}
 
 	rootNode := idary[0]
-	rootDht := dhtmap[rootNode.Id.String()]
+	rootDht := dhtmap[rootNode.ID.String()]
 
 	for _, d := range dhtmap {
 		d.addNode(rootNode)
-		d.findNearestNode(d.info.Id)
+		d.findNearestNode(d.info.ID)
 	}
 
 	kvs := map[string]string{

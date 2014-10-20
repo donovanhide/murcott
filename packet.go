@@ -8,8 +8,8 @@ import (
 )
 
 type packet struct {
-	Dst     NodeId    `msgpack:"dst"`
-	Src     NodeId    `msgpack:"src"`
+	Dst     NodeID    `msgpack:"dst"`
+	Src     NodeID    `msgpack:"src"`
 	Type    string    `msgpack:"type"`
 	Payload []byte    `msgpack:"payload"`
 	Sign    signature `msgpack:"sign"`

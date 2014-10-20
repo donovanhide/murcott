@@ -6,8 +6,8 @@ import (
 
 func TestPacketSignature(t *testing.T) {
 	packet := packet{
-		Dst:     newRandomNodeId(),
-		Src:     newRandomNodeId(),
+		Dst:     newRandomNodeID(),
+		Src:     newRandomNodeID(),
 		Type:    "dht",
 		Payload: []byte("payload"),
 	}

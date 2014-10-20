@@ -12,12 +12,12 @@ import (
 const (
 	createRosterTableStmt = iota
 	loadRosterStmt
-	insertIdToRosterStmt
+	insertIDToRosterStmt
 	clearRosterStmt
 
 	createBlockListTableStmt
 	loadBlockListStmt
-	insertIdToBlockListStmt
+	insertIDToBlockListStmt
 	clearBlockListStmt
 
 	createProfileTableStmt
@@ -54,14 +54,14 @@ func (s *Storage) init() {
 	s.exec(createRosterTableStmt)
 
 	s.prepare(loadRosterStmt, "SELECT id FROM roster")
-	s.prepare(insertIdToRosterStmt, "INSERT INTO roster (id) VALUES(?)")
+	s.prepare(insertIDToRosterStmt, "INSERT INTO roster (id) VALUES(?)")
 	s.prepare(clearRosterStmt, "DELETE FROM roster")
 
 	s.prepare(createBlockListTableStmt, "CREATE TABLE blocklist (id TEXT)")
 	s.exec(createBlockListTableStmt)
 
 	s.prepare(loadBlockListStmt, "SELECT id FROM blocklist")
-	s.prepare(insertIdToBlockListStmt, "INSERT INTO blocklist (id) VALUES(?)")
+	s.prepare(insertIDToBlockListStmt, "INSERT INTO blocklist (id) VALUES(?)")
 	s.prepare(clearBlockListStmt, "DELETE FROM blocklist")
 
 	s.prepare(createProfileTableStmt, "CREATE TABLE profile (id TEXT, nickname TEXT, data BLOB)")
@@ -112,7 +112,7 @@ func (s *Storage) queryRow(t int, args ...interface{}) *sql.Row {
 }
 
 func (s *Storage) LoadRoster() (*Roster, error) {
-	var list []NodeId
+	var list []NodeID
 	rows, err := s.query(loadRosterStmt)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (s *Storage) LoadRoster() (*Roster, error) {
 	for rows.Next() {
 		var id string
 		rows.Scan(&id)
-		nodeid, err := NewNodeIdFromString(id)
+		nodeid, err := NewNodeIDFromString(id)
 		if err == nil {
 			list = append(list, nodeid)
 		}
@@ -136,7 +136,7 @@ func (s *Storage) SaveRoster(roster *Roster) error {
 	}
 
 	for _, id := range roster.list {
-		_, err := s.exec(insertIdToRosterStmt, id.String())
+		_, err := s.exec(insertIDToRosterStmt, id.String())
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func (s *Storage) SaveRoster(roster *Roster) error {
 	return nil
 }
 
-func (s *Storage) LoadProfile(id NodeId) *UserProfile {
+func (s *Storage) LoadProfile(id NodeID) *UserProfile {
 	row := s.queryRow(loadProfileStmt, id.String())
 	if row == nil {
 		return nil
@@ -161,7 +161,7 @@ func (s *Storage) LoadProfile(id NodeId) *UserProfile {
 	}
 }
 
-func (s *Storage) SaveProfile(id NodeId, profile UserProfile) error {
+func (s *Storage) SaveProfile(id NodeID, profile UserProfile) error {
 	data, err := msgpack.Marshal(profile)
 	if err != nil {
 		return err
@@ -176,7 +176,7 @@ func (s *Storage) SaveProfile(id NodeId, profile UserProfile) error {
 }
 
 func (s *Storage) LoadBlockList() (*BlockList, error) {
-	var list []NodeId
+	var list []NodeID
 	rows, err := s.query(loadBlockListStmt)
 	if err != nil {
 		return nil, err
@@ -185,7 +185,7 @@ func (s *Storage) LoadBlockList() (*BlockList, error) {
 	for rows.Next() {
 		var id string
 		rows.Scan(&id)
-		nodeid, err := NewNodeIdFromString(id)
+		nodeid, err := NewNodeIDFromString(id)
 		if err == nil {
 			list = append(list, nodeid)
 		}
@@ -200,7 +200,7 @@ func (s *Storage) SaveBlockList(blocklist *BlockList) error {
 	}
 
 	for _, id := range blocklist.list {
-		_, err := s.exec(insertIdToBlockListStmt, id.String())
+		_, err := s.exec(insertIDToBlockListStmt, id.String())
 		if err != nil {
 			return err
 		}
@@ -218,11 +218,11 @@ func (s *Storage) loadKnownNodes() ([]nodeInfo, error) {
 	for rows.Next() {
 		var id, addrstr string
 		rows.Scan(&id, &addrstr)
-		nodeid, err := NewNodeIdFromString(id)
+		nodeid, err := NewNodeIDFromString(id)
 		if err == nil {
 			addr, err := net.ResolveUDPAddr("udp", addrstr)
 			if err == nil {
-				list = append(list, nodeInfo{Id: nodeid, Addr: addr})
+				list = append(list, nodeInfo{ID: nodeid, Addr: addr})
 			}
 		}
 	}
@@ -231,7 +231,7 @@ func (s *Storage) loadKnownNodes() ([]nodeInfo, error) {
 
 func (s *Storage) saveKnownNodes(nodes []nodeInfo) error {
 	for _, n := range nodes {
-		s.exec(replaceKnownNodesStmt, n.Id.String(), n.Addr.String())
+		s.exec(replaceKnownNodesStmt, n.ID.String(), n.Addr.String())
 	}
 	return nil
 }

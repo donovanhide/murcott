@@ -5,14 +5,14 @@ import (
 )
 
 type BlockList struct {
-	list []NodeId
+	list []NodeID
 }
 
-func (r *BlockList) List() []NodeId {
-	return append([]NodeId(nil), r.list...)
+func (r *BlockList) List() []NodeID {
+	return append([]NodeID(nil), r.list...)
 }
 
-func (r *BlockList) Add(id NodeId) {
+func (r *BlockList) Add(id NodeID) {
 	for _, n := range r.list {
 		if n.cmp(id) == 0 {
 			return
@@ -21,7 +21,7 @@ func (r *BlockList) Add(id NodeId) {
 	r.list = append(r.list, id)
 }
 
-func (r *BlockList) Remove(id NodeId) error {
+func (r *BlockList) Remove(id NodeID) error {
 	for i, n := range r.list {
 		if n.cmp(id) == 0 {
 			r.list = append(r.list[:i], r.list[i+1:]...)
@@ -31,7 +31,7 @@ func (r *BlockList) Remove(id NodeId) error {
 	return errors.New("item not found")
 }
 
-func (r *BlockList) contains(id NodeId) bool {
+func (r *BlockList) contains(id NodeID) bool {
 	for _, n := range r.list {
 		if n.cmp(id) == 0 {
 			return true
