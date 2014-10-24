@@ -1,6 +1,9 @@
 package main
 
-import "github.com/h2so5/murcott"
+import (
+	"fmt"
+	"github.com/h2so5/murcott"
+)
 
 func main() {
 	key := murcott.GeneratePrivateKey()
@@ -9,5 +12,15 @@ func main() {
 	if err != nil {
 		return
 	}
+	go func() {
+		for {
+			var buf [1024]byte
+			len, err := client.Logger.Read(buf[:])
+			if err != nil {
+				return
+			}
+			fmt.Println(string(buf[:len]))
+		}
+	}()
 	client.Run()
 }
