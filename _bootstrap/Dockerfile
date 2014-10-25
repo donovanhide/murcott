@@ -7,3 +7,5 @@ WORKDIR /go/src/github.com/h2so5/murcott/_bootstrap
 RUN go get . ...
 
 RUN go build -o murcott-bt main.go
+
+ENTRYPOINT ./murcott-bt
