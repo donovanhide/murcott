@@ -21,7 +21,7 @@ func TestDhtPing(t *testing.T) {
 	if dst.cmp(node2.ID) != 0 {
 		t.Errorf("wrong packet destination: %s", dst.String())
 	} else {
-		dht2.processPacket(packet{
+		dht2.ProcessPacket(packet{
 			Dst:     dst,
 			Src:     node1.ID,
 			Type:    "dht",
@@ -29,6 +29,8 @@ func TestDhtPing(t *testing.T) {
 			addr:    nil,
 		})
 	}
+
+	dht2.nextPacket()
 
 	if dht1.getNodeInfo(node2.ID) == nil {
 		t.Errorf("dht1 doesn't know node2")
@@ -98,7 +100,7 @@ func TestDhtGroup(t *testing.T) {
 				}
 				id := dst.String()
 				dht := dhtmap[id]
-				dht.processPacket(packet{
+				dht.ProcessPacket(packet{
 					Dst:     dst,
 					Src:     d.info.ID,
 					Type:    "dht",

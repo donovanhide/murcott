@@ -220,7 +220,7 @@ func (p *router) processPacket(packet packet) {
 	case "disco":
 		p.dht.addNode(info)
 	case "dht":
-		p.dht.processPacket(packet)
+		p.dht.ProcessPacket(packet)
 	case "msg":
 		p.recv <- message{id: info.ID, payload: packet.Payload}
 	}
