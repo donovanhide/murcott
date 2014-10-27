@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/vmihailenco/msgpack"
@@ -34,8 +35,8 @@ type dht struct {
 	table nodeTable
 	k     int
 
-	kvs   map[string]string
-	kvsch chan map[string]string
+	kvs      map[string]string
+	kvsMutex sync.RWMutex
 
 	chmap  map[string]chan<- dhtRPCReturn
 	rpc    chan dhtPacket
@@ -64,7 +65,6 @@ func newDht(k int, info nodeInfo, logger *Logger) *dht {
 		table:  newNodeTable(k, info.ID),
 		k:      k,
 		kvs:    make(map[string]string),
-		kvsch:  make(chan map[string]string),
 		chmap:  make(map[string]chan<- dhtRPCReturn),
 		rpc:    make(chan dhtPacket, 100),
 		recvch: make(chan packet, 100),
@@ -76,11 +76,6 @@ func newDht(k int, info nodeInfo, logger *Logger) *dht {
 }
 
 func (p *dht) loop() {
-	go func() {
-		for {
-			p.kvsch <- p.kvs
-		}
-	}()
 	for {
 		select {
 		case pac := <-p.recvch:
@@ -126,8 +121,9 @@ func (p *dht) processPacket(pac packet) {
 			p.logger.info("Receive DHT Store from %s", pac.Src.String())
 			if key, ok := command.Args["key"].(string); ok {
 				if val, ok := command.Args["value"].(string); ok {
-					kvs := <-p.kvsch
-					kvs[key] = val
+					p.kvsMutex.Lock()
+					p.kvs[key] = val
+					p.kvsMutex.Unlock()
 				}
 			}
 
@@ -135,13 +131,14 @@ func (p *dht) processPacket(pac packet) {
 			p.logger.info("Receive DHT Find-Node from %s", pac.Src.String())
 			if key, ok := command.Args["key"].(string); ok {
 				args := map[string]interface{}{}
-				kvs := <-p.kvsch
-				if val, ok := kvs[key]; ok {
+				p.kvsMutex.RLock()
+				if val, ok := p.kvs[key]; ok {
 					args["value"] = val
 				} else {
 					hash := sha1.Sum([]byte(key))
 					args["nodes"] = p.table.nearestNodes(NewNodeID(hash))
 				}
+				p.kvsMutex.RUnlock()
 				p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, args))
 			}
 
@@ -250,10 +247,11 @@ loop:
 
 func (p *dht) loadValue(key string) *string {
 
-	kvs := <-p.kvsch
-	if v, ok := kvs[key]; ok {
+	p.kvsMutex.RLock()
+	if v, ok := p.kvs[key]; ok {
 		return &v
 	}
+	p.kvsMutex.RUnlock()
 
 	hash := sha1.Sum([]byte(key))
 	keyid := NewNodeID(hash)
