@@ -10,7 +10,7 @@ type Logger struct {
 
 func newLogger() *Logger {
 	return &Logger{
-		ch: make(chan string),
+		ch: make(chan string, 1024),
 	}
 }
 
@@ -20,9 +20,7 @@ func (l *Logger) Read(p []byte) (n int, err error) {
 }
 
 func (l *Logger) write(msg string) {
-	go func(ch chan<- string) {
-		ch <- msg
-	}(l.ch)
+	l.ch <- msg
 }
 
 func (l *Logger) info(format string, a ...interface{}) {
