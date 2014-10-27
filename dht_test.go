@@ -21,7 +21,13 @@ func TestDhtPing(t *testing.T) {
 	if dst.cmp(node2.ID) != 0 {
 		t.Errorf("wrong packet destination: %s", dst.String())
 	} else {
-		dht2.processPacket(node1, payload)
+		dht2.processPacket(packet{
+			Dst:     dst,
+			Src:     node1.ID,
+			Type:    "dht",
+			Payload: payload,
+			addr:    nil,
+		})
 	}
 
 	if dht1.getNodeInfo(node2.ID) == nil {
@@ -92,7 +98,13 @@ func TestDhtGroup(t *testing.T) {
 				}
 				id := dst.String()
 				dht := dhtmap[id]
-				dht.processPacket(d.info, payload)
+				dht.processPacket(packet{
+					Dst:     dst,
+					Src:     d.info.ID,
+					Type:    "dht",
+					Payload: payload,
+					addr:    addr,
+				})
 			}
 		}(d)
 	}

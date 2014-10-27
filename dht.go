@@ -274,29 +274,29 @@ func (p *dht) loadValue(key string) *string {
 	}
 }
 
-func (p *dht) processPacket(src nodeInfo, payload []byte) {
+func (p *dht) processPacket(pac packet) {
 	var command dhtRPCCommand
-	err := msgpack.Unmarshal(payload, &command)
+	err := msgpack.Unmarshal(pac.Payload, &command)
 	if err == nil {
-		p.table.insert(src)
+		p.table.insert(nodeInfo{ID: pac.Src, Addr: pac.addr})
 
 		switch command.Method {
 		case "ping":
-			p.logger.info("Receive DHT Ping from %s", src.ID.String())
-			p.sendPacket(src.ID, newRPCReturnCommand(command.ID, nil))
+			p.logger.info("Receive DHT Ping from %s", pac.Src.String())
+			p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, nil))
 
 		case "find-node":
-			p.logger.info("Receive DHT Find-Node from %s", src.ID.String())
+			p.logger.info("Receive DHT Find-Node from %s", pac.Src.String())
 			if id, ok := command.Args["id"].(string); ok {
 				args := map[string]interface{}{}
 				var idary [20]byte
 				copy(idary[:], []byte(id)[:20])
 				args["nodes"] = p.table.nearestNodes(NewNodeID(idary))
-				p.sendPacket(src.ID, newRPCReturnCommand(command.ID, args))
+				p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, args))
 			}
 
 		case "store":
-			p.logger.info("Receive DHT Store from %s", src.ID.String())
+			p.logger.info("Receive DHT Store from %s", pac.Src.String())
 			if key, ok := command.Args["key"].(string); ok {
 				if val, ok := command.Args["value"].(string); ok {
 					p.kvs.set(key, val)
@@ -304,7 +304,7 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 			}
 
 		case "find-value":
-			p.logger.info("Receive DHT Find-Node from %s", src.ID.String())
+			p.logger.info("Receive DHT Find-Node from %s", pac.Src.String())
 			if key, ok := command.Args["key"].(string); ok {
 				args := map[string]interface{}{}
 				if val, ok := p.kvs.get(key); ok {
@@ -313,13 +313,13 @@ func (p *dht) processPacket(src nodeInfo, payload []byte) {
 					hash := sha1.Sum([]byte(key))
 					args["nodes"] = p.table.nearestNodes(NewNodeID(hash))
 				}
-				p.sendPacket(src.ID, newRPCReturnCommand(command.ID, args))
+				p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, args))
 			}
 
 		case "": // callback
 			id := string(command.ID)
 			if ch := p.rpcRet.pop(id); ch != nil {
-				ch <- dhtRPCReturn{command: command, addr: src.Addr}
+				ch <- dhtRPCReturn{command: command, addr: pac.addr}
 			}
 		}
 	}
