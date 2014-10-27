@@ -249,6 +249,7 @@ func (p *dht) loadValue(key string) *string {
 
 	p.kvsMutex.RLock()
 	if v, ok := p.kvs[key]; ok {
+		p.kvsMutex.RUnlock()
 		return &v
 	}
 	p.kvsMutex.RUnlock()
