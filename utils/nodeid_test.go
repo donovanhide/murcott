@@ -7,7 +7,7 @@ import (
 )
 
 func TestNodeIDMsgpack(t *testing.T) {
-	id := newRandomNodeID()
+	id := NewRandomNodeID()
 	data, err := msgpack.Marshal(id)
 	if err != nil {
 		t.Errorf("cannot marshal NodeID")
@@ -20,10 +20,10 @@ func TestNodeIDMsgpack(t *testing.T) {
 }
 
 func TestNodeIDString(t *testing.T) {
-	id := newRandomNodeID()
+	id := NewRandomNodeID()
 	str := id.String()
 	id2, err := NewNodeIDFromString(str)
-	if err != nil || id.cmp(id2) != 0 {
+	if err != nil || id.Cmp(id2) != 0 {
 		t.Errorf("failed to generate NodeID from string")
 	}
 }

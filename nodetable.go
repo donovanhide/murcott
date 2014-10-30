@@ -1,16 +1,20 @@
 package murcott
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/h2so5/murcott/utils"
+)
 
 type nodeTable struct {
-	buckets [][]nodeInfo
-	selfid  NodeID
+	buckets [][]murcott.NodeInfo
+	selfid  murcott.NodeID
 	k       int
 	mutex   *sync.RWMutex
 }
 
-func newNodeTable(k int, id NodeID) nodeTable {
-	buckets := make([][]nodeInfo, 160)
+func newNodeTable(k int, id murcott.NodeID) nodeTable {
+	buckets := make([][]murcott.NodeInfo, 160)
 
 	return nodeTable{
 		buckets: buckets,
@@ -20,13 +24,13 @@ func newNodeTable(k int, id NodeID) nodeTable {
 	}
 }
 
-func (p *nodeTable) insert(node nodeInfo) {
+func (p *nodeTable) insert(node murcott.NodeInfo) {
 	p.remove(node.ID)
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	b := node.ID.xor(p.selfid).log2int()
+	b := node.ID.Xor(p.selfid).Log2int()
 
 	if len(p.buckets[b]) < p.k {
 		p.buckets[b] = append(p.buckets[b], node)
@@ -35,22 +39,22 @@ func (p *nodeTable) insert(node nodeInfo) {
 	}
 }
 
-func (p *nodeTable) remove(id NodeID) {
+func (p *nodeTable) remove(id murcott.NodeID) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	b := id.xor(p.selfid).log2int()
+	b := id.Xor(p.selfid).Log2int()
 	for i, n := range p.buckets[b] {
-		if n.ID.cmp(id) == 0 {
+		if n.ID.Cmp(id) == 0 {
 			p.buckets[b] = append(p.buckets[b][:i], p.buckets[b][i+1:]...)
 			return
 		}
 	}
 }
 
-func (p *nodeTable) nodes() []nodeInfo {
+func (p *nodeTable) nodes() []murcott.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	var i []nodeInfo
+	var i []murcott.NodeInfo
 	for _, b := range p.buckets {
 		for _, n := range b {
 			i = append(i, n)
@@ -59,11 +63,11 @@ func (p *nodeTable) nodes() []nodeInfo {
 	return i
 }
 
-func (p *nodeTable) nearestNodes(id NodeID) []nodeInfo {
+func (p *nodeTable) nearestNodes(id murcott.NodeID) []murcott.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	var n []nodeInfo
-	b := id.xor(p.selfid).log2int()
+	var n []murcott.NodeInfo
+	b := id.Xor(p.selfid).Log2int()
 	n = append(n, p.buckets[b]...)
 	if len(n) > p.k {
 		return n[len(n)-p.k:]
@@ -84,12 +88,12 @@ func (p *nodeTable) nearestNodes(id NodeID) []nodeInfo {
 	return n
 }
 
-func (p *nodeTable) find(id NodeID) *nodeInfo {
+func (p *nodeTable) find(id murcott.NodeID) *murcott.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	b := id.xor(p.selfid).log2int()
+	b := id.Xor(p.selfid).Log2int()
 	for _, n := range p.buckets[b] {
-		if n.ID.cmp(id) == 0 {
+		if n.ID.Cmp(id) == 0 {
 			return &n
 		}
 	}

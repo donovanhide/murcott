@@ -7,7 +7,7 @@ import (
 )
 
 func TestKeySignature(t *testing.T) {
-	key := GeneratePrivateKey()
+	key := murcott.GeneratePrivateKey()
 	data := "The quick brown fox jumps over the lazy dog"
 
 	sign := key.sign([]byte(data))
@@ -17,7 +17,7 @@ func TestKeySignature(t *testing.T) {
 }
 
 func TestKeyString(t *testing.T) {
-	key := GeneratePrivateKey()
+	key := murcott.GeneratePrivateKey()
 	data := "The quick brown fox jumps over the lazy dog"
 
 	str := key.String()
@@ -30,7 +30,7 @@ func TestKeyString(t *testing.T) {
 }
 
 func TestKeyMsgpack(t *testing.T) {
-	prikey := GeneratePrivateKey()
+	prikey := murcott.GeneratePrivateKey()
 	pubkey := prikey.PublicKey
 	data := "The quick brown fox jumps over the lazy dog"
 
@@ -62,7 +62,7 @@ func TestKeyMsgpack(t *testing.T) {
 		t.Errorf("cannot unmarshal PublicKey")
 	}
 
-	var usign signature
+	var usign Signature
 	err = msgpack.Unmarshal(msign, &usign)
 	if err != nil {
 		t.Errorf("cannot unmarshal signature")

@@ -4,12 +4,14 @@ package murcott
 
 import (
 	"testing"
+
+	"github.com/h2so5/murcott/utils"
 )
 
 func TestNodeChatMessage(t *testing.T) {
 	logger := newLogger()
-	key1 := GeneratePrivateKey()
-	key2 := GeneratePrivateKey()
+	key1 := murcott.GeneratePrivateKey()
+	key2 := murcott.GeneratePrivateKey()
 	node1, err := newNode(key1, logger, DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -22,10 +24,10 @@ func TestNodeChatMessage(t *testing.T) {
 
 	success := make(chan bool)
 
-	node2.handle(func(src NodeID, msg interface{}) interface{} {
+	node2.handle(func(src murcott.NodeID, msg interface{}) interface{} {
 		if m, ok := msg.(ChatMessage); ok {
 			if m.Text() == plainmsg.Text() {
-				if src.cmp(key1.PublicKeyHash()) == 0 {
+				if src.Cmp(key1.PublicKeyHash()) == 0 {
 					success <- true
 				} else {
 					t.Errorf("wrong source id")

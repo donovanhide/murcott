@@ -7,34 +7,34 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
-type nodeInfo struct {
+type NodeInfo struct {
 	ID   NodeID
 	Addr *net.UDPAddr
 }
 
-type nodeInfoSorter struct {
-	nodes []nodeInfo
-	id    NodeID
+type NodeInfoSorter struct {
+	Nodes []NodeInfo
+	ID    NodeID
 }
 
-func (p nodeInfoSorter) Len() int {
-	return len(p.nodes)
+func (p NodeInfoSorter) Len() int {
+	return len(p.Nodes)
 }
 
-func (p nodeInfoSorter) Swap(i, j int) {
-	p.nodes[i], p.nodes[j] = p.nodes[j], p.nodes[i]
+func (p NodeInfoSorter) Swap(i, j int) {
+	p.Nodes[i], p.Nodes[j] = p.Nodes[j], p.Nodes[i]
 }
 
-func (p nodeInfoSorter) Less(i, j int) bool {
-	disti := p.nodes[i].ID.xor(p.id)
-	distj := p.nodes[j].ID.xor(p.id)
-	return (disti.cmp(distj) == -1)
+func (p NodeInfoSorter) Less(i, j int) bool {
+	disti := p.Nodes[i].ID.Xor(p.ID)
+	distj := p.Nodes[j].ID.Xor(p.ID)
+	return (disti.Cmp(distj) == -1)
 }
 
 func init() {
-	msgpack.Register(reflect.TypeOf(nodeInfo{}),
+	msgpack.Register(reflect.TypeOf(NodeInfo{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {
-			info := v.Interface().(nodeInfo)
+			info := v.Interface().(NodeInfo)
 			return e.Encode(map[string]string{
 				"id":   string(info.ID.Bytes()),
 				"addr": info.Addr.String(),
@@ -54,7 +54,7 @@ func init() {
 					if err != nil {
 						return nil
 					}
-					v.Set(reflect.ValueOf(nodeInfo{
+					v.Set(reflect.ValueOf(NodeInfo{
 						ID:   NewNodeID(idbuf),
 						Addr: addr,
 					}))

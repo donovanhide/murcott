@@ -4,15 +4,16 @@ import (
 	"errors"
 	"net"
 
+	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
 )
 
 type packet struct {
-	Dst     NodeID    `msgpack:"dst"`
-	Src     NodeID    `msgpack:"src"`
-	Type    string    `msgpack:"type"`
-	Payload []byte    `msgpack:"payload"`
-	Sign    signature `msgpack:"sign"`
+	Dst     murcott.NodeID    `msgpack:"dst"`
+	Src     murcott.NodeID    `msgpack:"src"`
+	Type    string            `msgpack:"type"`
+	Payload []byte            `msgpack:"payload"`
+	Sign    murcott.Signature `msgpack:"sign"`
 	addr    *net.UDPAddr
 }
 
@@ -28,8 +29,8 @@ func (p *packet) serialize() []byte {
 	return data
 }
 
-func (p *packet) sign(key *PrivateKey) error {
-	sign := key.sign(p.serialize())
+func (p *packet) sign(key *murcott.PrivateKey) error {
+	sign := key.Sign(p.serialize())
 	if sign == nil {
 		return errors.New("cannot sign packet")
 	}
@@ -37,6 +38,6 @@ func (p *packet) sign(key *PrivateKey) error {
 	return nil
 }
 
-func (p *packet) verify(key *PublicKey) bool {
-	return key.verify(p.serialize(), &p.Sign)
+func (p *packet) verify(key *murcott.PublicKey) bool {
+	return key.Verify(p.serialize(), &p.Sign)
 }

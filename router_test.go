@@ -4,14 +4,16 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/h2so5/murcott/utils"
 )
 
 func TestRouterMessageExchange(t *testing.T) {
 	logger := newLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
 
-	key1 := GeneratePrivateKey()
-	key2 := GeneratePrivateKey()
+	key1 := murcott.GeneratePrivateKey()
+	key2 := murcott.GeneratePrivateKey()
 
 	router1, err := newRouter(key1, logger, DefaultConfig)
 	if err != nil {
@@ -29,7 +31,7 @@ func TestRouterMessageExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.cmp(router1.info.ID) != 0 {
+	if m.id.Cmp(router1.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.payload) != msg {
@@ -42,7 +44,7 @@ func TestRouterMessageExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router1: recvMessage() returns error")
 	}
-	if m.id.cmp(router2.info.ID) != 0 {
+	if m.id.Cmp(router2.info.ID) != 0 {
 		t.Errorf("router1: wrong source id")
 	}
 	if string(m.payload) != msg {
@@ -58,8 +60,8 @@ func TestRouterCancelMessage(t *testing.T) {
 	msg1 := "The quick brown fox jumps over the lazy dog"
 	msg2 := "Grumpy Wizards make toxic brew for the Evil"
 
-	key1 := GeneratePrivateKey()
-	key2 := GeneratePrivateKey()
+	key1 := murcott.GeneratePrivateKey()
+	key2 := murcott.GeneratePrivateKey()
 
 	router1, err := newRouter(key1, logger, DefaultConfig)
 	if err != nil {
@@ -80,7 +82,7 @@ func TestRouterCancelMessage(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.cmp(router1.info.ID) != 0 {
+	if m.id.Cmp(router1.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.payload) != msg2 {
@@ -95,9 +97,9 @@ func TestRouterRouteExchange(t *testing.T) {
 	logger := newLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
 
-	key1 := GeneratePrivateKey()
-	key2 := GeneratePrivateKey()
-	key3 := GeneratePrivateKey()
+	key1 := murcott.GeneratePrivateKey()
+	key2 := murcott.GeneratePrivateKey()
+	key3 := murcott.GeneratePrivateKey()
 
 	router1, err := newRouter(key1, logger, DefaultConfig)
 	if err != nil {
@@ -126,7 +128,7 @@ func TestRouterRouteExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.cmp(router3.info.ID) != 0 {
+	if m.id.Cmp(router3.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.payload) != msg {

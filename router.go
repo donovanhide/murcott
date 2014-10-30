@@ -6,11 +6,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
 )
 
 type message struct {
-	id      NodeID
+	id      murcott.NodeID
 	payload []byte
 }
 
@@ -20,11 +21,11 @@ type queuedPacket struct {
 }
 
 type router struct {
-	info           nodeInfo
+	info           murcott.NodeInfo
 	dht            *dht
 	conn           *net.UDPConn
-	key            *PrivateKey
-	keycache       map[string]PublicKey
+	key            *murcott.PrivateKey
+	keycache       map[string]murcott.PublicKey
 	keyWaiting     []packet
 	addrWaiting    map[int]packet
 	requestedNodes map[string]time.Time
@@ -46,8 +47,8 @@ func getOpenPortConn(config Config) (*net.UDPConn, int, error) {
 	return nil, 0, errors.New("fail to bind port")
 }
 
-func newRouter(key *PrivateKey, logger *Logger, config Config) (*router, error) {
-	info := nodeInfo{ID: key.PublicKeyHash()}
+func newRouter(key *murcott.PrivateKey, logger *Logger, config Config) (*router, error) {
+	info := murcott.NodeInfo{ID: key.PublicKeyHash()}
 	dht := newDht(10, info, logger)
 	exit := make(chan int)
 	conn, selfport, err := getOpenPortConn(config)
@@ -62,7 +63,7 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) (*router, error) 
 		info:           info,
 		conn:           conn,
 		key:            key,
-		keycache:       make(map[string]PublicKey),
+		keycache:       make(map[string]murcott.PublicKey),
 		dht:            dht,
 		addrWaiting:    make(map[int]packet),
 		requestedNodes: make(map[string]time.Time),
@@ -89,12 +90,12 @@ func newRouter(key *PrivateKey, logger *Logger, config Config) (*router, error) 
 func (p *router) discover(addrs []net.UDPAddr) {
 	for _, addr := range addrs {
 		a := addr
-		p.sendPacket(NodeID{}, &a, "disco", nil)
+		p.sendPacket(murcott.NodeID{}, &a, "disco", nil)
 		p.logger.info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
 	}
 }
 
-func (p *router) sendMessage(dst NodeID, payload []byte) int {
+func (p *router) sendMessage(dst murcott.NodeID, payload []byte) int {
 	return p.sendPacket(dst, nil, "msg", payload)
 }
 
@@ -128,7 +129,7 @@ func (p *router) run() {
 				continue
 			}
 
-			if packet.Src.cmp(p.info.ID) == 0 {
+			if packet.Src.Cmp(p.info.ID) == 0 {
 				continue
 			}
 
@@ -199,11 +200,11 @@ func (p *router) run() {
 }
 
 func (p *router) processPublicKeyResponse(packet packet) {
-	var key PublicKey
+	var key murcott.PublicKey
 	err := msgpack.Unmarshal(packet.Payload, &key)
 	if err == nil {
 		id := key.PublicKeyHash()
-		if id.cmp(packet.Src) == 0 {
+		if id.Cmp(packet.Src) == 0 {
 			id := packet.Src.String()
 			p.keycache[id] = key
 			p.logger.info("Get publickey for %s", id)
@@ -215,7 +216,7 @@ func (p *router) processPublicKeyResponse(packet packet) {
 }
 
 func (p *router) processPacket(packet packet) {
-	info := nodeInfo{ID: packet.Src, Addr: packet.addr}
+	info := murcott.NodeInfo{ID: packet.Src, Addr: packet.addr}
 	switch packet.Type {
 	case "disco":
 		p.dht.addNode(info)
@@ -244,7 +245,7 @@ func (p *router) processWaitingKeyPackets() {
 
 // process packets waiting addresses
 func (p *router) processWaitingRoutePackets() {
-	var unknownNodes []NodeID
+	var unknownNodes []murcott.NodeID
 	for id, packet := range p.addrWaiting {
 		node := p.dht.getNodeInfo(packet.Dst)
 		if node != nil {
@@ -275,7 +276,7 @@ func (p *router) processWaitingRoutePackets() {
 	}
 }
 
-func (p *router) sendPacket(dst NodeID, addr *net.UDPAddr, typ string, payload []byte) int {
+func (p *router) sendPacket(dst murcott.NodeID, addr *net.UDPAddr, typ string, payload []byte) int {
 	packet := packet{
 		Dst:     dst,
 		Src:     p.info.ID,
@@ -294,11 +295,11 @@ func (p *router) sendPacket(dst NodeID, addr *net.UDPAddr, typ string, payload [
 	return id
 }
 
-func (p *router) addNode(info nodeInfo) {
+func (p *router) addNode(info murcott.NodeInfo) {
 	p.dht.addNode(info)
 }
 
-func (p *router) knownNodes() []nodeInfo {
+func (p *router) knownNodes() []murcott.NodeInfo {
 	return p.dht.knownNodes()
 }
 

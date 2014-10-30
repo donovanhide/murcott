@@ -4,6 +4,8 @@ import (
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/h2so5/murcott/utils"
 )
 
 func TestStorageRoster(t *testing.T) {
@@ -11,12 +13,12 @@ func TestStorageRoster(t *testing.T) {
 	defer s.close()
 
 	roster := &Roster{
-		list: []NodeID{
-			newRandomNodeID(),
-			newRandomNodeID(),
-			newRandomNodeID(),
-			newRandomNodeID(),
-			newRandomNodeID(),
+		list: []murcott.NodeID{
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
 		},
 	}
 
@@ -35,7 +37,7 @@ func TestStorageRoster(t *testing.T) {
 	}
 
 	for i, id := range r.list {
-		if id.cmp(roster.list[i]) != 0 {
+		if id.Cmp(roster.list[i]) != 0 {
 			t.Errorf("wrong NodeID: %s; expects %s", id.String(), roster.list[i].String())
 		}
 	}
@@ -46,12 +48,12 @@ func TestStorageBlockList(t *testing.T) {
 	defer s.close()
 
 	roster := &BlockList{
-		list: []NodeID{
-			newRandomNodeID(),
-			newRandomNodeID(),
-			newRandomNodeID(),
-			newRandomNodeID(),
-			newRandomNodeID(),
+		list: []murcott.NodeID{
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
+			murcott.NewRandomNodeID(),
 		},
 	}
 
@@ -70,7 +72,7 @@ func TestStorageBlockList(t *testing.T) {
 	}
 
 	for i, id := range r.list {
-		if id.cmp(roster.list[i]) != 0 {
+		if id.Cmp(roster.list[i]) != 0 {
 			t.Errorf("wrong NodeID: %s; expects %s", id.String(), roster.list[i].String())
 		}
 	}
@@ -79,7 +81,7 @@ func TestStorageBlockList(t *testing.T) {
 func TestStorageProfile(t *testing.T) {
 	s := NewStorage(":memory:")
 	defer s.close()
-	id := newRandomNodeID()
+	id := murcott.NewRandomNodeID()
 	profile := UserProfile{
 		Nickname: "nick",
 		Extension: map[string]string{
@@ -134,10 +136,10 @@ func TestStorageKnownNodes(t *testing.T) {
 	addr2, _ := net.ResolveUDPAddr("udp", "127.0.0.1:34567")
 	addr3, _ := net.ResolveUDPAddr("udp", "19.94.244.34:1234")
 
-	nodes := []nodeInfo{
-		nodeInfo{ID: newRandomNodeID(), Addr: addr1},
-		nodeInfo{ID: newRandomNodeID(), Addr: addr2},
-		nodeInfo{ID: newRandomNodeID(), Addr: addr3},
+	nodes := []murcott.NodeInfo{
+		murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: addr1},
+		murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: addr2},
+		murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: addr3},
 	}
 
 	err := s.saveKnownNodes(nodes)
@@ -155,11 +157,11 @@ func TestStorageKnownNodes(t *testing.T) {
 	}
 
 	for i := range nodes2 {
-		if nodes2[i].ID.cmp(nodes[i].ID) != 0 {
-			t.Errorf("nodeInfo.ID mismatch: %s; expects %s", nodes2[i].ID.String(), nodes[i].ID.String())
+		if nodes2[i].ID.Cmp(nodes[i].ID) != 0 {
+			t.Errorf("murcott.NodeInfo.ID mismatch: %s; expects %s", nodes2[i].ID.String(), nodes[i].ID.String())
 		}
 		if nodes2[i].Addr.String() != nodes[i].Addr.String() {
-			t.Errorf("nodeInfo.Addr mismatch: %s; expects %s", nodes2[i].Addr.String(), nodes[i].Addr.String())
+			t.Errorf("murcott.NodeInfo.Addr mismatch: %s; expects %s", nodes2[i].Addr.String(), nodes[i].Addr.String())
 		}
 	}
 }

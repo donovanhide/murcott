@@ -8,17 +8,17 @@ import (
 )
 
 func TestNodeInfoMsgpack(t *testing.T) {
-	info := nodeInfo{}
+	info := NodeInfo{}
 	data, err := msgpack.Marshal(info)
 	if err != nil {
-		t.Errorf("cannot marshal nodeInfo")
+		t.Errorf("cannot marshal NodeInfo")
 	}
-	var info2 nodeInfo
+	var info2 NodeInfo
 	err = msgpack.Unmarshal(data, &info2)
 	if err != nil {
-		t.Errorf("cannot unmarshal nodeInfo")
+		t.Errorf("cannot unmarshal NodeInfo")
 	}
-	if info.ID.cmp(info2.ID) != 0 {
+	if info.ID.Cmp(info2.ID) != 0 {
 		t.Errorf("node2.ID must be equal to node.ID")
 	}
 	if info.Addr.String() != info2.Addr.String() {
@@ -73,19 +73,19 @@ func TestNodeInfoSort(t *testing.T) {
 		"2Af1fPjeQ8jdtsHrrRxZCfJNBWGr",
 	}
 
-	ary := make([]nodeInfo, len(ids))
+	ary := make([]NodeInfo, len(ids))
 	for i := range ary {
 		id, _ := NewNodeIDFromString(ids[i])
-		ary[i] = nodeInfo{ID: id}
+		ary[i] = NodeInfo{ID: id}
 	}
 
 	id, _ := NewNodeIDFromString(ids[0])
-	sorter := nodeInfoSorter{nodes: ary, id: id}
+	sorter := NodeInfoSorter{nodes: ary, id: id}
 	sort.Sort(sorter)
 
 	for i, n := range sorter.nodes {
 		id, _ := NewNodeIDFromString(sorted[i])
-		if id.cmp(n.ID) != 0 {
+		if id.Cmp(n.ID) != 0 {
 			t.Errorf("sorter.nodes[%d] expects %s", i, sorted[i])
 		}
 	}

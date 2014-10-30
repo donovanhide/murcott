@@ -3,27 +3,29 @@ package murcott
 import (
 	"math/big"
 	"testing"
+
+	"github.com/h2so5/murcott/utils"
 )
 
 func TestNodeTableInsertRemove(t *testing.T) {
 	b := big.NewInt(int64(0))
 	var id [20]byte
 	copy(id[:], b.Bytes()[:])
-	selfid := NewNodeID(id)
+	selfid := murcott.NewNodeID(id)
 	n := newNodeTable(50, selfid)
 
-	ary := make([]NodeID, 100)
+	ary := make([]murcott.NodeID, 100)
 
 	for i := 0; i < len(ary); i++ {
 		b.Add(b, big.NewInt(int64(1)))
 		var id [20]byte
 		copy(id[:], b.Bytes()[:])
-		node := NewNodeID(id)
+		node := murcott.NewNodeID(id)
 		ary[i] = node
 	}
 
 	for _, id := range ary {
-		n.insert(nodeInfo{ID: id, Addr: nil})
+		n.insert(murcott.NodeInfo{ID: id, Addr: nil})
 	}
 
 	for _, id := range ary {

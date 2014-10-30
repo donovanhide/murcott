@@ -23,7 +23,7 @@ type PrivateKey struct {
 	d *big.Int
 }
 
-type signature struct {
+type Signature struct {
 	r, s *big.Int
 }
 
@@ -32,7 +32,7 @@ func (p *PublicKey) PublicKeyHash() NodeID {
 	return NewNodeID(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
 }
 
-// GeneratePrivateKey generates new ECDSA key pair.
+// murcott.GeneratePrivateKey generates new ECDSA key pair.
 func GeneratePrivateKey() *PrivateKey {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err == nil {
@@ -69,10 +69,10 @@ func (p *PrivateKey) String() string {
 
 func (p *PrivateKey) verifyKey() bool {
 	data := []byte("test")
-	return p.PublicKey.verify(data, p.sign(data))
+	return p.PublicKey.Verify(data, p.Sign(data))
 }
 
-func (p *PrivateKey) sign(data []byte) *signature {
+func (p *PrivateKey) Sign(data []byte) *Signature {
 	key := ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: p.x, Y: p.y},
 		D:         p.d,
@@ -80,12 +80,12 @@ func (p *PrivateKey) sign(data []byte) *signature {
 	hash := sha1.Sum(data)
 	r, s, err := ecdsa.Sign(rand.Reader, &key, hash[:])
 	if err == nil {
-		return &signature{r: r, s: s}
+		return &Signature{r: r, s: s}
 	}
 	return nil
 }
 
-func (p *PublicKey) verify(data []byte, sign *signature) bool {
+func (p *PublicKey) Verify(data []byte, sign *Signature) bool {
 	key := ecdsa.PublicKey{
 		Curve: elliptic.P256(),
 		X:     p.x,
@@ -96,9 +96,9 @@ func (p *PublicKey) verify(data []byte, sign *signature) bool {
 }
 
 func init() {
-	msgpack.Register(reflect.TypeOf(signature{}),
+	msgpack.Register(reflect.TypeOf(Signature{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {
-			sign := v.Interface().(signature)
+			sign := v.Interface().(Signature)
 			return e.Encode(map[string][]byte{
 				"r": sign.r.Bytes(),
 				"s": sign.s.Bytes(),
@@ -112,7 +112,7 @@ func init() {
 			m := i.(map[interface{}]interface{})
 			if r, ok := m["r"].(string); ok {
 				if s, ok := m["s"].(string); ok {
-					v.Set(reflect.ValueOf(signature{
+					v.Set(reflect.ValueOf(Signature{
 						r: big.NewInt(0).SetBytes([]byte(r)),
 						s: big.NewInt(0).SetBytes([]byte(s)),
 					}))

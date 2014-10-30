@@ -51,7 +51,7 @@ func NewNodeIDFromString(str string) (NodeID, error) {
 	return NodeID{*i}, nil
 }
 
-func newRandomNodeID() NodeID {
+func NewRandomNodeID() NodeID {
 	var data [20]byte
 	_, err := rand.Read(data[:])
 	if err != nil {
@@ -61,24 +61,24 @@ func newRandomNodeID() NodeID {
 	}
 }
 
-func (id NodeID) xor(n NodeID) NodeID {
+func (id NodeID) Xor(n NodeID) NodeID {
 	d := big.NewInt(0)
 	return NodeID{i: *d.Xor(&id.i, &n.i)}
 }
 
-func (id NodeID) bitLen() int {
+func (id NodeID) BitLen() int {
 	return 160
 }
 
-func (id NodeID) bit(i int) uint {
+func (id NodeID) Bit(i int) uint {
 	return id.i.Bit(159 - i)
 }
 
-func (id NodeID) cmp(n NodeID) int {
+func (id NodeID) Cmp(n NodeID) int {
 	return id.i.Cmp(&n.i)
 }
 
-func (id NodeID) log2int() int {
+func (id NodeID) Log2int() int {
 	l := 159
 	b := big.NewInt(0).Add(&id.i, big.NewInt(1))
 	for i := 160; i >= 0 && b.Bit(i) == 0; i-- {

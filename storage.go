@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 
+	"github.com/h2so5/murcott/utils"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vmihailenco/msgpack"
 )
@@ -109,7 +110,7 @@ func (s *Storage) queryRow(t int, args ...interface{}) *sql.Row {
 }
 
 func (s *Storage) LoadRoster() (*Roster, error) {
-	var list []NodeID
+	var list []murcott.NodeID
 	rows, err := s.query(loadRosterStmt)
 	if err != nil {
 		return nil, err
@@ -118,7 +119,7 @@ func (s *Storage) LoadRoster() (*Roster, error) {
 	for rows.Next() {
 		var id string
 		rows.Scan(&id)
-		nodeid, err := NewNodeIDFromString(id)
+		nodeid, err := murcott.NewNodeIDFromString(id)
 		if err == nil {
 			list = append(list, nodeid)
 		}
@@ -141,7 +142,7 @@ func (s *Storage) SaveRoster(roster *Roster) error {
 	return nil
 }
 
-func (s *Storage) LoadProfile(id NodeID) *UserProfile {
+func (s *Storage) LoadProfile(id murcott.NodeID) *UserProfile {
 	row := s.queryRow(loadProfileStmt, id.String())
 	if row == nil {
 		return nil
@@ -156,7 +157,7 @@ func (s *Storage) LoadProfile(id NodeID) *UserProfile {
 	return &profile
 }
 
-func (s *Storage) SaveProfile(id NodeID, profile UserProfile) error {
+func (s *Storage) SaveProfile(id murcott.NodeID, profile UserProfile) error {
 	data, err := msgpack.Marshal(profile)
 	if err != nil {
 		return err
@@ -170,7 +171,7 @@ func (s *Storage) SaveProfile(id NodeID, profile UserProfile) error {
 }
 
 func (s *Storage) LoadBlockList() (*BlockList, error) {
-	var list []NodeID
+	var list []murcott.NodeID
 	rows, err := s.query(loadBlockListStmt)
 	if err != nil {
 		return nil, err
@@ -179,7 +180,7 @@ func (s *Storage) LoadBlockList() (*BlockList, error) {
 	for rows.Next() {
 		var id string
 		rows.Scan(&id)
-		nodeid, err := NewNodeIDFromString(id)
+		nodeid, err := murcott.NewNodeIDFromString(id)
 		if err == nil {
 			list = append(list, nodeid)
 		}
@@ -202,8 +203,8 @@ func (s *Storage) SaveBlockList(blocklist *BlockList) error {
 	return nil
 }
 
-func (s *Storage) loadKnownNodes() ([]nodeInfo, error) {
-	var list []nodeInfo
+func (s *Storage) loadKnownNodes() ([]murcott.NodeInfo, error) {
+	var list []murcott.NodeInfo
 	rows, err := s.query(loadKnownNodesStmt)
 	if err != nil {
 		return nil, err
@@ -212,18 +213,18 @@ func (s *Storage) loadKnownNodes() ([]nodeInfo, error) {
 	for rows.Next() {
 		var id, addrstr string
 		rows.Scan(&id, &addrstr)
-		nodeid, err := NewNodeIDFromString(id)
+		nodeid, err := murcott.NewNodeIDFromString(id)
 		if err == nil {
 			addr, err := net.ResolveUDPAddr("udp", addrstr)
 			if err == nil {
-				list = append(list, nodeInfo{ID: nodeid, Addr: addr})
+				list = append(list, murcott.NodeInfo{ID: nodeid, Addr: addr})
 			}
 		}
 	}
 	return list, nil
 }
 
-func (s *Storage) saveKnownNodes(nodes []nodeInfo) error {
+func (s *Storage) saveKnownNodes(nodes []murcott.NodeInfo) error {
 	for _, n := range nodes {
 		s.exec(replaceKnownNodesStmt, n.ID.String(), n.Addr.String())
 	}
