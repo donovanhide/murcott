@@ -90,6 +90,7 @@ func TestDhtGroup(t *testing.T) {
 		addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4000")
 		node := nodeInfo{ID: id, Addr: addr}
 		d := newDht(20, node, logger)
+		defer d.close()
 		idary[i] = node
 		dhtmap[id.String()] = d
 		go func(d *dht) {
@@ -140,6 +141,4 @@ func TestDhtGroup(t *testing.T) {
 			}
 		}
 	}
-
-	// TODO: close dhts correctly
 }
