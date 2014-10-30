@@ -1,4 +1,4 @@
-package murcott
+package utils
 
 import (
 	"crypto/ecdsa"
@@ -32,7 +32,7 @@ func (p *PublicKey) PublicKeyHash() NodeID {
 	return NewNodeID(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
 }
 
-// murcott.GeneratePrivateKey generates new ECDSA key pair.
+// GeneratePrivateKey generates new ECDSA key pair.
 func GeneratePrivateKey() *PrivateKey {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err == nil {

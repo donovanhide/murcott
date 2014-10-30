@@ -27,17 +27,17 @@ import (
 
 func main() {
 	// Private key identifies the ownership of your node.
-	key := murcott.GeneratePrivateKey()
+	key := utils.GeneratePrivateKey()
 	fmt.Println("Your node id: " + key.PublicKeyHash().String())
 
 	// Storage keeps client's persistent data.
-	storage := murcott.NewStorage("storage.sqlite3")
+	storage := utils.NewStorage("storage.sqlite3")
 
 	// Create a client with the private key and the storage.
-	client, _ := murcott.NewClient(key, storage, murcott.DefaultConfig)
+	client, _ := utils.NewClient(key, storage, utils.DefaultConfig)
 
 	// Handle incoming messages.
-	client.HandleMessages(func(src murcott.NodeID, msg murcott.ChatMessage) {
+	client.HandleMessages(func(src utils.NodeID, msg utils.ChatMessage) {
 		fmt.Println(msg.Text() + " from " + src.String())
 	})
 
@@ -45,7 +45,7 @@ func main() {
 	go client.Run()
 
 	// Parse a base58-encoded node identifier of your friend.
-	dst, _ := murcott.NewNodeIDFromString("3CjjdZLV4DqXkc3KtPZPTfBU1AAY")
+	dst, _ := utils.NewNodeIDFromString("3CjjdZLV4DqXkc3KtPZPTfBU1AAY")
 
 	for {
 		b := make([]byte, 1024)
@@ -59,7 +59,7 @@ func main() {
 		}
 
 		// Send message to the destination node.
-		client.SendMessage(dst, murcott.NewPlainChatMessage(str), func(ok bool) {
+		client.SendMessage(dst, utils.NewPlainChatMessage(str), func(ok bool) {
 			if !ok {
 				fmt.Println("Failed to deliver the message to the node...")
 			}

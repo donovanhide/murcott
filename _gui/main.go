@@ -15,6 +15,7 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
 	"github.com/h2so5/murcott"
+	"github.com/h2so5/murcott/utils"
 	"github.com/martini-contrib/render"
 	"github.com/nfnt/resize"
 )
@@ -36,7 +37,7 @@ func main() {
 	m.Get("/ws/:key", ws)
 
 	m.Get("/newkey", func(r render.Render) {
-		key := murcott.GeneratePrivateKey()
+		key := utils.GeneratePrivateKey()
 		r.JSON(200, map[string]interface{}{
 			"id":  key.PublicKeyHash().String(),
 			"key": key.String(),
@@ -83,19 +84,19 @@ func (r JsonRPCListener) HandleLog(c func(args []interface{})) {
 }
 
 func (r JsonRPCListener) HandleMessage(c func(args []interface{})) {
-	r.client.HandleMessages(func(src murcott.NodeID, msg murcott.ChatMessage) {
+	r.client.HandleMessages(func(src utils.NodeID, msg murcott.ChatMessage) {
 		c([]interface{}{src.String(), msg.Text(), msg.Time})
 	})
 }
 
 func (r JsonRPCListener) HandleStatus(c func(args []interface{})) {
-	r.client.HandleStatuses(func(src murcott.NodeID, status murcott.UserStatus) {
+	r.client.HandleStatuses(func(src utils.NodeID, status murcott.UserStatus) {
 		c([]interface{}{src.String(), status.Type})
 	})
 }
 
 func (r JsonRPCListener) SendMessage(dst string, msg string, c func(args []interface{})) {
-	id, err := murcott.NewNodeIDFromString(dst)
+	id, err := utils.NewNodeIDFromString(dst)
 	if err == nil {
 		r.client.SendMessage(id, murcott.NewPlainChatMessage(msg), func(ok bool) {
 			c([]interface{}{ok})
@@ -106,7 +107,7 @@ func (r JsonRPCListener) SendMessage(dst string, msg string, c func(args []inter
 }
 
 func (r JsonRPCListener) AddFriend(idstr string) {
-	id, err := murcott.NewNodeIDFromString(idstr)
+	id, err := utils.NewNodeIDFromString(idstr)
 	if err == nil {
 		r.client.Roster.Add(id)
 	}
@@ -131,7 +132,7 @@ func (r JsonRPCListener) GetProfile(c func(args []interface{})) {
 }
 
 func (r JsonRPCListener) GetFriendProfile(idstr string, c func(args []interface{})) {
-	id, err := murcott.NewNodeIDFromString(idstr)
+	id, err := utils.NewNodeIDFromString(idstr)
 	if err != nil {
 		return
 	}
@@ -170,10 +171,10 @@ func (r JsonRPCListener) SetStatus(status string) {
 
 func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
 
-	var key *murcott.PrivateKey
-	key = murcott.PrivateKeyFromString(params["key"])
+	var key *utils.PrivateKey
+	key = utils.PrivateKeyFromString(params["key"])
 	if key == nil {
-		key = murcott.GeneratePrivateKey()
+		key = utils.GeneratePrivateKey()
 	}
 
 	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)

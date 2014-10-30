@@ -11,21 +11,21 @@ func TestNodeTableInsertRemove(t *testing.T) {
 	b := big.NewInt(int64(0))
 	var id [20]byte
 	copy(id[:], b.Bytes()[:])
-	selfid := murcott.NewNodeID(id)
+	selfid := utils.NewNodeID(id)
 	n := newNodeTable(50, selfid)
 
-	ary := make([]murcott.NodeID, 100)
+	ary := make([]utils.NodeID, 100)
 
 	for i := 0; i < len(ary); i++ {
 		b.Add(b, big.NewInt(int64(1)))
 		var id [20]byte
 		copy(id[:], b.Bytes()[:])
-		node := murcott.NewNodeID(id)
+		node := utils.NewNodeID(id)
 		ary[i] = node
 	}
 
 	for _, id := range ary {
-		n.insert(murcott.NodeInfo{ID: id, Addr: nil})
+		n.insert(utils.NodeInfo{ID: id, Addr: nil})
 	}
 
 	for _, id := range ary {

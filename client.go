@@ -10,17 +10,17 @@ type Client struct {
 	storage       *Storage
 	status        UserStatus
 	profile       UserProfile
-	id            murcott.NodeID
+	id            utils.NodeID
 	Roster        *Roster
 	BlockList     *BlockList
 	Logger        *Logger
 }
 
-type messageHandler func(src murcott.NodeID, msg ChatMessage)
-type statusHandler func(src murcott.NodeID, status UserStatus)
+type messageHandler func(src utils.NodeID, msg ChatMessage)
+type statusHandler func(src utils.NodeID, status UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
-func NewClient(key *murcott.PrivateKey, storage *Storage, config Config) (*Client, error) {
+func NewClient(key *utils.PrivateKey, storage *Storage, config Config) (*Client, error) {
 	logger := newLogger()
 	roster, _ := storage.LoadRoster()
 	blocklist, _ := storage.LoadBlockList()
@@ -50,7 +50,7 @@ func NewClient(key *murcott.PrivateKey, storage *Storage, config Config) (*Clien
 		c.profile = *profile
 	}
 
-	c.node.handle(func(src murcott.NodeID, msg interface{}) interface{} {
+	c.node.handle(func(src utils.NodeID, msg interface{}) interface{} {
 		if c.BlockList.contains(src) {
 			return nil
 		}
@@ -97,25 +97,25 @@ func (c *Client) Close() {
 }
 
 // Sends the given message to the destination node.
-func (c *Client) SendMessage(dst murcott.NodeID, msg ChatMessage, ack func(ok bool)) {
+func (c *Client) SendMessage(dst utils.NodeID, msg ChatMessage, ack func(ok bool)) {
 	c.node.send(dst, msg, func(r interface{}) {
 		ack(r != nil)
 	})
 }
 
 // HandleMessages registers the given function as a massage handler.
-func (c *Client) HandleMessages(handler func(src murcott.NodeID, msg ChatMessage)) {
+func (c *Client) HandleMessages(handler func(src utils.NodeID, msg ChatMessage)) {
 	c.msgHandler = handler
 }
 
 // HandleStatuses registers the given function as a status handler.
-func (c *Client) HandleStatuses(handler func(src murcott.NodeID, status UserStatus)) {
+func (c *Client) HandleStatuses(handler func(src utils.NodeID, status UserStatus)) {
 	c.statusHandler = handler
 }
 
 // Requests a user profile to the destination node.
 // If no response is received from the node, RequestProfile tries to load a profile from the cache.
-func (c *Client) RequestProfile(dst murcott.NodeID, f func(profile *UserProfile)) {
+func (c *Client) RequestProfile(dst utils.NodeID, f func(profile *UserProfile)) {
 	c.node.send(dst, userProfileRequest{}, func(r interface{}) {
 		if p, ok := r.(userProfileResponse); ok {
 			c.storage.SaveProfile(dst, p.Profile)
@@ -126,7 +126,7 @@ func (c *Client) RequestProfile(dst murcott.NodeID, f func(profile *UserProfile)
 	})
 }
 
-func (c *Client) ID() murcott.NodeID {
+func (c *Client) ID() utils.NodeID {
 	return c.id
 }
 

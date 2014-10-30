@@ -11,7 +11,7 @@ import (
 )
 
 type msgpair struct {
-	id  murcott.NodeID
+	id  utils.NodeID
 	msg interface{}
 }
 
@@ -22,7 +22,7 @@ type msghandler struct {
 
 type node struct {
 	router        *router
-	handler       func(murcott.NodeID, interface{}) interface{}
+	handler       func(utils.NodeID, interface{}) interface{}
 	idmap         map[string]func(interface{})
 	name2type     map[string]reflect.Type
 	type2name     map[reflect.Type]string
@@ -34,7 +34,7 @@ type node struct {
 	exit          chan struct{}
 }
 
-func newNode(key *murcott.PrivateKey, logger *Logger, config Config) (*node, error) {
+func newNode(key *utils.PrivateKey, logger *Logger, config Config) (*node, error) {
 	router, err := newRouter(key, logger, config)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (p *node) registerMessageType(name string, typ interface{}) {
 	p.type2name[t] = name
 }
 
-func (p *node) parseMessage(typ string, payload []byte, id murcott.NodeID) {
+func (p *node) parseMessage(typ string, payload []byte, id utils.NodeID) {
 	if t, ok := p.name2type[typ]; ok {
 		p.parseCommand(payload, id, t)
 	} else {
@@ -121,7 +121,7 @@ func (p *node) parseMessage(typ string, payload []byte, id murcott.NodeID) {
 	}
 }
 
-func (p *node) parseCommand(payload []byte, id murcott.NodeID, typ reflect.Type) {
+func (p *node) parseCommand(payload []byte, id utils.NodeID, typ reflect.Type) {
 	c := struct {
 		Content interface{} `msgpack:"content"`
 		ID      string      `msgpack:"id"`
@@ -141,11 +141,11 @@ func (p *node) parseCommand(payload []byte, id murcott.NodeID, typ reflect.Type)
 	}
 }
 
-func (p *node) send(dst murcott.NodeID, msg interface{}, handler func(interface{})) error {
+func (p *node) send(dst utils.NodeID, msg interface{}, handler func(interface{})) error {
 	return p.sendWithID(dst, msg, handler, "")
 }
 
-func (p *node) sendWithID(dst murcott.NodeID, msg interface{}, handler func(interface{}), id string) error {
+func (p *node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interface{}), id string) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
@@ -182,15 +182,15 @@ func (p *node) sendWithID(dst murcott.NodeID, msg interface{}, handler func(inte
 	return nil
 }
 
-func (p *node) addNode(info murcott.NodeInfo) {
+func (p *node) addNode(info utils.NodeInfo) {
 	p.router.addNode(info)
 }
 
-func (p *node) knownNodes() []murcott.NodeInfo {
+func (p *node) knownNodes() []utils.NodeInfo {
 	return p.router.knownNodes()
 }
 
-func (p *node) handle(handler func(murcott.NodeID, interface{}) interface{}) {
+func (p *node) handle(handler func(utils.NodeID, interface{}) interface{}) {
 	p.handler = handler
 }
 

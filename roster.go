@@ -8,14 +8,14 @@ import (
 
 // Roster represents a contact list.
 type Roster struct {
-	list []murcott.NodeID
+	list []utils.NodeID
 }
 
-func (r *Roster) List() []murcott.NodeID {
-	return append([]murcott.NodeID(nil), r.list...)
+func (r *Roster) List() []utils.NodeID {
+	return append([]utils.NodeID(nil), r.list...)
 }
 
-func (r *Roster) Add(id murcott.NodeID) {
+func (r *Roster) Add(id utils.NodeID) {
 	for _, n := range r.list {
 		if n.Cmp(id) == 0 {
 			return
@@ -24,7 +24,7 @@ func (r *Roster) Add(id murcott.NodeID) {
 	r.list = append(r.list, id)
 }
 
-func (r *Roster) Remove(id murcott.NodeID) error {
+func (r *Roster) Remove(id utils.NodeID) error {
 	for i, n := range r.list {
 		if n.Cmp(id) == 0 {
 			r.list = append(r.list[:i], r.list[i+1:]...)

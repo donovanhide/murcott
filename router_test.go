@@ -12,8 +12,8 @@ func TestRouterMessageExchange(t *testing.T) {
 	logger := newLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
 
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
 
 	router1, err := newRouter(key1, logger, DefaultConfig)
 	if err != nil {
@@ -60,8 +60,8 @@ func TestRouterCancelMessage(t *testing.T) {
 	msg1 := "The quick brown fox jumps over the lazy dog"
 	msg2 := "Grumpy Wizards make toxic brew for the Evil"
 
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
 
 	router1, err := newRouter(key1, logger, DefaultConfig)
 	if err != nil {
@@ -97,9 +97,9 @@ func TestRouterRouteExchange(t *testing.T) {
 	logger := newLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
 
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
-	key3 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
+	key3 := utils.GeneratePrivateKey()
 
 	router1, err := newRouter(key1, logger, DefaultConfig)
 	if err != nil {

@@ -7,14 +7,14 @@ import (
 )
 
 type nodeTable struct {
-	buckets [][]murcott.NodeInfo
-	selfid  murcott.NodeID
+	buckets [][]utils.NodeInfo
+	selfid  utils.NodeID
 	k       int
 	mutex   *sync.RWMutex
 }
 
-func newNodeTable(k int, id murcott.NodeID) nodeTable {
-	buckets := make([][]murcott.NodeInfo, 160)
+func newNodeTable(k int, id utils.NodeID) nodeTable {
+	buckets := make([][]utils.NodeInfo, 160)
 
 	return nodeTable{
 		buckets: buckets,
@@ -24,7 +24,7 @@ func newNodeTable(k int, id murcott.NodeID) nodeTable {
 	}
 }
 
-func (p *nodeTable) insert(node murcott.NodeInfo) {
+func (p *nodeTable) insert(node utils.NodeInfo) {
 	p.remove(node.ID)
 
 	p.mutex.Lock()
@@ -39,7 +39,7 @@ func (p *nodeTable) insert(node murcott.NodeInfo) {
 	}
 }
 
-func (p *nodeTable) remove(id murcott.NodeID) {
+func (p *nodeTable) remove(id utils.NodeID) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	b := id.Xor(p.selfid).Log2int()
@@ -51,10 +51,10 @@ func (p *nodeTable) remove(id murcott.NodeID) {
 	}
 }
 
-func (p *nodeTable) nodes() []murcott.NodeInfo {
+func (p *nodeTable) nodes() []utils.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	var i []murcott.NodeInfo
+	var i []utils.NodeInfo
 	for _, b := range p.buckets {
 		for _, n := range b {
 			i = append(i, n)
@@ -63,10 +63,10 @@ func (p *nodeTable) nodes() []murcott.NodeInfo {
 	return i
 }
 
-func (p *nodeTable) nearestNodes(id murcott.NodeID) []murcott.NodeInfo {
+func (p *nodeTable) nearestNodes(id utils.NodeID) []utils.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	var n []murcott.NodeInfo
+	var n []utils.NodeInfo
 	b := id.Xor(p.selfid).Log2int()
 	n = append(n, p.buckets[b]...)
 	if len(n) > p.k {
@@ -88,7 +88,7 @@ func (p *nodeTable) nearestNodes(id murcott.NodeID) []murcott.NodeInfo {
 	return n
 }
 
-func (p *nodeTable) find(id murcott.NodeID) *murcott.NodeInfo {
+func (p *nodeTable) find(id utils.NodeID) *utils.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 	b := id.Xor(p.selfid).Log2int()

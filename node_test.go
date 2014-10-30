@@ -10,8 +10,8 @@ import (
 
 func TestNodeChatMessage(t *testing.T) {
 	logger := newLogger()
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
 	node1, err := newNode(key1, logger, DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -24,7 +24,7 @@ func TestNodeChatMessage(t *testing.T) {
 
 	success := make(chan bool)
 
-	node2.handle(func(src murcott.NodeID, msg interface{}) interface{} {
+	node2.handle(func(src utils.NodeID, msg interface{}) interface{} {
 		if m, ok := msg.(ChatMessage); ok {
 			if m.Text() == plainmsg.Text() {
 				if src.Cmp(key1.PublicKeyHash()) == 0 {

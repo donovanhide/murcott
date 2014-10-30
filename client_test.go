@@ -13,8 +13,8 @@ import (
 )
 
 func TestClientMessage(t *testing.T) {
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
 	client1, err := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -27,7 +27,7 @@ func TestClientMessage(t *testing.T) {
 	success := make(chan bool)
 	plainmsg := NewPlainChatMessage("Hello")
 
-	client2.HandleMessages(func(src murcott.NodeID, msg ChatMessage) {
+	client2.HandleMessages(func(src utils.NodeID, msg ChatMessage) {
 		if src.Cmp(key1.PublicKeyHash()) == 0 {
 			if msg.Text() == plainmsg.Text() {
 				success <- true
@@ -64,8 +64,8 @@ func TestClientMessage(t *testing.T) {
 }
 
 func TestClientBlockList(t *testing.T) {
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
 	client1, err := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -120,8 +120,8 @@ FwkyLnCKezY4Oz3noF79/vZQtPcSaCAhTsbpj/ZwXASUzFueTT5WWx2MeKFMxyM9oHBb6/cFacsddp
 NXA4VWCfWX6irsbray11sm47TGccJ3pcI9PMULzAbMrTtuSqDpHmFtCNj3EvAtPBWEaYonkoKTY9Ef
 R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
 	client1, err := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -188,8 +188,8 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 }
 
 func TestClientStatus(t *testing.T) {
-	key1 := murcott.GeneratePrivateKey()
-	key2 := murcott.GeneratePrivateKey()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
 	client1, err := NewClient(key1, NewStorage(":memory:"), DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -206,7 +206,7 @@ func TestClientStatus(t *testing.T) {
 
 	success := make(chan bool)
 
-	client1.HandleStatuses(func(src murcott.NodeID, p UserStatus) {
+	client1.HandleStatuses(func(src utils.NodeID, p UserStatus) {
 		if p.Type != StatusOffline {
 			t.Errorf("wrong Type: %s; expects %s", p.Type, StatusOffline)
 			success <- false
@@ -220,7 +220,7 @@ func TestClientStatus(t *testing.T) {
 		success <- true
 	})
 
-	client2.HandleStatuses(func(src murcott.NodeID, p UserStatus) {
+	client2.HandleStatuses(func(src utils.NodeID, p UserStatus) {
 		if p.Type != status1.Type {
 			t.Errorf("wrong Type: %s; expects %s", p.Type, status1.Type)
 			success <- false

@@ -1,13 +1,14 @@
-package murcott
+package utils
 
 import (
 	"testing"
 
+	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
 )
 
 func TestKeySignature(t *testing.T) {
-	key := murcott.GeneratePrivateKey()
+	key := utils.GeneratePrivateKey()
 	data := "The quick brown fox jumps over the lazy dog"
 
 	sign := key.sign([]byte(data))
@@ -17,7 +18,7 @@ func TestKeySignature(t *testing.T) {
 }
 
 func TestKeyString(t *testing.T) {
-	key := murcott.GeneratePrivateKey()
+	key := utils.GeneratePrivateKey()
 	data := "The quick brown fox jumps over the lazy dog"
 
 	str := key.String()
@@ -30,7 +31,7 @@ func TestKeyString(t *testing.T) {
 }
 
 func TestKeyMsgpack(t *testing.T) {
-	prikey := murcott.GeneratePrivateKey()
+	prikey := utils.GeneratePrivateKey()
 	pubkey := prikey.PublicKey
 	data := "The quick brown fox jumps over the lazy dog"
 

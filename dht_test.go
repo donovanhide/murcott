@@ -8,8 +8,8 @@ import (
 )
 
 func TestDhtPing(t *testing.T) {
-	node1 := murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: nil}
-	node2 := murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: nil}
+	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
+	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 
 	dht1 := newDht(10, node1, newLogger())
 	dht2 := newDht(10, node2, newLogger())
@@ -47,8 +47,8 @@ func TestDhtPing(t *testing.T) {
 }
 
 func TestDhtTimeout(t *testing.T) {
-	node1 := murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: nil}
-	node2 := murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: nil}
+	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
+	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 	dht1 := newDht(10, node1, newLogger())
 	dht1.addNode(node2)
 	r := dht1.sendRecvPacket(node2.ID, dhtRPCCommand{})
@@ -62,7 +62,7 @@ func TestDhtGroup(t *testing.T) {
 
 	n := 20
 	dhtmap := make(map[string]*dht)
-	idary := make([]murcott.NodeInfo, n)
+	idary := make([]utils.NodeInfo, n)
 
 	ids := []string{
 		"2R2eoXNPEhbmhx7aNqgY1e2SdKrJ",
@@ -88,9 +88,9 @@ func TestDhtGroup(t *testing.T) {
 	}
 
 	for i := 0; i < n; i++ {
-		id, _ := murcott.NewNodeIDFromString(ids[i])
+		id, _ := utils.NewNodeIDFromString(ids[i])
 		addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4000")
-		node := murcott.NodeInfo{ID: id, Addr: addr}
+		node := utils.NodeInfo{ID: id, Addr: addr}
 		d := newDht(20, node, logger)
 		idary[i] = node
 		dhtmap[id.String()] = d

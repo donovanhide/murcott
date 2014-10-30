@@ -13,12 +13,12 @@ func TestStorageRoster(t *testing.T) {
 	defer s.close()
 
 	roster := &Roster{
-		list: []murcott.NodeID{
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
+		list: []utils.NodeID{
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
 		},
 	}
 
@@ -48,12 +48,12 @@ func TestStorageBlockList(t *testing.T) {
 	defer s.close()
 
 	roster := &BlockList{
-		list: []murcott.NodeID{
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
-			murcott.NewRandomNodeID(),
+		list: []utils.NodeID{
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
+			utils.NewRandomNodeID(),
 		},
 	}
 
@@ -81,7 +81,7 @@ func TestStorageBlockList(t *testing.T) {
 func TestStorageProfile(t *testing.T) {
 	s := NewStorage(":memory:")
 	defer s.close()
-	id := murcott.NewRandomNodeID()
+	id := utils.NewRandomNodeID()
 	profile := UserProfile{
 		Nickname: "nick",
 		Extension: map[string]string{
@@ -136,10 +136,10 @@ func TestStorageKnownNodes(t *testing.T) {
 	addr2, _ := net.ResolveUDPAddr("udp", "127.0.0.1:34567")
 	addr3, _ := net.ResolveUDPAddr("udp", "19.94.244.34:1234")
 
-	nodes := []murcott.NodeInfo{
-		murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: addr1},
-		murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: addr2},
-		murcott.NodeInfo{ID: murcott.NewRandomNodeID(), Addr: addr3},
+	nodes := []utils.NodeInfo{
+		utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: addr1},
+		utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: addr2},
+		utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: addr3},
 	}
 
 	err := s.saveKnownNodes(nodes)
@@ -158,10 +158,10 @@ func TestStorageKnownNodes(t *testing.T) {
 
 	for i := range nodes2 {
 		if nodes2[i].ID.Cmp(nodes[i].ID) != 0 {
-			t.Errorf("murcott.NodeInfo.ID mismatch: %s; expects %s", nodes2[i].ID.String(), nodes[i].ID.String())
+			t.Errorf("utils.NodeInfo.ID mismatch: %s; expects %s", nodes2[i].ID.String(), nodes[i].ID.String())
 		}
 		if nodes2[i].Addr.String() != nodes[i].Addr.String() {
-			t.Errorf("murcott.NodeInfo.Addr mismatch: %s; expects %s", nodes2[i].Addr.String(), nodes[i].Addr.String())
+			t.Errorf("utils.NodeInfo.Addr mismatch: %s; expects %s", nodes2[i].Addr.String(), nodes[i].Addr.String())
 		}
 	}
 }

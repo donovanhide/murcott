@@ -8,13 +8,13 @@ import (
 
 func TestPacketSignature(t *testing.T) {
 	packet := packet{
-		Dst:     murcott.NewRandomNodeID(),
-		Src:     murcott.NewRandomNodeID(),
+		Dst:     utils.NewRandomNodeID(),
+		Src:     utils.NewRandomNodeID(),
 		Type:    "dht",
 		Payload: []byte("payload"),
 	}
 
-	key := murcott.GeneratePrivateKey()
+	key := utils.GeneratePrivateKey()
 	packet.sign(key)
 
 	if !packet.verify(&key.PublicKey) {

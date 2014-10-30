@@ -1,4 +1,4 @@
-package murcott
+package utils
 
 import (
 	"crypto/rand"
