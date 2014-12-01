@@ -80,10 +80,10 @@ func TestNodeInfoSort(t *testing.T) {
 	}
 
 	id, _ := NewNodeIDFromString(ids[0])
-	sorter := NodeInfoSorter{nodes: ary, id: id}
+	sorter := NodeInfoSorter{Nodes: ary, ID: id}
 	sort.Sort(sorter)
 
-	for i, n := range sorter.nodes {
+	for i, n := range sorter.Nodes {
 		id, _ := NewNodeIDFromString(sorted[i])
 		if id.Cmp(n.ID) != 0 {
 			t.Errorf("sorter.nodes[%d] expects %s", i, sorted[i])

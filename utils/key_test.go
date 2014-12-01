@@ -3,35 +3,34 @@ package utils
 import (
 	"testing"
 
-	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
 )
 
 func TestKeySignature(t *testing.T) {
-	key := utils.GeneratePrivateKey()
+	key := GeneratePrivateKey()
 	data := "The quick brown fox jumps over the lazy dog"
 
-	sign := key.sign([]byte(data))
-	if !key.verify([]byte(data), sign) {
+	sign := key.Sign([]byte(data))
+	if !key.Verify([]byte(data), sign) {
 		t.Errorf("varification failed")
 	}
 }
 
 func TestKeyString(t *testing.T) {
-	key := utils.GeneratePrivateKey()
+	key := GeneratePrivateKey()
 	data := "The quick brown fox jumps over the lazy dog"
 
 	str := key.String()
 	key2 := PrivateKeyFromString(str)
 
-	sign := key.sign([]byte(data))
-	if !key2.verify([]byte(data), sign) {
+	sign := key.Sign([]byte(data))
+	if !key2.Verify([]byte(data), sign) {
 		t.Errorf("varification failed")
 	}
 }
 
 func TestKeyMsgpack(t *testing.T) {
-	prikey := utils.GeneratePrivateKey()
+	prikey := GeneratePrivateKey()
 	pubkey := prikey.PublicKey
 	data := "The quick brown fox jumps over the lazy dog"
 
@@ -51,7 +50,7 @@ func TestKeyMsgpack(t *testing.T) {
 		t.Errorf("cannot unmarshal PrivateKey")
 	}
 
-	sign := uprikey.sign([]byte(data))
+	sign := uprikey.Sign([]byte(data))
 	msign, err := msgpack.Marshal(sign)
 	if err != nil {
 		t.Errorf("cannot marshal signatur")
@@ -69,7 +68,7 @@ func TestKeyMsgpack(t *testing.T) {
 		t.Errorf("cannot unmarshal signature")
 	}
 
-	if !upubkey.verify([]byte(data), &usign) {
+	if !upubkey.Verify([]byte(data), &usign) {
 		t.Errorf("varification failed")
 	}
 }
