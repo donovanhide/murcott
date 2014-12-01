@@ -29,6 +29,9 @@ type Signature struct {
 
 // PublicKeyHash returns a SHA-1 digest for the public key.
 func (p *PublicKey) PublicKeyHash() NodeID {
+	if p.x == nil || p.y == nil {
+		return NewNodeID([20]byte{})
+	}
 	return NewNodeID(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
 }
 
