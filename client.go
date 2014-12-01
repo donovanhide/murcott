@@ -1,7 +1,10 @@
 // Package murcott is a decentralized instant messaging framework.
 package murcott
 
-import "github.com/h2so5/murcott/utils"
+import (
+	"github.com/h2so5/murcott/log"
+	"github.com/h2so5/murcott/utils"
+)
 
 type Client struct {
 	node          *node
@@ -13,7 +16,7 @@ type Client struct {
 	id            utils.NodeID
 	Roster        *Roster
 	BlockList     *BlockList
-	Logger        *Logger
+	Logger        *log.Logger
 }
 
 type messageHandler func(src utils.NodeID, msg ChatMessage)
@@ -21,7 +24,7 @@ type statusHandler func(src utils.NodeID, status UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
 func NewClient(key *utils.PrivateKey, storage *Storage, config Config) (*Client, error) {
-	logger := newLogger()
+	logger := log.NewLogger()
 	roster, _ := storage.LoadRoster()
 	blocklist, _ := storage.LoadBlockList()
 

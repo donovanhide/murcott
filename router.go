@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
 )
@@ -29,7 +30,7 @@ type router struct {
 	keyWaiting     []packet
 	addrWaiting    map[int]packet
 	requestedNodes map[string]time.Time
-	logger         *Logger
+	logger         *log.Logger
 	packetID       chan int
 	recv           chan message
 	send           chan queuedPacket
@@ -47,7 +48,7 @@ func getOpenPortConn(config Config) (*net.UDPConn, int, error) {
 	return nil, 0, errors.New("fail to bind port")
 }
 
-func newRouter(key *utils.PrivateKey, logger *Logger, config Config) (*router, error) {
+func newRouter(key *utils.PrivateKey, logger *log.Logger, config Config) (*router, error) {
 	info := utils.NodeInfo{ID: key.PublicKeyHash()}
 	dht := newDht(10, info, logger)
 	exit := make(chan int)
@@ -56,8 +57,8 @@ func newRouter(key *utils.PrivateKey, logger *Logger, config Config) (*router, e
 		return nil, err
 	}
 
-	logger.info("Node ID: %s", info.ID.String())
-	logger.info("Node UDP port: %d", selfport)
+	logger.Info("Node ID: %s", info.ID.String())
+	logger.Info("Node UDP port: %d", selfport)
 
 	r := router{
 		info:           info,
@@ -91,7 +92,7 @@ func (p *router) discover(addrs []net.UDPAddr) {
 	for _, addr := range addrs {
 		a := addr
 		p.sendPacket(utils.NodeID{}, &a, "disco", nil)
-		p.logger.info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
+		p.logger.Info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
 	}
 }
 
@@ -133,7 +134,7 @@ func (p *router) run() {
 				continue
 			}
 
-			p.logger.info("Receive %s packet from %s", packet.Type, packet.Src.String())
+			p.logger.Info("Receive %s packet from %s", packet.Type, packet.Src.String())
 			packet.addr = addr
 
 			recv <- packet
@@ -164,7 +165,7 @@ func (p *router) run() {
 					if err == nil {
 						p.conn.WriteToUDP(data, addr)
 					} else {
-						p.logger.error("packet marshal error")
+						p.logger.Error("packet marshal error")
 					}
 				} else {
 					p.addrWaiting[q.id] = *q.packet
@@ -207,10 +208,10 @@ func (p *router) processPublicKeyResponse(packet packet) {
 		if id.Cmp(packet.Src) == 0 {
 			id := packet.Src.String()
 			p.keycache[id] = key
-			p.logger.info("Get publickey for %s", id)
+			p.logger.Info("Get publickey for %s", id)
 			p.processWaitingKeyPackets()
 		} else {
-			p.logger.error("receive wrong public key")
+			p.logger.Error("receive wrong public key")
 		}
 	}
 }
@@ -253,7 +254,7 @@ func (p *router) processWaitingRoutePackets() {
 			if err == nil {
 				p.conn.WriteToUDP(data, node.Addr)
 			} else {
-				p.logger.error("packet marshal error")
+				p.logger.Error("packet marshal error")
 			}
 			delete(p.addrWaiting, id)
 		} else {
@@ -289,7 +290,7 @@ func (p *router) sendPacket(dst utils.NodeID, addr *net.UDPAddr, typ string, pay
 	p.send <- queuedPacket{id: id, packet: &packet}
 
 	if d := dst.String(); len(d) > 0 {
-		p.logger.info("Send %s packet to %s", packet.Type, d)
+		p.logger.Info("Send %s packet to %s", packet.Type, d)
 	}
 
 	return id

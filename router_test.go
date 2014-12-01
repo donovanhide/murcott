@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/h2so5/murcott/utils"
+
+	"github.com/h2so5/murcott/log"
 )
 
 func TestRouterMessageExchange(t *testing.T) {
-	logger := newLogger()
+	logger := log.NewLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
 
 	key1 := utils.GeneratePrivateKey()
@@ -56,7 +58,7 @@ func TestRouterMessageExchange(t *testing.T) {
 }
 
 func TestRouterCancelMessage(t *testing.T) {
-	logger := newLogger()
+	logger := log.NewLogger()
 	msg1 := "The quick brown fox jumps over the lazy dog"
 	msg2 := "Grumpy Wizards make toxic brew for the Evil"
 
@@ -94,7 +96,7 @@ func TestRouterCancelMessage(t *testing.T) {
 }
 
 func TestRouterRouteExchange(t *testing.T) {
-	logger := newLogger()
+	logger := log.NewLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
 
 	key1 := utils.GeneratePrivateKey()

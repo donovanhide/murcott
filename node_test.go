@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/h2so5/murcott/utils"
+	"github.com/h2so5/murcott/log"
 )
 
 func TestNodeChatMessage(t *testing.T) {
-	logger := newLogger()
+	logger := log.NewLogger()
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
 	node1, err := newNode(key1, logger, DefaultConfig)

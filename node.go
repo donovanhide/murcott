@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/h2so5/murcott/utils"
+		"github.com/h2so5/murcott/log"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -30,11 +31,11 @@ type node struct {
 	cancelHandler chan string
 	cancelMessage chan int
 	config        Config
-	logger        *Logger
+	logger        *log.Logger
 	exit          chan struct{}
 }
 
-func newNode(key *utils.PrivateKey, logger *Logger, config Config) (*node, error) {
+func newNode(key *utils.PrivateKey, logger *log.Logger, config Config) (*node, error) {
 	router, err := newRouter(key, logger, config)
 	if err != nil {
 		return nil, err
@@ -117,7 +118,7 @@ func (p *node) parseMessage(typ string, payload []byte, id utils.NodeID) {
 	if t, ok := p.name2type[typ]; ok {
 		p.parseCommand(payload, id, t)
 	} else {
-		p.logger.error("Unknown message type: %s", typ)
+		p.logger.Error("Unknown message type: %s", typ)
 	}
 }
 

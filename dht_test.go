@@ -4,6 +4,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 )
 
@@ -11,8 +12,8 @@ func TestDhtPing(t *testing.T) {
 	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 
-	dht1 := newDht(10, node1, newLogger())
-	dht2 := newDht(10, node2, newLogger())
+	dht1 := newDht(10, node1, log.NewLogger())
+	dht2 := newDht(10, node2, log.NewLogger())
 
 	dht1.addNode(node2)
 
@@ -49,7 +50,7 @@ func TestDhtPing(t *testing.T) {
 func TestDhtTimeout(t *testing.T) {
 	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
-	dht1 := newDht(10, node1, newLogger())
+	dht1 := newDht(10, node1, log.NewLogger())
 	dht1.addNode(node2)
 	r := dht1.sendRecvPacket(node2.ID, dhtRPCCommand{})
 	if r != nil {
@@ -58,7 +59,7 @@ func TestDhtTimeout(t *testing.T) {
 }
 
 func TestDhtGroup(t *testing.T) {
-	logger := newLogger()
+	logger := log.NewLogger()
 
 	n := 20
 	dhtmap := make(map[string]*dht)

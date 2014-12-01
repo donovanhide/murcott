@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
 )
@@ -44,7 +45,7 @@ type dht struct {
 	recvch chan packet
 	sendch chan dhtOutgoingPacket
 
-	logger *Logger
+	logger *log.Logger
 }
 
 type dhtRPCCommand struct {
@@ -60,7 +61,7 @@ func (p *dhtRPCCommand) getArgs(k string, v ...interface{}) {
 	}
 }
 
-func newDht(k int, info utils.NodeInfo, logger *Logger) *dht {
+func newDht(k int, info utils.NodeInfo, logger *log.Logger) *dht {
 	d := dht{
 		info:   info,
 		table:  newNodeTable(k, info.ID),
@@ -105,11 +106,11 @@ func (p *dht) processPacket(pac packet) {
 
 		switch command.Method {
 		case "ping":
-			p.logger.info("Receive DHT Ping from %s", pac.Src.String())
+			p.logger.Info("Receive DHT Ping from %s", pac.Src.String())
 			p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, nil))
 
 		case "find-node":
-			p.logger.info("Receive DHT Find-Node from %s", pac.Src.String())
+			p.logger.Info("Receive DHT Find-Node from %s", pac.Src.String())
 			if id, ok := command.Args["id"].(string); ok {
 				args := map[string]interface{}{}
 				var idary [20]byte
@@ -119,7 +120,7 @@ func (p *dht) processPacket(pac packet) {
 			}
 
 		case "store":
-			p.logger.info("Receive DHT Store from %s", pac.Src.String())
+			p.logger.Info("Receive DHT Store from %s", pac.Src.String())
 			if key, ok := command.Args["key"].(string); ok {
 				if val, ok := command.Args["value"].(string); ok {
 					p.kvsMutex.Lock()
@@ -129,7 +130,7 @@ func (p *dht) processPacket(pac packet) {
 			}
 
 		case "find-value":
-			p.logger.info("Receive DHT Find-Node from %s", pac.Src.String())
+			p.logger.Info("Receive DHT Find-Node from %s", pac.Src.String())
 			if key, ok := command.Args["key"].(string); ok {
 				args := map[string]interface{}{}
 				p.kvsMutex.RLock()

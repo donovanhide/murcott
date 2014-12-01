@@ -1,4 +1,4 @@
-package murcott
+package log
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ type Logger struct {
 	ch chan string
 }
 
-func newLogger() *Logger {
+func NewLogger() *Logger {
 	return &Logger{
 		ch: make(chan string, 1024),
 	}
@@ -23,18 +23,18 @@ func (l *Logger) write(msg string) {
 	l.ch <- msg
 }
 
-func (l *Logger) info(format string, a ...interface{}) {
+func (l *Logger) Info(format string, a ...interface{}) {
 	l.write("[INFO]  " + fmt.Sprintf(format, a...))
 }
 
-func (l *Logger) warning(format string, a ...interface{}) {
+func (l *Logger) Warning(format string, a ...interface{}) {
 	l.write("[WARN]  " + fmt.Sprintf(format, a...))
 }
 
-func (l *Logger) error(format string, a ...interface{}) {
+func (l *Logger) Error(format string, a ...interface{}) {
 	l.write("[ERROR] " + fmt.Sprintf(format, a...))
 }
 
-func (l *Logger) fatal(format string, a ...interface{}) {
+func (l *Logger) Fatal(format string, a ...interface{}) {
 	l.write("[FATAL] " + fmt.Sprintf(format, a...))
 }
