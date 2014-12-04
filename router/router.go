@@ -25,10 +25,9 @@ type queuedPacket struct {
 }
 
 type Router struct {
-	info           utils.NodeInfo
 	dht            *dht.DHT
 	conn           net.PacketConn
-	c              *utp.Conn
+	listener       *utp.Listener
 	key            *utils.PrivateKey
 	keycache       map[string]utils.PublicKey
 	keyWaiting     []internal.Packet
@@ -41,32 +40,31 @@ type Router struct {
 	exit           chan int
 }
 
-func getOpenPortConn(config utils.Config) (*net.UDPConn, int, error) {
+func getOpenPortConn(config utils.Config) (*utp.Listener, error) {
 	for _, port := range config.Ports() {
-		addr, err := net.ResolveUDPAddr("udp4", ":"+strconv.Itoa(port))
-		conn, err := net.ListenUDP("udp", addr)
+		addr, err := utp.ResolveAddr("utp4", ":"+strconv.Itoa(port))
+		conn, err := utp.Listen("utp", addr)
 		if err == nil {
-			return conn, port, nil
+			return conn, nil
 		}
 	}
-	return nil, 0, errors.New("fail to bind port")
+	return nil, errors.New("fail to bind port")
 }
 
 func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*Router, error) {
-	info := utils.NodeInfo{ID: key.PublicKeyHash()}
-	dht := dht.NewDHT(10, info, logger)
+
 	exit := make(chan int)
-	conn, selfport, err := getOpenPortConn(config)
+	listener, err := getOpenPortConn(config)
 	if err != nil {
 		return nil, err
 	}
+	dht := dht.NewDHT(10, key.PublicKeyHash(), listener.RawConn, logger)
 
-	logger.Info("Node ID: %s", info.ID.String())
-	logger.Info("Node UDP port: %d", selfport)
+	logger.Info("Node ID: %s", key.PublicKeyHash().String())
+	logger.Info("Node Socket: %v", listener.Addr())
 
 	r := Router{
-		info:           info,
-		conn:           conn,
+		listener:       listener,
 		key:            key,
 		keycache:       make(map[string]utils.PublicKey),
 		dht:            dht,
@@ -134,7 +132,7 @@ func (p *Router) run() {
 				continue
 			}
 
-			if packet.Src.Cmp(p.info.ID) == 0 {
+			if packet.Src.Cmp(p.key.PublicKeyHash()) == 0 {
 				continue
 			}
 
@@ -142,16 +140,6 @@ func (p *Router) run() {
 			packet.Addr = addr
 
 			recv <- packet
-		}
-	}()
-
-	go func() {
-		for {
-			dst, payload, err := p.dht.NextPacket()
-			if err != nil {
-				return
-			}
-			p.sendPacket(dst, nil, "dht", payload)
 		}
 	}()
 
@@ -223,10 +211,6 @@ func (p *Router) processPublicKeyResponse(packet internal.Packet) {
 func (p *Router) processPacket(packet internal.Packet) {
 	info := utils.NodeInfo{ID: packet.Src, Addr: packet.Addr}
 	switch packet.Type {
-	case "disco":
-		p.dht.AddNode(info)
-	case "dht":
-		p.dht.ProcessPacket(packet)
 	case "msg":
 		p.recv <- Message{ID: info.ID, Payload: packet.Payload}
 	}
@@ -284,7 +268,7 @@ func (p *Router) processWaitingRoutePackets() {
 func (p *Router) sendPacket(dst utils.NodeID, addr net.Addr, typ string, payload []byte) int {
 	packet := internal.Packet{
 		Dst:     dst,
-		Src:     p.info.ID,
+		Src:     p.key.PublicKeyHash(),
 		Type:    typ,
 		Payload: payload,
 		Addr:    addr,
