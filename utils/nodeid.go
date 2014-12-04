@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/rand"
+	"errors"
 	"math/big"
 	"reflect"
 
@@ -18,12 +19,12 @@ func init() {
 		func(d *msgpack.Decoder, v reflect.Value) error {
 			b, err := d.DecodeBytes()
 			if err != nil {
-				return nil
+				return err
 			}
 			i := big.NewInt(0)
 			i.SetBytes(b)
 			if i.BitLen() > 160 {
-				return nil
+				return errors.New("too long id")
 			}
 			v.Set(reflect.ValueOf(NodeID{*i}))
 			return nil

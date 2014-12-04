@@ -29,9 +29,6 @@ type Signature struct {
 
 // PublicKeyHash returns a SHA-1 digest for the public key.
 func (p *PublicKey) PublicKeyHash() NodeID {
-	if p.x == nil || p.y == nil {
-		return NewNodeID([20]byte{})
-	}
 	return NewNodeID(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
 }
 
@@ -110,14 +107,14 @@ func init() {
 		func(d *msgpack.Decoder, v reflect.Value) error {
 			i, err := d.DecodeMap()
 			if err != nil {
-				return nil
+				return err
 			}
 			m := i.(map[interface{}]interface{})
-			if r, ok := m["r"].(string); ok {
-				if s, ok := m["s"].(string); ok {
+			if r, ok := m["r"].([]byte); ok {
+				if s, ok := m["s"].([]byte); ok {
 					v.Set(reflect.ValueOf(Signature{
-						r: big.NewInt(0).SetBytes([]byte(r)),
-						s: big.NewInt(0).SetBytes([]byte(s)),
+						r: big.NewInt(0).SetBytes(r),
+						s: big.NewInt(0).SetBytes(s),
 					}))
 				}
 			}
@@ -136,18 +133,18 @@ func init() {
 		func(d *msgpack.Decoder, v reflect.Value) error {
 			i, err := d.DecodeMap()
 			if err != nil {
-				return nil
+				return err
 			}
 			m := i.(map[interface{}]interface{})
-			if x, ok := m["x"].(string); ok {
-				if y, ok := m["y"].(string); ok {
-					if d, ok := m["d"].(string); ok {
+			if x, ok := m["x"].([]byte); ok {
+				if y, ok := m["y"].([]byte); ok {
+					if d, ok := m["d"].([]byte); ok {
 						v.Set(reflect.ValueOf(PrivateKey{
 							PublicKey: PublicKey{
-								x: big.NewInt(0).SetBytes([]byte(x)),
-								y: big.NewInt(0).SetBytes([]byte(y)),
+								x: big.NewInt(0).SetBytes(x),
+								y: big.NewInt(0).SetBytes(y),
 							},
-							d: big.NewInt(0).SetBytes([]byte(d)),
+							d: big.NewInt(0).SetBytes(d),
 						}))
 					}
 				}
@@ -166,14 +163,14 @@ func init() {
 		func(d *msgpack.Decoder, v reflect.Value) error {
 			i, err := d.DecodeMap()
 			if err != nil {
-				return nil
+				return err
 			}
 			m := i.(map[interface{}]interface{})
-			if x, ok := m["x"].(string); ok {
-				if y, ok := m["y"].(string); ok {
+			if x, ok := m["x"].([]byte); ok {
+				if y, ok := m["y"].([]byte); ok {
 					v.Set(reflect.ValueOf(PublicKey{
-						x: big.NewInt(0).SetBytes([]byte(x)),
-						y: big.NewInt(0).SetBytes([]byte(y)),
+						x: big.NewInt(0).SetBytes(x),
+						y: big.NewInt(0).SetBytes(y),
 					}))
 				}
 			}

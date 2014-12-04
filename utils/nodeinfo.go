@@ -43,7 +43,7 @@ func init() {
 		func(d *msgpack.Decoder, v reflect.Value) error {
 			i, err := d.DecodeMap()
 			if err != nil {
-				return nil
+				return err
 			}
 			m := i.(map[interface{}]interface{})
 			if id, ok := m["id"].(string); ok {
@@ -52,7 +52,7 @@ func init() {
 					copy(idbuf[:], []byte(id))
 					addr, err := net.ResolveUDPAddr("udp", addrstr)
 					if err != nil {
-						return nil
+						return err
 					}
 					v.Set(reflect.ValueOf(NodeInfo{
 						ID:   NewNodeID(idbuf),

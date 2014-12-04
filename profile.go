@@ -32,9 +32,9 @@ func init() {
 			if err != nil {
 				return err
 			}
-			return e.Encode(map[string]string{
-				"type": "png",
-				"data": string(b.Bytes()),
+			return e.Encode(map[string][]byte{
+				"type": []byte("png"),
+				"data": b.Bytes(),
 			})
 		},
 		func(d *msgpack.Decoder, v reflect.Value) error {
@@ -43,10 +43,10 @@ func init() {
 				return nil
 			}
 			if m, ok := i.(map[interface{}]interface{}); ok {
-				if t, ok := m["type"].(string); ok {
-					if data, ok := m["data"].(string); ok {
-						if t == "png" {
-							b := bytes.NewBuffer([]byte(data))
+				if t, ok := m["type"].([]byte); ok {
+					if data, ok := m["data"].([]byte); ok {
+						if string(t) == "png" {
+							b := bytes.NewBuffer(data)
 							img, err := png.Decode(b)
 							if err != nil {
 								return err
