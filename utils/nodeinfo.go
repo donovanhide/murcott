@@ -9,7 +9,7 @@ import (
 
 type NodeInfo struct {
 	ID   NodeID
-	Addr *net.UDPAddr
+	Addr net.Addr
 }
 
 type NodeInfoSorter struct {

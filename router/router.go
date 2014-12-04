@@ -27,7 +27,7 @@ type queuedPacket struct {
 type Router struct {
 	info           utils.NodeInfo
 	dht            *dht.DHT
-	conn           *net.UDPConn
+	conn           net.PacketConn
 	c              *utp.Conn
 	key            *utils.PrivateKey
 	keycache       map[string]utils.PublicKey
@@ -123,7 +123,7 @@ func (p *Router) run() {
 	go func() {
 		for {
 			var buf [65507]byte
-			len, addr, err := p.conn.ReadFromUDP(buf[:])
+			len, addr, err := p.conn.ReadFrom(buf[:])
 			if err != nil {
 				break
 			}
@@ -167,7 +167,7 @@ func (p *Router) run() {
 				if addr != nil {
 					data, err := msgpack.Marshal(q.packet)
 					if err == nil {
-						p.conn.WriteToUDP(data, addr)
+						p.conn.WriteTo(data, addr)
 					} else {
 						p.logger.Error("packet marshal error")
 					}
@@ -256,7 +256,7 @@ func (p *Router) processWaitingRoutePackets() {
 		if node != nil {
 			data, err := msgpack.Marshal(packet)
 			if err == nil {
-				p.conn.WriteToUDP(data, node.Addr)
+				p.conn.WriteTo(data, node.Addr)
 			} else {
 				p.logger.Error("packet marshal error")
 			}
@@ -281,7 +281,7 @@ func (p *Router) processWaitingRoutePackets() {
 	}
 }
 
-func (p *Router) sendPacket(dst utils.NodeID, addr *net.UDPAddr, typ string, payload []byte) int {
+func (p *Router) sendPacket(dst utils.NodeID, addr net.Addr, typ string, payload []byte) int {
 	packet := internal.Packet{
 		Dst:     dst,
 		Src:     p.info.ID,

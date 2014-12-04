@@ -14,7 +14,7 @@ type Packet struct {
 	Type    string          `msgpack:"type"`
 	Payload []byte          `msgpack:"payload"`
 	S       utils.Signature `msgpack:"sign"`
-	Addr    *net.UDPAddr
+	Addr    net.Addr        `msgpack:"-"`
 }
 
 func (p *Packet) Serialize() []byte {

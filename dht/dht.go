@@ -24,7 +24,7 @@ type dhtPacket struct {
 
 type dhtRPCReturn struct {
 	command dhtRPCCommand
-	addr    *net.UDPAddr
+	addr    net.Addr
 }
 
 type dhtOutgoingPacket struct {
