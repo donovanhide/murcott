@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/h2so5/murcott/internal"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
@@ -17,39 +16,29 @@ import (
 
 type dhtRPCCallback func(*dhtRPCCommand, *net.UDPAddr)
 
-type dhtPacket struct {
-	dst     utils.NodeID
-	payload []byte
-}
-
 type dhtRPCReturn struct {
 	command dhtRPCCommand
 	addr    net.Addr
 }
 
-type dhtOutgoingPacket struct {
-	dst      utils.NodeID
-	command  dhtRPCCommand
-	callback chan<- dhtRPCReturn
-}
-
 type DHT struct {
-	info  utils.NodeInfo
+	id    utils.NodeID
 	table nodeTable
 	k     int
 
 	kvs      map[string]string
 	kvsMutex sync.RWMutex
 
-	chmap  map[string]chan<- dhtRPCReturn
-	rpc    chan dhtPacket
-	recvch chan internal.Packet
-	sendch chan dhtOutgoingPacket
+	chmap      map[string]chan<- dhtRPCReturn
+	chmapMutex sync.Mutex
+
+	conn net.PacketConn
 
 	logger *log.Logger
 }
 
 type dhtRPCCommand struct {
+	Src    utils.NodeID           `msgpack:"src"`
 	ID     []byte                 `msgpack:"id"`
 	Method string                 `msgpack:"method"`
 	Args   map[string]interface{} `msgpack:"args"`
@@ -62,16 +51,14 @@ func (p *dhtRPCCommand) getArgs(k string, v ...interface{}) {
 	}
 }
 
-func NewDHT(k int, info utils.NodeInfo, logger *log.Logger) *DHT {
+func NewDHT(k int, id utils.NodeID, conn net.PacketConn, logger *log.Logger) *DHT {
 	d := DHT{
-		info:   info,
-		table:  newNodeTable(k, info.ID),
+		id:     id,
+		table:  newNodeTable(k, id),
 		k:      k,
 		kvs:    make(map[string]string),
 		chmap:  make(map[string]chan<- dhtRPCReturn),
-		rpc:    make(chan dhtPacket, 100),
-		recvch: make(chan internal.Packet, 100),
-		sendch: make(chan dhtOutgoingPacket, 100),
+		conn:   conn,
 		logger: logger,
 	}
 	go d.loop()
@@ -79,103 +66,72 @@ func NewDHT(k int, info utils.NodeInfo, logger *log.Logger) *DHT {
 }
 
 func (p *DHT) loop() {
+	var b [1024]byte
 	for {
-		select {
-		case pac := <-p.recvch:
-			p.processPacket(pac)
-		case pac := <-p.sendch:
-			data, err := msgpack.Marshal(pac.command)
-			if err == nil {
-				p.rpc <- dhtPacket{dst: pac.dst, payload: data}
-				if pac.callback != nil {
-					p.chmap[string(pac.command.ID)] = pac.callback
-				}
-			}
+		l, addr, err := p.conn.ReadFrom(b[:])
+		if err != nil {
+			return
+		}
+		var command dhtRPCCommand
+		err = msgpack.Unmarshal(b[:l], &command)
+		if err == nil {
+			p.processPacket(command, addr)
 		}
 	}
 }
 
-func (p *DHT) ProcessPacket(pac internal.Packet) {
-	p.recvch <- pac
-}
+func (p *DHT) processPacket(c dhtRPCCommand, addr net.Addr) {
 
-func (p *DHT) processPacket(pac internal.Packet) {
-	var command dhtRPCCommand
-	err := msgpack.Unmarshal(pac.Payload, &command)
-	if err == nil {
-		p.table.insert(utils.NodeInfo{ID: pac.Src, Addr: pac.Addr})
+	p.table.insert(utils.NodeInfo{ID: c.Src, Addr: addr})
 
-		switch command.Method {
-		case "ping":
-			p.logger.Info("Receive DHT Ping from %s", pac.Src.String())
-			p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, nil))
+	switch c.Method {
+	case "ping":
+		p.logger.Info("Receive DHT Ping from %s", c.Src.String())
+		p.sendPacket(c.Src, newRPCReturnCommand(c.ID, nil))
 
-		case "find-node":
-			p.logger.Info("Receive DHT Find-Node from %s", pac.Src.String())
-			if id, ok := command.Args["id"].(string); ok {
-				args := map[string]interface{}{}
-				var idary [20]byte
-				copy(idary[:], []byte(id)[:20])
-				args["nodes"] = p.table.nearestNodes(utils.NewNodeID(idary))
-				p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, args))
-			}
+	case "find-node":
+		p.logger.Info("Receive DHT Find-Node from %s", c.Src.String())
+		if id, ok := c.Args["id"].(string); ok {
+			args := map[string]interface{}{}
+			var idary [20]byte
+			copy(idary[:], []byte(id)[:20])
+			args["nodes"] = p.table.nearestNodes(utils.NewNodeID(idary))
+			p.sendPacket(c.Src, newRPCReturnCommand(c.ID, args))
+		}
 
-		case "store":
-			p.logger.Info("Receive DHT Store from %s", pac.Src.String())
-			if key, ok := command.Args["key"].(string); ok {
-				if val, ok := command.Args["value"].(string); ok {
-					p.kvsMutex.Lock()
-					p.kvs[key] = val
-					p.kvsMutex.Unlock()
-				}
-			}
-
-		case "find-value":
-			p.logger.Info("Receive DHT Find-Node from %s", pac.Src.String())
-			if key, ok := command.Args["key"].(string); ok {
-				args := map[string]interface{}{}
-				p.kvsMutex.RLock()
-				if val, ok := p.kvs[key]; ok {
-					args["value"] = val
-				} else {
-					hash := sha1.Sum([]byte(key))
-					args["nodes"] = p.table.nearestNodes(utils.NewNodeID(hash))
-				}
-				p.kvsMutex.RUnlock()
-				p.sendPacket(pac.Src, newRPCReturnCommand(command.ID, args))
-			}
-
-		case "": // callback
-			id := string(command.ID)
-			if ch, ok := p.chmap[id]; ok {
-				delete(p.chmap, id)
-				ch <- dhtRPCReturn{command: command, addr: pac.Addr}
+	case "store":
+		p.logger.Info("Receive DHT Store from %s", c.Src.String())
+		if key, ok := c.Args["key"].(string); ok {
+			if val, ok := c.Args["value"].(string); ok {
+				p.kvsMutex.Lock()
+				p.kvs[key] = val
+				p.kvsMutex.Unlock()
 			}
 		}
-	}
-}
 
-func (p *DHT) AddNode(node utils.NodeInfo) {
-	p.table.insert(node)
-	p.sendPing(node.ID)
-}
+	case "find-value":
+		p.logger.Info("Receive DHT Find-Node from %s", c.Src.String())
+		if key, ok := c.Args["key"].(string); ok {
+			args := map[string]interface{}{}
+			p.kvsMutex.RLock()
+			if val, ok := p.kvs[key]; ok {
+				args["value"] = val
+			} else {
+				hash := sha1.Sum([]byte(key))
+				args["nodes"] = p.table.nearestNodes(utils.NewNodeID(hash))
+			}
+			p.kvsMutex.RUnlock()
+			p.sendPacket(c.Src, newRPCReturnCommand(c.ID, args))
+		}
 
-func (p *DHT) KnownNodes() []utils.NodeInfo {
-	return p.table.nodes()
-}
-
-func (p *DHT) GetNodeInfo(id utils.NodeID) *utils.NodeInfo {
-	return p.table.find(id)
-}
-
-func (p *DHT) storeValue(key string, value string) {
-	hash := sha1.Sum([]byte(key))
-	c := newRPCCommand("store", map[string]interface{}{
-		"key":   key,
-		"value": value,
-	})
-	for _, n := range p.FindNearestNode(utils.NewNodeID(hash)) {
-		p.sendPacket(n.ID, c)
+	case "": // callback
+		id := string(c.ID)
+		p.chmapMutex.Lock()
+		defer p.chmapMutex.Unlock()
+		if ch, ok := p.chmap[id]; ok {
+			delete(p.chmap, id)
+			ch <- dhtRPCReturn{command: c, addr: addr}
+		}
 	}
 }
 
@@ -186,13 +142,13 @@ func (p *DHT) FindNearestNode(findid utils.NodeID) []utils.NodeInfo {
 
 	f := func(id utils.NodeID, command dhtRPCCommand) {
 		defer func() { endch <- struct{}{} }()
-		ret := p.sendRecvPacket(id, command)
-		if ret != nil {
+		ret, err := p.sendAndWaitPacket(id, command)
+		if err == nil {
 			if _, ok := ret.command.Args["nodes"]; ok {
 				var nodes []utils.NodeInfo
 				ret.command.getArgs("nodes", &nodes)
 				for _, n := range nodes {
-					if n.ID.Cmp(p.info.ID) != 0 {
+					if n.ID.Cmp(p.id) != 0 {
 						p.table.insert(n)
 						reqch <- n
 					}
@@ -248,7 +204,7 @@ loop:
 	return sorter.Nodes
 }
 
-func (p *DHT) loadValue(key string) *string {
+func (p *DHT) LoadValue(key string) *string {
 
 	p.kvsMutex.RLock()
 	if v, ok := p.kvs[key]; ok {
@@ -267,8 +223,8 @@ func (p *DHT) loadValue(key string) *string {
 	nodes := p.table.nearestNodes(utils.NewNodeID(hash))
 
 	f := func(id utils.NodeID, keyid utils.NodeID, command dhtRPCCommand) {
-		ret := p.sendRecvPacket(id, command)
-		if ret != nil {
+		ret, err := p.sendAndWaitPacket(id, command)
+		if err == nil {
 			if val, ok := ret.command.Args["value"].(string); ok {
 				retch <- &val
 			} else if _, ok := ret.command.Args["nodes"]; ok {
@@ -325,11 +281,28 @@ func (p *DHT) loadValue(key string) *string {
 	}
 }
 
-func (p *DHT) NextPacket() (utils.NodeID, []byte, error) {
-	if c, ok := <-p.rpc; ok {
-		return c.dst, c.payload, nil
+func (p *DHT) StoreValue(key string, value string) {
+	hash := sha1.Sum([]byte(key))
+	c := newRPCCommand("store", map[string]interface{}{
+		"key":   key,
+		"value": value,
+	})
+	for _, n := range p.FindNearestNode(utils.NewNodeID(hash)) {
+		p.sendPacket(n.ID, c)
 	}
-	return utils.NodeID{}, nil, errors.New("DHT closed")
+}
+
+func (p *DHT) AddNode(node utils.NodeInfo) {
+	p.table.insert(node)
+	p.sendPing(node.ID)
+}
+
+func (p *DHT) KnownNodes() []utils.NodeInfo {
+	return p.table.nodes()
+}
+
+func (p *DHT) GetNodeInfo(id utils.NodeID) *utils.NodeInfo {
+	return p.table.find(id)
 }
 
 func newRPCCommand(method string, args map[string]interface{}) dhtRPCCommand {
@@ -358,22 +331,45 @@ func (p *DHT) sendPing(dst utils.NodeID) {
 	p.sendPacket(dst, c)
 }
 
-func (p *DHT) sendPacket(dst utils.NodeID, command dhtRPCCommand) {
-	p.sendch <- dhtOutgoingPacket{dst: dst, command: command, callback: nil}
+func (p *DHT) sendPacket(dst utils.NodeID, c dhtRPCCommand) error {
+	c.Src = p.id
+	i := p.GetNodeInfo(dst)
+	if i == nil || i.Addr == nil {
+		return errors.New("route not found")
+	}
+	b, err := msgpack.Marshal(c)
+	if err != nil {
+		return err
+	}
+	_, err = p.conn.WriteTo(b, i.Addr)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (p *DHT) sendRecvPacket(dst utils.NodeID, command dhtRPCCommand) *dhtRPCReturn {
+func (p *DHT) sendAndWaitPacket(dst utils.NodeID, c dhtRPCCommand) (dhtRPCReturn, error) {
 	ch := make(chan dhtRPCReturn, 2)
-	p.sendch <- dhtOutgoingPacket{dst: dst, command: command, callback: ch}
 
+	p.chmapMutex.Lock()
+	p.chmap[string(c.ID)] = ch
+	p.chmapMutex.Unlock()
+
+	defer func() {
+		p.chmapMutex.Lock()
+		delete(p.chmap, string(c.ID))
+		p.chmapMutex.Unlock()
+	}()
+
+	p.sendPacket(dst, c)
 	select {
 	case r := <-ch:
-		return &r
+		return r, nil
 	case <-time.After(time.Second):
-		return nil
+		return dhtRPCReturn{}, errors.New("timeout")
 	}
 }
 
-func (p *DHT) Close() {
-	//close(p.rpc)
+func (p *DHT) Close() error {
+	return p.conn.Close()
 }
