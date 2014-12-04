@@ -1,4 +1,4 @@
-package murcott
+package client
 
 import (
 	"errors"
@@ -33,7 +33,7 @@ func (r *BlockList) Remove(id utils.NodeID) error {
 	return errors.New("item not found")
 }
 
-func (r *BlockList) contains(id utils.NodeID) bool {
+func (r *BlockList) Contains(id utils.NodeID) bool {
 	for _, n := range r.list {
 		if n.Cmp(id) == 0 {
 			return true

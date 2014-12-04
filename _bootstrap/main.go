@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/h2so5/murcott"
+	"github.com/h2so5/murcott/client"
 	"github.com/h2so5/murcott/utils"
 )
 
 func main() {
 	key := utils.GeneratePrivateKey()
-	storage := murcott.NewStorage(":memory:")
+	storage := client.NewStorage(":memory:")
 	client, err := murcott.NewClient(key, storage, utils.DefaultConfig)
 	if err != nil {
 		return

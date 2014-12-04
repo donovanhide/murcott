@@ -15,6 +15,7 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/gorilla/websocket"
 	"github.com/h2so5/murcott"
+	"github.com/h2so5/murcott/client"
 	"github.com/h2so5/murcott/utils"
 	"github.com/martini-contrib/render"
 	"github.com/nfnt/resize"
@@ -84,13 +85,13 @@ func (r JsonRPCListener) HandleLog(c func(args []interface{})) {
 }
 
 func (r JsonRPCListener) HandleMessage(c func(args []interface{})) {
-	r.client.HandleMessages(func(src utils.NodeID, msg murcott.ChatMessage) {
+	r.client.HandleMessages(func(src utils.NodeID, msg client.ChatMessage) {
 		c([]interface{}{src.String(), msg.Text(), msg.Time})
 	})
 }
 
 func (r JsonRPCListener) HandleStatus(c func(args []interface{})) {
-	r.client.HandleStatuses(func(src utils.NodeID, status murcott.UserStatus) {
+	r.client.HandleStatuses(func(src utils.NodeID, status client.UserStatus) {
 		c([]interface{}{src.String(), status.Type})
 	})
 }
@@ -98,7 +99,7 @@ func (r JsonRPCListener) HandleStatus(c func(args []interface{})) {
 func (r JsonRPCListener) SendMessage(dst string, msg string, c func(args []interface{})) {
 	id, err := utils.NewNodeIDFromString(dst)
 	if err == nil {
-		r.client.SendMessage(id, murcott.NewPlainChatMessage(msg), func(ok bool) {
+		r.client.SendMessage(id, client.NewPlainChatMessage(msg), func(ok bool) {
 			c([]interface{}{ok})
 		})
 	} else {
@@ -136,7 +137,7 @@ func (r JsonRPCListener) GetFriendProfile(idstr string, c func(args []interface{
 	if err != nil {
 		return
 	}
-	r.client.RequestProfile(id, func(profile *murcott.UserProfile) {
+	r.client.RequestProfile(id, func(profile *client.UserProfile) {
 		if profile != nil {
 			var buf bytes.Buffer
 			encoder := base64.NewEncoder(base64.StdEncoding, &buf)
@@ -155,17 +156,17 @@ func (r JsonRPCListener) SetProfile(nickname string, avatar string, c func(args 
 	m, _, err := image.Decode(reader)
 	if err == nil {
 		m = resize.Thumbnail(32, 32, m, resize.Lanczos3)
-		profile.Avatar = murcott.UserAvatar{m}
+		profile.Avatar = client.UserAvatar{m}
 	}
 	r.client.SetProfile(profile)
 	c([]interface{}{})
 }
 
 func (r JsonRPCListener) SetStatus(status string) {
-	if status == murcott.StatusActive {
-		r.client.SetStatus(murcott.UserStatus{Type: murcott.StatusActive})
-	} else if status == murcott.StatusAway {
-		r.client.SetStatus(murcott.UserStatus{Type: murcott.StatusAway})
+	if status == client.StatusActive {
+		r.client.SetStatus(client.UserStatus{Type: client.StatusActive})
+	} else if status == client.StatusAway {
+		r.client.SetStatus(client.UserStatus{Type: client.StatusAway})
 	}
 }
 
@@ -182,7 +183,7 @@ func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
 		return
 	}
 
-	storage := murcott.NewStorage(key.PublicKeyHash().String() + ".sqlite3")
+	storage := client.NewStorage(key.PublicKeyHash().String() + ".sqlite3")
 	c, err := murcott.NewClient(key, storage, utils.DefaultConfig)
 	if err != nil {
 		return

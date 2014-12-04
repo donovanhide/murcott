@@ -1,4 +1,4 @@
-package murcott
+package client
 
 import (
 	"database/sql"
@@ -203,7 +203,7 @@ func (s *Storage) SaveBlockList(blocklist *BlockList) error {
 	return nil
 }
 
-func (s *Storage) loadKnownNodes() ([]utils.NodeInfo, error) {
+func (s *Storage) LoadKnownNodes() ([]utils.NodeInfo, error) {
 	var list []utils.NodeInfo
 	rows, err := s.query(loadKnownNodesStmt)
 	if err != nil {
@@ -224,7 +224,7 @@ func (s *Storage) loadKnownNodes() ([]utils.NodeInfo, error) {
 	return list, nil
 }
 
-func (s *Storage) saveKnownNodes(nodes []utils.NodeInfo) error {
+func (s *Storage) SaveKnownNodes(nodes []utils.NodeInfo) error {
 	for _, n := range nodes {
 		s.exec(replaceKnownNodesStmt, n.ID.String(), n.Addr.String())
 	}

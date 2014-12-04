@@ -1,4 +1,4 @@
-package murcott
+package client
 
 import (
 	"errors"
@@ -79,17 +79,17 @@ func (m *ChatMessage) Len() int {
 	return len(m.Contents)
 }
 
-type messageAck struct {
+type MessageAck struct {
 }
 
-type userProfileRequest struct {
+type UserProfileRequest struct {
 }
 
-type userProfileResponse struct {
+type UserProfileResponse struct {
 	Profile UserProfile `msgpack:"profile"`
 }
 
-type userPresence struct {
+type UserPresence struct {
 	Status UserStatus `msgpack:"status"`
 	Ack    bool       `msgpack:"ack"`
 }

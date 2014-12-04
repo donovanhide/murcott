@@ -1,4 +1,4 @@
-package murcott
+package client
 
 import (
 	"testing"

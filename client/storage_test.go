@@ -1,4 +1,4 @@
-package murcott
+package client
 
 import (
 	"net"
@@ -142,12 +142,12 @@ func TestStorageKnownNodes(t *testing.T) {
 		utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: addr3},
 	}
 
-	err := s.saveKnownNodes(nodes)
+	err := s.SaveKnownNodes(nodes)
 	if err != nil {
 		t.Errorf("saveKnownNodes failed: %v", err)
 	}
 
-	nodes2, err := s.loadKnownNodes()
+	nodes2, err := s.LoadKnownNodes()
 	if err != nil {
 		t.Errorf("loadKnownNodes failed: %v", err)
 	}

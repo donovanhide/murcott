@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/h2so5/murcott/client"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/node"
 	"github.com/h2so5/murcott/utils"
@@ -17,19 +18,19 @@ import (
 func TestClientMessage(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	client1, err := NewClient(key1, NewStorage(":memory:"), utils.DefaultConfig)
+	client1, err := NewClient(key1, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client2, err := NewClient(key2, NewStorage(":memory:"), utils.DefaultConfig)
+	client2, err := NewClient(key2, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	success := make(chan bool)
-	plainmsg := NewPlainChatMessage("Hello")
+	plainmsg := client.NewPlainChatMessage("Hello")
 
-	client2.HandleMessages(func(src utils.NodeID, msg ChatMessage) {
+	client2.HandleMessages(func(src utils.NodeID, msg client.ChatMessage) {
 		if src.Cmp(key1.PublicKeyHash()) == 0 {
 			if msg.Text() == plainmsg.Text() {
 				success <- true
@@ -68,17 +69,17 @@ func TestClientMessage(t *testing.T) {
 func TestClientBlockList(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	client1, err := NewClient(key1, NewStorage(":memory:"), utils.DefaultConfig)
+	client1, err := NewClient(key1, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client2, err := NewClient(key2, NewStorage(":memory:"), utils.DefaultConfig)
+	client2, err := NewClient(key2, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	success := make(chan bool)
-	plainmsg := NewPlainChatMessage("Hello")
+	plainmsg := client.NewPlainChatMessage("Hello")
 
 	client2.BlockList.Add(key1.PublicKeyHash())
 
@@ -124,11 +125,11 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	client1, err := NewClient(key1, NewStorage(":memory:"), utils.DefaultConfig)
+	client1, err := NewClient(key1, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client2, err := NewClient(key2, NewStorage(":memory:"), utils.DefaultConfig)
+	client2, err := NewClient(key2, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,9 +141,9 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 		return
 	}
 
-	profile := UserProfile{
+	profile := client.UserProfile{
 		Nickname: "nick",
-		Avatar:   UserAvatar{Image: img},
+		Avatar:   client.UserAvatar{Image: img},
 		Extension: map[string]string{
 			"Location": "Tokyo",
 		},
@@ -154,7 +155,7 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 	go client1.Run()
 	go client2.Run()
 
-	client1.RequestProfile(key2.PublicKeyHash(), func(p *UserProfile) {
+	client1.RequestProfile(key2.PublicKeyHash(), func(p *client.UserProfile) {
 		if p == nil {
 			t.Errorf("UserProfile should not be nil")
 			success <- false
@@ -192,25 +193,25 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 func TestClientStatus(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	client1, err := NewClient(key1, NewStorage(":memory:"), utils.DefaultConfig)
+	client1, err := NewClient(key1, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client2, err := NewClient(key2, NewStorage(":memory:"), utils.DefaultConfig)
+	client2, err := NewClient(key2, client.NewStorage(":memory:"), utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	status1 := UserStatus{Type: StatusActive, Message: ":-("}
+	status1 := client.UserStatus{Type: client.StatusActive, Message: ":-("}
 
 	client1.Roster.Add(key2.PublicKeyHash())
 	client2.Roster.Add(key1.PublicKeyHash())
 
 	success := make(chan bool)
 
-	client1.HandleStatuses(func(src utils.NodeID, p UserStatus) {
-		if p.Type != StatusOffline {
-			t.Errorf("wrong Type: %s; expects %s", p.Type, StatusOffline)
+	client1.HandleStatuses(func(src utils.NodeID, p client.UserStatus) {
+		if p.Type != client.StatusOffline {
+			t.Errorf("wrong Type: %s; expects %s", p.Type, client.StatusOffline)
 			success <- false
 			return
 		}
@@ -222,7 +223,7 @@ func TestClientStatus(t *testing.T) {
 		success <- true
 	})
 
-	client2.HandleStatuses(func(src utils.NodeID, p UserStatus) {
+	client2.HandleStatuses(func(src utils.NodeID, p client.UserStatus) {
 		if p.Type != status1.Type {
 			t.Errorf("wrong Type: %s; expects %s", p.Type, status1.Type)
 			success <- false
@@ -263,12 +264,12 @@ func TestNodeChatMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plainmsg := NewPlainChatMessage("Hello")
+	plainmsg := client.NewPlainChatMessage("Hello")
 
 	success := make(chan bool)
 
 	node2.Handle(func(src utils.NodeID, msg interface{}) interface{} {
-		if m, ok := msg.(ChatMessage); ok {
+		if m, ok := msg.(client.ChatMessage); ok {
 			if m.Text() == plainmsg.Text() {
 				if src.Cmp(key1.PublicKeyHash()) == 0 {
 					success <- true
@@ -284,11 +285,11 @@ func TestNodeChatMessage(t *testing.T) {
 			t.Errorf("wrong message type")
 			success <- false
 		}
-		return messageAck{}
+		return client.MessageAck{}
 	})
 
 	node1.Send(key2.PublicKeyHash(), plainmsg, func(msg interface{}) {
-		if _, ok := msg.(messageAck); ok {
+		if _, ok := msg.(client.MessageAck); ok {
 			success <- true
 		} else {
 			t.Errorf("wrong ack type")
