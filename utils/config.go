@@ -1,4 +1,4 @@
-package murcott
+package utils
 
 import (
 	"fmt"
@@ -7,14 +7,14 @@ import (
 )
 
 type Config struct {
-	Ports     string
-	Bootstrap []string
+	P string
+	B []string
 }
 
-func (c Config) getPorts() []int {
+func (c Config) Ports() []int {
 	var ports []int
 	var begin, end int
-	_, err := fmt.Sscanf(c.Ports, "%d-%d", &begin, &end)
+	_, err := fmt.Sscanf(c.P, "%d-%d", &begin, &end)
 	if err == nil {
 		if begin < end {
 			for p := begin; p <= end; p++ {
@@ -25,9 +25,9 @@ func (c Config) getPorts() []int {
 	return ports
 }
 
-func (c Config) getBootstrap() []net.UDPAddr {
+func (c Config) Bootstrap() []net.UDPAddr {
 	var udpaddrs []net.UDPAddr
-	for _, s := range c.Bootstrap {
+	for _, s := range c.B {
 		z := strings.SplitN(s, ":", 2)
 		if len(z) != 2 {
 			continue
@@ -54,8 +54,8 @@ func (c Config) getBootstrap() []net.UDPAddr {
 }
 
 var DefaultConfig = Config{
-	Ports: "9200-9210",
-	Bootstrap: []string{
+	P: "9200-9210",
+	B: []string{
 		"localhost:9200-9210",
 		"h2so5.net:9200-9210",
 	},

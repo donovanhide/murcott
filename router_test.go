@@ -17,18 +17,18 @@ func TestRouterMessageExchange(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
 
-	router1, err := newRouter(key1, logger, DefaultConfig)
+	router1, err := newRouter(key1, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.discover(DefaultConfig.getBootstrap())
+	router1.discover(utils.DefaultConfig.Bootstrap())
 	router1.sendMessage(key2.PublicKeyHash(), []byte(msg))
 
-	router2, err := newRouter(key2, logger, DefaultConfig)
+	router2, err := newRouter(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.discover(DefaultConfig.getBootstrap())
+	router2.discover(utils.DefaultConfig.Bootstrap())
 	m, err := router2.recvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
@@ -65,20 +65,20 @@ func TestRouterCancelMessage(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
 
-	router1, err := newRouter(key1, logger, DefaultConfig)
+	router1, err := newRouter(key1, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.discover(DefaultConfig.getBootstrap())
+	router1.discover(utils.DefaultConfig.Bootstrap())
 	id := router1.sendMessage(key2.PublicKeyHash(), []byte(msg1))
 	router1.sendMessage(key2.PublicKeyHash(), []byte(msg2))
 	router1.cancelMessage(id)
 
-	router2, err := newRouter(key2, logger, DefaultConfig)
+	router2, err := newRouter(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.discover(DefaultConfig.getBootstrap())
+	router2.discover(utils.DefaultConfig.Bootstrap())
 
 	m, err := router2.recvMessage()
 	if err != nil {
@@ -103,20 +103,20 @@ func TestRouterRouteExchange(t *testing.T) {
 	key2 := utils.GeneratePrivateKey()
 	key3 := utils.GeneratePrivateKey()
 
-	router1, err := newRouter(key1, logger, DefaultConfig)
+	router1, err := newRouter(key1, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.discover(DefaultConfig.getBootstrap())
+	router1.discover(utils.DefaultConfig.Bootstrap())
 
-	router2, err := newRouter(key2, logger, DefaultConfig)
+	router2, err := newRouter(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.discover(DefaultConfig.getBootstrap())
+	router2.discover(utils.DefaultConfig.Bootstrap())
 
 	time.Sleep(100 * time.Millisecond)
-	router3, err := newRouter(key3, logger, DefaultConfig)
+	router3, err := newRouter(key3, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

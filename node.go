@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
-		"github.com/h2so5/murcott/log"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -30,12 +30,12 @@ type node struct {
 	register      chan msghandler
 	cancelHandler chan string
 	cancelMessage chan int
-	config        Config
+	config        utils.Config
 	logger        *log.Logger
 	exit          chan struct{}
 }
 
-func newNode(key *utils.PrivateKey, logger *log.Logger, config Config) (*node, error) {
+func newNode(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*node, error) {
 	router, err := newRouter(key, logger, config)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (p *node) run() {
 	msg := make(chan message)
 
 	// Discover bootstrap nodes
-	p.router.discover(p.config.getBootstrap())
+	p.router.discover(p.config.Bootstrap())
 
 	go func() {
 		for {

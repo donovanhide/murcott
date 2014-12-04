@@ -23,7 +23,7 @@ type messageHandler func(src utils.NodeID, msg ChatMessage)
 type statusHandler func(src utils.NodeID, status UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
-func NewClient(key *utils.PrivateKey, storage *Storage, config Config) (*Client, error) {
+func NewClient(key *utils.PrivateKey, storage *Storage, config utils.Config) (*Client, error) {
 	logger := log.NewLogger()
 	roster, _ := storage.LoadRoster()
 	blocklist, _ := storage.LoadBlockList()

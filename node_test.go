@@ -5,19 +5,19 @@ package murcott
 import (
 	"testing"
 
-	"github.com/h2so5/murcott/utils"
 	"github.com/h2so5/murcott/log"
+	"github.com/h2so5/murcott/utils"
 )
 
 func TestNodeChatMessage(t *testing.T) {
 	logger := log.NewLogger()
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	node1, err := newNode(key1, logger, DefaultConfig)
+	node1, err := newNode(key1, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	node2, err := newNode(key2, logger, DefaultConfig)
+	node2, err := newNode(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
