@@ -10,6 +10,7 @@ import (
 	"github.com/h2so5/murcott/internal"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
+	"github.com/h2so5/utp"
 	"github.com/vmihailenco/msgpack"
 )
 
@@ -27,6 +28,7 @@ type Router struct {
 	info           utils.NodeInfo
 	dht            *dht.DHT
 	conn           *net.UDPConn
+	c              *utp.Conn
 	key            *utils.PrivateKey
 	keycache       map[string]utils.PublicKey
 	keyWaiting     []internal.Packet

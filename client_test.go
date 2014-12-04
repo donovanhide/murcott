@@ -260,10 +260,24 @@ func TestNodeChatMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	node1.RegisterMessageType("chat", client.ChatMessage{})
+	node1.RegisterMessageType("ack", client.MessageAck{})
+	node1.RegisterMessageType("profile-req", client.UserProfileRequest{})
+	node1.RegisterMessageType("profile-res", client.UserProfileResponse{})
+	node1.RegisterMessageType("presence", client.UserPresence{})
+	defer node1.Close()
+
 	node2, err := node.NewNode(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
+	node2.RegisterMessageType("chat", client.ChatMessage{})
+	node2.RegisterMessageType("ack", client.MessageAck{})
+	node2.RegisterMessageType("profile-req", client.UserProfileRequest{})
+	node2.RegisterMessageType("profile-res", client.UserProfileResponse{})
+	node2.RegisterMessageType("presence", client.UserPresence{})
+	defer node2.Close()
+
 	plainmsg := client.NewPlainChatMessage("Hello")
 
 	success := make(chan bool)
@@ -300,12 +314,9 @@ func TestNodeChatMessage(t *testing.T) {
 	go node1.Run()
 	go node2.Run()
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 1; i++ {
 		if !<-success {
 			return
 		}
 	}
-
-	node1.Close()
-	node2.Close()
 }
