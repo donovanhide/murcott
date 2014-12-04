@@ -1,4 +1,4 @@
-package murcott
+package internal
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestPacketSignature(t *testing.T) {
-	packet := packet{
+	packet := Packet{
 		Dst:     utils.NewRandomNodeID(),
 		Src:     utils.NewRandomNodeID(),
 		Type:    "dht",
@@ -15,9 +15,9 @@ func TestPacketSignature(t *testing.T) {
 	}
 
 	key := utils.GeneratePrivateKey()
-	packet.sign(key)
+	packet.Sign(key)
 
-	if !packet.verify(&key.PublicKey) {
+	if !packet.Verify(&key.PublicKey) {
 		t.Errorf("varification failed")
 	}
 }

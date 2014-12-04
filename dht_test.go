@@ -4,6 +4,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/h2so5/murcott/internal"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 )
@@ -24,12 +25,12 @@ func TestDhtPing(t *testing.T) {
 	if dst.Cmp(node2.ID) != 0 {
 		t.Errorf("wrong packet destination: %s", dst.String())
 	} else {
-		dht2.ProcessPacket(packet{
+		dht2.ProcessPacket(internal.Packet{
 			Dst:     dst,
 			Src:     node1.ID,
 			Type:    "dht",
 			Payload: payload,
-			addr:    nil,
+			Addr:    nil,
 		})
 	}
 
@@ -103,12 +104,12 @@ func TestDhtGroup(t *testing.T) {
 				}
 				id := dst.String()
 				dht := dhtmap[id]
-				dht.ProcessPacket(packet{
+				dht.ProcessPacket(internal.Packet{
 					Dst:     dst,
 					Src:     d.info.ID,
 					Type:    "dht",
 					Payload: payload,
-					addr:    addr,
+					Addr:    addr,
 				})
 			}
 		}(d)

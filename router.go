@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/h2so5/murcott/internal"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
@@ -18,7 +19,7 @@ type message struct {
 
 type queuedPacket struct {
 	id     int
-	packet *packet
+	packet *internal.Packet
 }
 
 type router struct {
@@ -27,8 +28,8 @@ type router struct {
 	conn           *net.UDPConn
 	key            *utils.PrivateKey
 	keycache       map[string]utils.PublicKey
-	keyWaiting     []packet
-	addrWaiting    map[int]packet
+	keyWaiting     []internal.Packet
+	addrWaiting    map[int]internal.Packet
 	requestedNodes map[string]time.Time
 	logger         *log.Logger
 	packetID       chan int
@@ -66,7 +67,7 @@ func newRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		key:            key,
 		keycache:       make(map[string]utils.PublicKey),
 		dht:            dht,
-		addrWaiting:    make(map[int]packet),
+		addrWaiting:    make(map[int]internal.Packet),
 		requestedNodes: make(map[string]time.Time),
 		logger:         logger,
 		packetID:       make(chan int),
@@ -113,7 +114,7 @@ func (p *router) recvMessage() (message, error) {
 
 func (p *router) run() {
 
-	recv := make(chan packet)
+	recv := make(chan internal.Packet)
 
 	// read datagram from udp socket
 	go func() {
@@ -124,7 +125,7 @@ func (p *router) run() {
 				break
 			}
 
-			var packet packet
+			var packet internal.Packet
 			err = msgpack.Unmarshal(buf[:len], &packet)
 			if err != nil {
 				continue
@@ -135,7 +136,7 @@ func (p *router) run() {
 			}
 
 			p.logger.Info("Receive %s packet from %s", packet.Type, packet.Src.String())
-			packet.addr = addr
+			packet.Addr = addr
 
 			recv <- packet
 		}
@@ -158,8 +159,8 @@ func (p *router) run() {
 				// cancel queued packet
 				delete(p.addrWaiting, q.id)
 			} else {
-				q.packet.sign(p.key)
-				addr := q.packet.addr
+				q.packet.Sign(p.key)
+				addr := q.packet.Addr
 				if addr != nil {
 					data, err := msgpack.Marshal(q.packet)
 					if err == nil {
@@ -176,19 +177,19 @@ func (p *router) run() {
 			if packet.Type == "key" {
 				if len(packet.Payload) == 0 {
 					key, _ := msgpack.Marshal(p.key.PublicKey)
-					p.sendPacket(packet.Src, packet.addr, "key", key)
+					p.sendPacket(packet.Src, packet.Addr, "key", key)
 				} else {
 					p.processPublicKeyResponse(packet)
 				}
 			} else {
 				// find publickey from cache
 				if key, ok := p.keycache[packet.Src.String()]; ok {
-					if packet.verify(&key) {
+					if packet.Verify(&key) {
 						p.processPacket(packet)
 					}
 				} else {
 					// request publickey
-					p.sendPacket(packet.Src, packet.addr, "key", nil)
+					p.sendPacket(packet.Src, packet.Addr, "key", nil)
 					p.keyWaiting = append(p.keyWaiting, packet)
 				}
 			}
@@ -200,7 +201,7 @@ func (p *router) run() {
 	}
 }
 
-func (p *router) processPublicKeyResponse(packet packet) {
+func (p *router) processPublicKeyResponse(packet internal.Packet) {
 	var key utils.PublicKey
 	err := msgpack.Unmarshal(packet.Payload, &key)
 	if err == nil {
@@ -216,8 +217,8 @@ func (p *router) processPublicKeyResponse(packet packet) {
 	}
 }
 
-func (p *router) processPacket(packet packet) {
-	info := utils.NodeInfo{ID: packet.Src, Addr: packet.addr}
+func (p *router) processPacket(packet internal.Packet) {
+	info := utils.NodeInfo{ID: packet.Src, Addr: packet.Addr}
 	switch packet.Type {
 	case "disco":
 		p.dht.addNode(info)
@@ -230,11 +231,11 @@ func (p *router) processPacket(packet packet) {
 
 // process packets waiting publickeys
 func (p *router) processWaitingKeyPackets() {
-	rest := make([]packet, 0, len(p.keyWaiting))
+	rest := make([]internal.Packet, 0, len(p.keyWaiting))
 	for _, packet := range p.keyWaiting {
 		// find publickey from cache
 		if key, ok := p.keycache[packet.Src.String()]; ok {
-			if packet.verify(&key) {
+			if packet.Verify(&key) {
 				p.processPacket(packet)
 			}
 		} else {
@@ -278,12 +279,12 @@ func (p *router) processWaitingRoutePackets() {
 }
 
 func (p *router) sendPacket(dst utils.NodeID, addr *net.UDPAddr, typ string, payload []byte) int {
-	packet := packet{
+	packet := internal.Packet{
 		Dst:     dst,
 		Src:     p.info.ID,
 		Type:    typ,
 		Payload: payload,
-		addr:    addr,
+		Addr:    addr,
 	}
 
 	id := <-p.packetID

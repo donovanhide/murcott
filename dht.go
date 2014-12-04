@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/h2so5/murcott/internal"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
@@ -42,7 +43,7 @@ type dht struct {
 
 	chmap  map[string]chan<- dhtRPCReturn
 	rpc    chan dhtPacket
-	recvch chan packet
+	recvch chan internal.Packet
 	sendch chan dhtOutgoingPacket
 
 	logger *log.Logger
@@ -69,7 +70,7 @@ func newDht(k int, info utils.NodeInfo, logger *log.Logger) *dht {
 		kvs:    make(map[string]string),
 		chmap:  make(map[string]chan<- dhtRPCReturn),
 		rpc:    make(chan dhtPacket, 100),
-		recvch: make(chan packet, 100),
+		recvch: make(chan internal.Packet, 100),
 		sendch: make(chan dhtOutgoingPacket, 100),
 		logger: logger,
 	}
@@ -94,15 +95,15 @@ func (p *dht) loop() {
 	}
 }
 
-func (p *dht) ProcessPacket(pac packet) {
+func (p *dht) ProcessPacket(pac internal.Packet) {
 	p.recvch <- pac
 }
 
-func (p *dht) processPacket(pac packet) {
+func (p *dht) processPacket(pac internal.Packet) {
 	var command dhtRPCCommand
 	err := msgpack.Unmarshal(pac.Payload, &command)
 	if err == nil {
-		p.table.insert(utils.NodeInfo{ID: pac.Src, Addr: pac.addr})
+		p.table.insert(utils.NodeInfo{ID: pac.Src, Addr: pac.Addr})
 
 		switch command.Method {
 		case "ping":
@@ -148,7 +149,7 @@ func (p *dht) processPacket(pac packet) {
 			id := string(command.ID)
 			if ch, ok := p.chmap[id]; ok {
 				delete(p.chmap, id)
-				ch <- dhtRPCReturn{command: command, addr: pac.addr}
+				ch <- dhtRPCReturn{command: command, addr: pac.Addr}
 			}
 		}
 	}

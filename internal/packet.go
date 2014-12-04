@@ -1,4 +1,4 @@
-package murcott
+package internal
 
 import (
 	"errors"
@@ -8,16 +8,16 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
-type packet struct {
+type Packet struct {
 	Dst     utils.NodeID    `msgpack:"dst"`
 	Src     utils.NodeID    `msgpack:"src"`
 	Type    string          `msgpack:"type"`
 	Payload []byte          `msgpack:"payload"`
-	Sign    utils.Signature `msgpack:"sign"`
-	addr    *net.UDPAddr
+	S       utils.Signature `msgpack:"sign"`
+	Addr    *net.UDPAddr
 }
 
-func (p *packet) serialize() []byte {
+func (p *Packet) Serialize() []byte {
 	ary := []interface{}{
 		p.Dst.Bytes(),
 		p.Src.Bytes(),
@@ -29,15 +29,15 @@ func (p *packet) serialize() []byte {
 	return data
 }
 
-func (p *packet) sign(key *utils.PrivateKey) error {
-	sign := key.Sign(p.serialize())
+func (p *Packet) Sign(key *utils.PrivateKey) error {
+	sign := key.Sign(p.Serialize())
 	if sign == nil {
 		return errors.New("cannot sign packet")
 	}
-	p.Sign = *sign
+	p.S = *sign
 	return nil
 }
 
-func (p *packet) verify(key *utils.PublicKey) bool {
-	return key.Verify(p.serialize(), &p.Sign)
+func (p *Packet) Verify(key *utils.PublicKey) bool {
+	return key.Verify(p.Serialize(), &p.S)
 }
