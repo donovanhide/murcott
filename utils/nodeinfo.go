@@ -35,9 +35,9 @@ func init() {
 	msgpack.Register(reflect.TypeOf(NodeInfo{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {
 			info := v.Interface().(NodeInfo)
-			return e.Encode(map[string]string{
-				"id":   string(info.ID.Bytes()),
-				"addr": info.Addr.String(),
+			return e.Encode(map[string][]byte{
+				"id":   info.ID.Bytes(),
+				"addr": []byte(info.Addr.String()),
 			})
 		},
 		func(d *msgpack.Decoder, v reflect.Value) error {
@@ -46,11 +46,11 @@ func init() {
 				return err
 			}
 			m := i.(map[interface{}]interface{})
-			if id, ok := m["id"].(string); ok {
-				if addrstr, ok := m["addr"].(string); ok {
+			if id, ok := m["id"].([]byte); ok {
+				if addrstr, ok := m["addr"].([]byte); ok {
 					var idbuf [20]byte
-					copy(idbuf[:], []byte(id))
-					addr, err := net.ResolveUDPAddr("udp", addrstr)
+					copy(idbuf[:], id)
+					addr, err := net.ResolveUDPAddr("udp", string(addrstr))
 					if err != nil {
 						return err
 					}

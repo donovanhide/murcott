@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"net"
 	"sort"
 	"testing"
 
@@ -8,7 +9,12 @@ import (
 )
 
 func TestNodeInfoMsgpack(t *testing.T) {
-	info := NodeInfo{}
+	addr, err := net.ResolveUDPAddr("udp", ":0")
+	if err != nil {
+		t.Errorf("cannot marshal NodeInfo")
+	}
+
+	info := NodeInfo{ID: NewRandomNodeID(), Addr: addr}
 	data, err := msgpack.Marshal(info)
 	if err != nil {
 		t.Errorf("cannot marshal NodeInfo")
