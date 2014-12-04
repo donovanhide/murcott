@@ -1,6 +1,7 @@
 language: go
 
 install:
+ - go get -v .
  - go get -v ./_gui ...
 
 script:
