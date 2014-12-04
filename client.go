@@ -3,11 +3,12 @@ package murcott
 
 import (
 	"github.com/h2so5/murcott/log"
+	"github.com/h2so5/murcott/node"
 	"github.com/h2so5/murcott/utils"
 )
 
 type Client struct {
-	node          *node
+	node          *node.Node
 	msgHandler    messageHandler
 	statusHandler statusHandler
 	storage       *Storage
@@ -28,10 +29,16 @@ func NewClient(key *utils.PrivateKey, storage *Storage, config utils.Config) (*C
 	roster, _ := storage.LoadRoster()
 	blocklist, _ := storage.LoadBlockList()
 
-	node, err := newNode(key, logger, config)
+	node, err := node.NewNode(key, logger, config)
 	if err != nil {
 		return nil, err
 	}
+
+	node.RegisterMessageType("chat", ChatMessage{})
+	node.RegisterMessageType("ack", messageAck{})
+	node.RegisterMessageType("profile-req", userProfileRequest{})
+	node.RegisterMessageType("profile-res", userProfileResponse{})
+	node.RegisterMessageType("presence", userPresence{})
 
 	knownNodes, _ := storage.loadKnownNodes()
 	for _, n := range knownNodes {
@@ -53,7 +60,7 @@ func NewClient(key *utils.PrivateKey, storage *Storage, config utils.Config) (*C
 		c.profile = *profile
 	}
 
-	c.node.handle(func(src utils.NodeID, msg interface{}) interface{} {
+	c.node.Handle(func(src utils.NodeID, msg interface{}) interface{} {
 		if c.BlockList.contains(src) {
 			return nil
 		}
@@ -71,7 +78,7 @@ func NewClient(key *utils.PrivateKey, storage *Storage, config utils.Config) (*C
 				c.statusHandler(src, p.Status)
 			}
 			if !p.Ack {
-				c.node.send(src, userPresence{Status: c.status, Ack: true}, nil)
+				c.node.Send(src, userPresence{Status: c.status, Ack: true}, nil)
 			}
 		}
 		return nil
@@ -82,7 +89,7 @@ func NewClient(key *utils.PrivateKey, storage *Storage, config utils.Config) (*C
 
 // Starts a mainloop in the current goroutine.
 func (c *Client) Run() {
-	c.node.run()
+	c.node.Run()
 }
 
 // Stops the current mainloop.
@@ -90,18 +97,18 @@ func (c *Client) Close() {
 	status := c.status
 	status.Type = StatusOffline
 	for _, n := range c.Roster.List() {
-		c.node.send(n, userPresence{Status: status, Ack: false}, nil)
+		c.node.Send(n, userPresence{Status: status, Ack: false}, nil)
 	}
 
 	c.storage.SaveRoster(c.Roster)
 	c.storage.SaveBlockList(c.BlockList)
 	c.storage.saveKnownNodes(c.node.KnownNodes())
-	c.node.close()
+	c.node.Close()
 }
 
 // Sends the given message to the destination node.
 func (c *Client) SendMessage(dst utils.NodeID, msg ChatMessage, ack func(ok bool)) {
-	c.node.send(dst, msg, func(r interface{}) {
+	c.node.Send(dst, msg, func(r interface{}) {
 		ack(r != nil)
 	})
 }
@@ -119,7 +126,7 @@ func (c *Client) HandleStatuses(handler func(src utils.NodeID, status UserStatus
 // Requests a user profile to the destination node.
 // If no response is received from the node, RequestProfile tries to load a profile from the cache.
 func (c *Client) RequestProfile(dst utils.NodeID, f func(profile *UserProfile)) {
-	c.node.send(dst, userProfileRequest{}, func(r interface{}) {
+	c.node.Send(dst, userProfileRequest{}, func(r interface{}) {
 		if p, ok := r.(userProfileResponse); ok {
 			c.storage.SaveProfile(dst, p.Profile)
 			f(&p.Profile)
@@ -140,7 +147,7 @@ func (c *Client) Status() UserStatus {
 func (c *Client) SetStatus(status UserStatus) {
 	c.status = status
 	for _, n := range c.Roster.List() {
-		c.node.send(n, userPresence{Status: c.status, Ack: false}, nil)
+		c.node.Send(n, userPresence{Status: c.status, Ack: false}, nil)
 	}
 }
 

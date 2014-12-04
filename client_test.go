@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/h2so5/murcott/log"
+	"github.com/h2so5/murcott/node"
 	"github.com/h2so5/murcott/utils"
 )
 
@@ -247,4 +249,62 @@ func TestClientStatus(t *testing.T) {
 
 	client1.Close()
 	client2.Close()
+}
+
+func TestNodeChatMessage(t *testing.T) {
+	logger := log.NewLogger()
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
+	node1, err := node.NewNode(key1, logger, utils.DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node2, err := node.NewNode(key2, logger, utils.DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plainmsg := NewPlainChatMessage("Hello")
+
+	success := make(chan bool)
+
+	node2.Handle(func(src utils.NodeID, msg interface{}) interface{} {
+		if m, ok := msg.(ChatMessage); ok {
+			if m.Text() == plainmsg.Text() {
+				if src.Cmp(key1.PublicKeyHash()) == 0 {
+					success <- true
+				} else {
+					t.Errorf("wrong source id")
+					success <- false
+				}
+			} else {
+				t.Errorf("wrong message body")
+				success <- false
+			}
+		} else {
+			t.Errorf("wrong message type")
+			success <- false
+		}
+		return messageAck{}
+	})
+
+	node1.Send(key2.PublicKeyHash(), plainmsg, func(msg interface{}) {
+		if _, ok := msg.(messageAck); ok {
+			success <- true
+		} else {
+			t.Errorf("wrong ack type")
+			success <- false
+		}
+	})
+
+	go node1.Run()
+	go node2.Run()
+
+	for i := 0; i < 2; i++ {
+		if !<-success {
+			return
+		}
+	}
+
+	node1.Close()
+	node2.Close()
 }

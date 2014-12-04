@@ -1,4 +1,4 @@
-package murcott
+package node
 
 import (
 	"crypto/rand"
@@ -22,7 +22,7 @@ type msghandler struct {
 	callback func(interface{})
 }
 
-type node struct {
+type Node struct {
 	router        *router.Router
 	handler       func(utils.NodeID, interface{}) interface{}
 	idmap         map[string]func(interface{})
@@ -36,13 +36,13 @@ type node struct {
 	exit          chan struct{}
 }
 
-func newNode(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*node, error) {
+func NewNode(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*Node, error) {
 	router, err := router.NewRouter(key, logger, config)
 	if err != nil {
 		return nil, err
 	}
 
-	n := &node{
+	n := &Node{
 		router:        router,
 		idmap:         make(map[string]func(interface{})),
 		name2type:     make(map[string]reflect.Type),
@@ -55,16 +55,10 @@ func newNode(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*n
 		exit:          make(chan struct{}),
 	}
 
-	n.registerMessageType("chat", ChatMessage{})
-	n.registerMessageType("ack", messageAck{})
-	n.registerMessageType("profile-req", userProfileRequest{})
-	n.registerMessageType("profile-res", userProfileResponse{})
-	n.registerMessageType("presence", userPresence{})
-
 	return n, nil
 }
 
-func (p *node) run() {
+func (p *Node) Run() {
 	msg := make(chan router.Message)
 
 	// Discover bootstrap nodes
@@ -109,13 +103,13 @@ func (p *node) run() {
 	}
 }
 
-func (p *node) registerMessageType(name string, typ interface{}) {
+func (p *Node) RegisterMessageType(name string, typ interface{}) {
 	t := reflect.TypeOf(typ)
 	p.name2type[name] = t
 	p.type2name[t] = name
 }
 
-func (p *node) parseMessage(typ string, payload []byte, id utils.NodeID) {
+func (p *Node) parseMessage(typ string, payload []byte, id utils.NodeID) {
 	if t, ok := p.name2type[typ]; ok {
 		p.parseCommand(payload, id, t)
 	} else {
@@ -123,7 +117,7 @@ func (p *node) parseMessage(typ string, payload []byte, id utils.NodeID) {
 	}
 }
 
-func (p *node) parseCommand(payload []byte, id utils.NodeID, typ reflect.Type) {
+func (p *Node) parseCommand(payload []byte, id utils.NodeID, typ reflect.Type) {
 	c := struct {
 		Content interface{} `msgpack:"content"`
 		ID      string      `msgpack:"id"`
@@ -143,11 +137,11 @@ func (p *node) parseCommand(payload []byte, id utils.NodeID, typ reflect.Type) {
 	}
 }
 
-func (p *node) send(dst utils.NodeID, msg interface{}, handler func(interface{})) error {
+func (p *Node) Send(dst utils.NodeID, msg interface{}, handler func(interface{})) error {
 	return p.sendWithID(dst, msg, handler, "")
 }
 
-func (p *node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interface{}), id string) error {
+func (p *Node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interface{}), id string) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
@@ -184,19 +178,19 @@ func (p *node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interf
 	return nil
 }
 
-func (p *node) AddNode(info utils.NodeInfo) {
+func (p *Node) AddNode(info utils.NodeInfo) {
 	p.router.AddNode(info)
 }
 
-func (p *node) KnownNodes() []utils.NodeInfo {
+func (p *Node) KnownNodes() []utils.NodeInfo {
 	return p.router.KnownNodes()
 }
 
-func (p *node) handle(handler func(utils.NodeID, interface{}) interface{}) {
+func (p *Node) Handle(handler func(utils.NodeID, interface{}) interface{}) {
 	p.handler = handler
 }
 
-func (p *node) close() {
+func (p *Node) Close() {
 	p.router.Close()
 	p.exit <- struct{}{}
 }
