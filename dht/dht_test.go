@@ -123,11 +123,9 @@ func TestDhtGroup(t *testing.T) {
 		d.FindNearestNode(d.id)
 	}
 
-	kvs := map[string]string{
-		"a": "b",
-		"c": "d",
-		"e": "f",
-		"g": "h",
+	kvs := map[string]string{}
+	for i := 0; i < 10; i++ {
+		kvs[utils.NewRandomNodeID().String()] = utils.NewRandomNodeID().String()
 	}
 
 	for k, v := range kvs {
