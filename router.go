@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/h2so5/murcott/dht"
 	"github.com/h2so5/murcott/internal"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
@@ -24,7 +25,7 @@ type queuedPacket struct {
 
 type router struct {
 	info           utils.NodeInfo
-	dht            *dht
+	dht            *dht.DHT
 	conn           *net.UDPConn
 	key            *utils.PrivateKey
 	keycache       map[string]utils.PublicKey
@@ -51,7 +52,7 @@ func getOpenPortConn(config utils.Config) (*net.UDPConn, int, error) {
 
 func newRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*router, error) {
 	info := utils.NodeInfo{ID: key.PublicKeyHash()}
-	dht := newDht(10, info, logger)
+	dht := dht.NewDHT(10, info, logger)
 	exit := make(chan int)
 	conn, selfport, err := getOpenPortConn(config)
 	if err != nil {
@@ -144,7 +145,7 @@ func (p *router) run() {
 
 	go func() {
 		for {
-			dst, payload, err := p.dht.nextPacket()
+			dst, payload, err := p.dht.NextPacket()
 			if err != nil {
 				return
 			}
@@ -221,7 +222,7 @@ func (p *router) processPacket(packet internal.Packet) {
 	info := utils.NodeInfo{ID: packet.Src, Addr: packet.Addr}
 	switch packet.Type {
 	case "disco":
-		p.dht.addNode(info)
+		p.dht.AddNode(info)
 	case "dht":
 		p.dht.ProcessPacket(packet)
 	case "msg":
@@ -249,7 +250,7 @@ func (p *router) processWaitingKeyPackets() {
 func (p *router) processWaitingRoutePackets() {
 	var unknownNodes []utils.NodeID
 	for id, packet := range p.addrWaiting {
-		node := p.dht.getNodeInfo(packet.Dst)
+		node := p.dht.GetNodeInfo(packet.Dst)
 		if node != nil {
 			data, err := msgpack.Marshal(packet)
 			if err == nil {
@@ -272,7 +273,7 @@ func (p *router) processWaitingRoutePackets() {
 
 	for _, n := range unknownNodes {
 		if _, ok := p.requestedNodes[n.String()]; !ok {
-			go p.dht.findNearestNode(n)
+			go p.dht.FindNearestNode(n)
 			p.requestedNodes[n.String()] = time.Now()
 		}
 	}
@@ -298,16 +299,16 @@ func (p *router) sendPacket(dst utils.NodeID, addr *net.UDPAddr, typ string, pay
 }
 
 func (p *router) addNode(info utils.NodeInfo) {
-	p.dht.addNode(info)
+	p.dht.AddNode(info)
 }
 
 func (p *router) knownNodes() []utils.NodeInfo {
-	return p.dht.knownNodes()
+	return p.dht.KnownNodes()
 }
 
 func (p *router) close() {
 	p.exit <- 0
 	close(p.recv)
-	p.dht.close()
+	p.dht.Close()
 	p.conn.Close()
 }

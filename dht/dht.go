@@ -1,4 +1,4 @@
-package murcott
+package dht
 
 import (
 	"crypto/rand"
@@ -33,7 +33,7 @@ type dhtOutgoingPacket struct {
 	callback chan<- dhtRPCReturn
 }
 
-type dht struct {
+type DHT struct {
 	info  utils.NodeInfo
 	table nodeTable
 	k     int
@@ -62,8 +62,8 @@ func (p *dhtRPCCommand) getArgs(k string, v ...interface{}) {
 	}
 }
 
-func newDht(k int, info utils.NodeInfo, logger *log.Logger) *dht {
-	d := dht{
+func NewDHT(k int, info utils.NodeInfo, logger *log.Logger) *DHT {
+	d := DHT{
 		info:   info,
 		table:  newNodeTable(k, info.ID),
 		k:      k,
@@ -78,7 +78,7 @@ func newDht(k int, info utils.NodeInfo, logger *log.Logger) *dht {
 	return &d
 }
 
-func (p *dht) loop() {
+func (p *DHT) loop() {
 	for {
 		select {
 		case pac := <-p.recvch:
@@ -95,11 +95,11 @@ func (p *dht) loop() {
 	}
 }
 
-func (p *dht) ProcessPacket(pac internal.Packet) {
+func (p *DHT) ProcessPacket(pac internal.Packet) {
 	p.recvch <- pac
 }
 
-func (p *dht) processPacket(pac internal.Packet) {
+func (p *DHT) processPacket(pac internal.Packet) {
 	var command dhtRPCCommand
 	err := msgpack.Unmarshal(pac.Payload, &command)
 	if err == nil {
@@ -155,31 +155,31 @@ func (p *dht) processPacket(pac internal.Packet) {
 	}
 }
 
-func (p *dht) addNode(node utils.NodeInfo) {
+func (p *DHT) AddNode(node utils.NodeInfo) {
 	p.table.insert(node)
 	p.sendPing(node.ID)
 }
 
-func (p *dht) knownNodes() []utils.NodeInfo {
+func (p *DHT) KnownNodes() []utils.NodeInfo {
 	return p.table.nodes()
 }
 
-func (p *dht) getNodeInfo(id utils.NodeID) *utils.NodeInfo {
+func (p *DHT) GetNodeInfo(id utils.NodeID) *utils.NodeInfo {
 	return p.table.find(id)
 }
 
-func (p *dht) storeValue(key string, value string) {
+func (p *DHT) storeValue(key string, value string) {
 	hash := sha1.Sum([]byte(key))
 	c := newRPCCommand("store", map[string]interface{}{
 		"key":   key,
 		"value": value,
 	})
-	for _, n := range p.findNearestNode(utils.NewNodeID(hash)) {
+	for _, n := range p.FindNearestNode(utils.NewNodeID(hash)) {
 		p.sendPacket(n.ID, c)
 	}
 }
 
-func (p *dht) findNearestNode(findid utils.NodeID) []utils.NodeInfo {
+func (p *DHT) FindNearestNode(findid utils.NodeID) []utils.NodeInfo {
 
 	reqch := make(chan utils.NodeInfo, 100)
 	endch := make(chan struct{}, 100)
@@ -248,7 +248,7 @@ loop:
 	return sorter.Nodes
 }
 
-func (p *dht) loadValue(key string) *string {
+func (p *DHT) loadValue(key string) *string {
 
 	p.kvsMutex.RLock()
 	if v, ok := p.kvs[key]; ok {
@@ -325,7 +325,7 @@ func (p *dht) loadValue(key string) *string {
 	}
 }
 
-func (p *dht) nextPacket() (utils.NodeID, []byte, error) {
+func (p *DHT) NextPacket() (utils.NodeID, []byte, error) {
 	if c, ok := <-p.rpc; ok {
 		return c.dst, c.payload, nil
 	}
@@ -353,16 +353,16 @@ func newRPCReturnCommand(id []byte, args map[string]interface{}) dhtRPCCommand {
 	}
 }
 
-func (p *dht) sendPing(dst utils.NodeID) {
+func (p *DHT) sendPing(dst utils.NodeID) {
 	c := newRPCCommand("ping", nil)
 	p.sendPacket(dst, c)
 }
 
-func (p *dht) sendPacket(dst utils.NodeID, command dhtRPCCommand) {
+func (p *DHT) sendPacket(dst utils.NodeID, command dhtRPCCommand) {
 	p.sendch <- dhtOutgoingPacket{dst: dst, command: command, callback: nil}
 }
 
-func (p *dht) sendRecvPacket(dst utils.NodeID, command dhtRPCCommand) *dhtRPCReturn {
+func (p *DHT) sendRecvPacket(dst utils.NodeID, command dhtRPCCommand) *dhtRPCReturn {
 	ch := make(chan dhtRPCReturn, 2)
 	p.sendch <- dhtOutgoingPacket{dst: dst, command: command, callback: ch}
 
@@ -374,6 +374,6 @@ func (p *dht) sendRecvPacket(dst utils.NodeID, command dhtRPCCommand) *dhtRPCRet
 	}
 }
 
-func (p *dht) close() {
+func (p *DHT) Close() {
 	//close(p.rpc)
 }

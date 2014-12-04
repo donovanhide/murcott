@@ -1,4 +1,4 @@
-package murcott
+package dht
 
 import (
 	"net"
@@ -13,12 +13,12 @@ func TestDhtPing(t *testing.T) {
 	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 
-	dht1 := newDht(10, node1, log.NewLogger())
-	dht2 := newDht(10, node2, log.NewLogger())
+	dht1 := NewDHT(10, node1, log.NewLogger())
+	dht2 := NewDHT(10, node2, log.NewLogger())
 
-	dht1.addNode(node2)
+	dht1.AddNode(node2)
 
-	dst, payload, err := dht1.nextPacket()
+	dst, payload, err := dht1.NextPacket()
 	if err != nil {
 		return
 	}
@@ -34,25 +34,25 @@ func TestDhtPing(t *testing.T) {
 		})
 	}
 
-	dht2.nextPacket()
+	dht2.NextPacket()
 
-	if dht1.getNodeInfo(node2.ID) == nil {
+	if dht1.GetNodeInfo(node2.ID) == nil {
 		t.Errorf("dht1 doesn't know node2")
 	}
 
-	if dht2.getNodeInfo(node1.ID) == nil {
+	if dht2.GetNodeInfo(node1.ID) == nil {
 		t.Errorf("dht2 doesn't know node1")
 	}
 
-	dht1.close()
-	dht2.close()
+	dht1.Close()
+	dht2.Close()
 }
 
 func TestDhtTimeout(t *testing.T) {
 	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
 	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: nil}
-	dht1 := newDht(10, node1, log.NewLogger())
-	dht1.addNode(node2)
+	dht1 := NewDHT(10, node1, log.NewLogger())
+	dht1.AddNode(node2)
 	r := dht1.sendRecvPacket(node2.ID, dhtRPCCommand{})
 	if r != nil {
 		t.Errorf("sendRecvPacket should fail")
@@ -63,7 +63,7 @@ func TestDhtGroup(t *testing.T) {
 	logger := log.NewLogger()
 
 	n := 20
-	dhtmap := make(map[string]*dht)
+	dhtmap := make(map[string]*DHT)
 	idary := make([]utils.NodeInfo, n)
 
 	ids := []string{
@@ -93,12 +93,12 @@ func TestDhtGroup(t *testing.T) {
 		id, _ := utils.NewNodeIDFromString(ids[i])
 		addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4000")
 		node := utils.NodeInfo{ID: id, Addr: addr}
-		d := newDht(20, node, logger)
+		d := NewDHT(20, node, logger)
 		idary[i] = node
 		dhtmap[id.String()] = d
-		go func(d *dht) {
+		go func(d *DHT) {
 			for {
-				dst, payload, err := d.nextPacket()
+				dst, payload, err := d.NextPacket()
 				if err != nil {
 					return
 				}
@@ -119,8 +119,8 @@ func TestDhtGroup(t *testing.T) {
 	rootDht := dhtmap[rootNode.ID.String()]
 
 	for _, d := range dhtmap {
-		d.addNode(rootNode)
-		d.findNearestNode(d.info.ID)
+		d.AddNode(rootNode)
+		d.FindNearestNode(d.info.ID)
 	}
 
 	kvs := map[string]string{
