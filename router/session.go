@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -67,9 +66,7 @@ func (s *session) Read() (internal.Packet, error) {
 		return internal.Packet{}, err
 	}
 	if !packet.Verify(s.rkey) {
-		//return internal.Packet{}, errors.New("receive wrong packet")
-	} else {
-		fmt.Println("OK")
+		return internal.Packet{}, errors.New("receive wrong packet")
 	}
 	return packet, nil
 }
@@ -100,7 +97,6 @@ func (s *session) verifyPubkey() error {
 			if id.Digest.Cmp(packet.Src.Digest) != 0 {
 				return errors.New("receive wrong public key")
 			}
-			fmt.Println("setrkey")
 			s.rkey = &key
 		}
 	} else {
