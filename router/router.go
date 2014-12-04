@@ -1,4 +1,4 @@
-package murcott
+package router
 
 import (
 	"errors"
@@ -13,9 +13,9 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
-type message struct {
-	id      utils.NodeID
-	payload []byte
+type Message struct {
+	ID      utils.NodeID
+	Payload []byte
 }
 
 type queuedPacket struct {
@@ -23,7 +23,7 @@ type queuedPacket struct {
 	packet *internal.Packet
 }
 
-type router struct {
+type Router struct {
 	info           utils.NodeInfo
 	dht            *dht.DHT
 	conn           *net.UDPConn
@@ -34,7 +34,7 @@ type router struct {
 	requestedNodes map[string]time.Time
 	logger         *log.Logger
 	packetID       chan int
-	recv           chan message
+	recv           chan Message
 	send           chan queuedPacket
 	exit           chan int
 }
@@ -50,7 +50,7 @@ func getOpenPortConn(config utils.Config) (*net.UDPConn, int, error) {
 	return nil, 0, errors.New("fail to bind port")
 }
 
-func newRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*router, error) {
+func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*Router, error) {
 	info := utils.NodeInfo{ID: key.PublicKeyHash()}
 	dht := dht.NewDHT(10, info, logger)
 	exit := make(chan int)
@@ -62,7 +62,7 @@ func newRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	logger.Info("Node ID: %s", info.ID.String())
 	logger.Info("Node UDP port: %d", selfport)
 
-	r := router{
+	r := Router{
 		info:           info,
 		conn:           conn,
 		key:            key,
@@ -72,7 +72,7 @@ func newRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		requestedNodes: make(map[string]time.Time),
 		logger:         logger,
 		packetID:       make(chan int),
-		recv:           make(chan message, 100),
+		recv:           make(chan Message, 100),
 		send:           make(chan queuedPacket, 100),
 		exit:           exit,
 	}
@@ -90,7 +90,7 @@ func newRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	return &r, nil
 }
 
-func (p *router) discover(addrs []net.UDPAddr) {
+func (p *Router) Discover(addrs []net.UDPAddr) {
 	for _, addr := range addrs {
 		a := addr
 		p.sendPacket(utils.NodeID{}, &a, "disco", nil)
@@ -98,22 +98,22 @@ func (p *router) discover(addrs []net.UDPAddr) {
 	}
 }
 
-func (p *router) sendMessage(dst utils.NodeID, payload []byte) int {
+func (p *Router) SendMessage(dst utils.NodeID, payload []byte) int {
 	return p.sendPacket(dst, nil, "msg", payload)
 }
 
-func (p *router) cancelMessage(id int) {
+func (p *Router) CancelMessage(id int) {
 	p.send <- queuedPacket{id: id, packet: nil}
 }
 
-func (p *router) recvMessage() (message, error) {
+func (p *Router) RecvMessage() (Message, error) {
 	if m, ok := <-p.recv; ok {
 		return m, nil
 	}
-	return message{}, errors.New("Node closed")
+	return Message{}, errors.New("Node closed")
 }
 
-func (p *router) run() {
+func (p *Router) run() {
 
 	recv := make(chan internal.Packet)
 
@@ -202,7 +202,7 @@ func (p *router) run() {
 	}
 }
 
-func (p *router) processPublicKeyResponse(packet internal.Packet) {
+func (p *Router) processPublicKeyResponse(packet internal.Packet) {
 	var key utils.PublicKey
 	err := msgpack.Unmarshal(packet.Payload, &key)
 	if err == nil {
@@ -218,7 +218,7 @@ func (p *router) processPublicKeyResponse(packet internal.Packet) {
 	}
 }
 
-func (p *router) processPacket(packet internal.Packet) {
+func (p *Router) processPacket(packet internal.Packet) {
 	info := utils.NodeInfo{ID: packet.Src, Addr: packet.Addr}
 	switch packet.Type {
 	case "disco":
@@ -226,12 +226,12 @@ func (p *router) processPacket(packet internal.Packet) {
 	case "dht":
 		p.dht.ProcessPacket(packet)
 	case "msg":
-		p.recv <- message{id: info.ID, payload: packet.Payload}
+		p.recv <- Message{ID: info.ID, Payload: packet.Payload}
 	}
 }
 
 // process packets waiting publickeys
-func (p *router) processWaitingKeyPackets() {
+func (p *Router) processWaitingKeyPackets() {
 	rest := make([]internal.Packet, 0, len(p.keyWaiting))
 	for _, packet := range p.keyWaiting {
 		// find publickey from cache
@@ -247,7 +247,7 @@ func (p *router) processWaitingKeyPackets() {
 }
 
 // process packets waiting addresses
-func (p *router) processWaitingRoutePackets() {
+func (p *Router) processWaitingRoutePackets() {
 	var unknownNodes []utils.NodeID
 	for id, packet := range p.addrWaiting {
 		node := p.dht.GetNodeInfo(packet.Dst)
@@ -279,7 +279,7 @@ func (p *router) processWaitingRoutePackets() {
 	}
 }
 
-func (p *router) sendPacket(dst utils.NodeID, addr *net.UDPAddr, typ string, payload []byte) int {
+func (p *Router) sendPacket(dst utils.NodeID, addr *net.UDPAddr, typ string, payload []byte) int {
 	packet := internal.Packet{
 		Dst:     dst,
 		Src:     p.info.ID,
@@ -298,15 +298,15 @@ func (p *router) sendPacket(dst utils.NodeID, addr *net.UDPAddr, typ string, pay
 	return id
 }
 
-func (p *router) addNode(info utils.NodeInfo) {
+func (p *Router) AddNode(info utils.NodeInfo) {
 	p.dht.AddNode(info)
 }
 
-func (p *router) knownNodes() []utils.NodeInfo {
+func (p *Router) KnownNodes() []utils.NodeInfo {
 	return p.dht.KnownNodes()
 }
 
-func (p *router) close() {
+func (p *Router) Close() {
 	p.exit <- 0
 	close(p.recv)
 	p.dht.Close()

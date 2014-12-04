@@ -35,7 +35,7 @@ func NewClient(key *utils.PrivateKey, storage *Storage, config utils.Config) (*C
 
 	knownNodes, _ := storage.loadKnownNodes()
 	for _, n := range knownNodes {
-		node.addNode(n)
+		node.AddNode(n)
 	}
 
 	c := &Client{
@@ -95,7 +95,7 @@ func (c *Client) Close() {
 
 	c.storage.SaveRoster(c.Roster)
 	c.storage.SaveBlockList(c.BlockList)
-	c.storage.saveKnownNodes(c.node.knownNodes())
+	c.storage.saveKnownNodes(c.node.KnownNodes())
 	c.node.close()
 }
 

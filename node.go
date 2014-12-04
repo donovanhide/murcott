@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/h2so5/murcott/log"
+	"github.com/h2so5/murcott/router"
 	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
 )
@@ -22,7 +23,7 @@ type msghandler struct {
 }
 
 type node struct {
-	router        *router
+	router        *router.Router
 	handler       func(utils.NodeID, interface{}) interface{}
 	idmap         map[string]func(interface{})
 	name2type     map[string]reflect.Type
@@ -36,7 +37,7 @@ type node struct {
 }
 
 func newNode(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*node, error) {
-	router, err := newRouter(key, logger, config)
+	router, err := router.NewRouter(key, logger, config)
 	if err != nil {
 		return nil, err
 	}
@@ -64,14 +65,14 @@ func newNode(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*n
 }
 
 func (p *node) run() {
-	msg := make(chan message)
+	msg := make(chan router.Message)
 
 	// Discover bootstrap nodes
-	p.router.discover(p.config.Bootstrap())
+	p.router.Discover(p.config.Bootstrap())
 
 	go func() {
 		for {
-			m, err := p.router.recvMessage()
+			m, err := p.router.RecvMessage()
 			if err != nil {
 				break
 			}
@@ -85,9 +86,9 @@ func (p *node) run() {
 			var t struct {
 				Type string `msgpack:"type"`
 			}
-			err := msgpack.Unmarshal(m.payload, &t)
+			err := msgpack.Unmarshal(m.Payload, &t)
 			if err == nil {
-				p.parseMessage(t.Type, m.payload, m.id)
+				p.parseMessage(t.Type, m.Payload, m.ID)
 			}
 
 		case h := <-p.register:
@@ -100,7 +101,7 @@ func (p *node) run() {
 			}
 
 		case id := <-p.cancelMessage:
-			p.router.cancelMessage(id)
+			p.router.CancelMessage(id)
 
 		case <-p.exit:
 			return
@@ -172,7 +173,7 @@ func (p *node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interf
 	if err != nil {
 		return err
 	}
-	packetID := p.router.sendMessage(dst, data)
+	packetID := p.router.SendMessage(dst, data)
 
 	go func(msgID string, packetID int) {
 		<-time.After(time.Second)
@@ -183,12 +184,12 @@ func (p *node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interf
 	return nil
 }
 
-func (p *node) addNode(info utils.NodeInfo) {
-	p.router.addNode(info)
+func (p *node) AddNode(info utils.NodeInfo) {
+	p.router.AddNode(info)
 }
 
-func (p *node) knownNodes() []utils.NodeInfo {
-	return p.router.knownNodes()
+func (p *node) KnownNodes() []utils.NodeInfo {
+	return p.router.KnownNodes()
 }
 
 func (p *node) handle(handler func(utils.NodeID, interface{}) interface{}) {
@@ -196,6 +197,6 @@ func (p *node) handle(handler func(utils.NodeID, interface{}) interface{}) {
 }
 
 func (p *node) close() {
-	p.router.close()
+	p.router.Close()
 	p.exit <- struct{}{}
 }

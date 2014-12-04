@@ -1,4 +1,4 @@
-package murcott
+package router
 
 import (
 	"net"
@@ -17,44 +17,44 @@ func TestRouterMessageExchange(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
 
-	router1, err := newRouter(key1, logger, utils.DefaultConfig)
+	router1, err := NewRouter(key1, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.discover(utils.DefaultConfig.Bootstrap())
-	router1.sendMessage(key2.PublicKeyHash(), []byte(msg))
+	router1.Discover(utils.DefaultConfig.Bootstrap())
+	router1.SendMessage(key2.PublicKeyHash(), []byte(msg))
 
-	router2, err := newRouter(key2, logger, utils.DefaultConfig)
+	router2, err := NewRouter(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.discover(utils.DefaultConfig.Bootstrap())
-	m, err := router2.recvMessage()
+	router2.Discover(utils.DefaultConfig.Bootstrap())
+	m, err := router2.RecvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.Cmp(router1.info.ID) != 0 {
+	if m.ID.Cmp(router1.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
-	if string(m.payload) != msg {
+	if string(m.Payload) != msg {
 		t.Errorf("router2: wrong message body")
 	}
 
-	router2.sendMessage(router1.info.ID, []byte(msg))
+	router2.SendMessage(router1.info.ID, []byte(msg))
 
-	m, err = router1.recvMessage()
+	m, err = router1.RecvMessage()
 	if err != nil {
 		t.Errorf("router1: recvMessage() returns error")
 	}
-	if m.id.Cmp(router2.info.ID) != 0 {
+	if m.ID.Cmp(router2.info.ID) != 0 {
 		t.Errorf("router1: wrong source id")
 	}
-	if string(m.payload) != msg {
+	if string(m.Payload) != msg {
 		t.Errorf("router1: wrong message body")
 	}
 
-	router1.close()
-	router2.close()
+	router1.Close()
+	router2.Close()
 }
 
 func TestRouterCancelMessage(t *testing.T) {
@@ -65,34 +65,34 @@ func TestRouterCancelMessage(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
 
-	router1, err := newRouter(key1, logger, utils.DefaultConfig)
+	router1, err := NewRouter(key1, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.discover(utils.DefaultConfig.Bootstrap())
-	id := router1.sendMessage(key2.PublicKeyHash(), []byte(msg1))
-	router1.sendMessage(key2.PublicKeyHash(), []byte(msg2))
-	router1.cancelMessage(id)
+	router1.Discover(utils.DefaultConfig.Bootstrap())
+	id := router1.SendMessage(key2.PublicKeyHash(), []byte(msg1))
+	router1.SendMessage(key2.PublicKeyHash(), []byte(msg2))
+	router1.CancelMessage(id)
 
-	router2, err := newRouter(key2, logger, utils.DefaultConfig)
+	router2, err := NewRouter(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.discover(utils.DefaultConfig.Bootstrap())
+	router2.Discover(utils.DefaultConfig.Bootstrap())
 
-	m, err := router2.recvMessage()
+	m, err := router2.RecvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.Cmp(router1.info.ID) != 0 {
+	if m.ID.Cmp(router1.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
-	if string(m.payload) != msg2 {
+	if string(m.Payload) != msg2 {
 		t.Errorf("router2: wrong message body")
 	}
 
-	router1.close()
-	router2.close()
+	router1.Close()
+	router2.Close()
 }
 
 func TestRouterRouteExchange(t *testing.T) {
@@ -103,41 +103,41 @@ func TestRouterRouteExchange(t *testing.T) {
 	key2 := utils.GeneratePrivateKey()
 	key3 := utils.GeneratePrivateKey()
 
-	router1, err := newRouter(key1, logger, utils.DefaultConfig)
+	router1, err := NewRouter(key1, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.discover(utils.DefaultConfig.Bootstrap())
+	router1.Discover(utils.DefaultConfig.Bootstrap())
 
-	router2, err := newRouter(key2, logger, utils.DefaultConfig)
+	router2, err := NewRouter(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.discover(utils.DefaultConfig.Bootstrap())
+	router2.Discover(utils.DefaultConfig.Bootstrap())
 
 	time.Sleep(100 * time.Millisecond)
-	router3, err := newRouter(key3, logger, utils.DefaultConfig)
+	router3, err := NewRouter(key3, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 	addr, _ := net.ResolveUDPAddr("udp", router1.conn.LocalAddr().String())
-	router3.discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
+	router3.Discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
 
 	time.Sleep(100 * time.Millisecond)
-	router3.sendMessage(key2.PublicKeyHash(), []byte(msg))
+	router3.SendMessage(key2.PublicKeyHash(), []byte(msg))
 
-	m, err := router2.recvMessage()
+	m, err := router2.RecvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.id.Cmp(router3.info.ID) != 0 {
+	if m.ID.Cmp(router3.info.ID) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
-	if string(m.payload) != msg {
+	if string(m.Payload) != msg {
 		t.Errorf("router2: wrong message body")
 	}
 
-	router1.close()
-	router2.close()
-	router3.close()
+	router1.Close()
+	router2.Close()
+	router3.Close()
 }
