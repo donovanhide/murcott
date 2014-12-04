@@ -2,13 +2,9 @@ language: go
 
 install:
  - go get -v ./_gui ...
- - go get github.com/axw/gocov/gocov
- - go get github.com/mattn/goveralls
- - go get code.google.com/p/go.tools/cmd/cover
 
 script:
  - go test ./... -v
  - go test -v -race
  - go build _gui/main.go
  - go build _bootstrap/main.go
- - $HOME/gopath/bin/goveralls -repotoken KGrXLi6QeZ3e6rIPghP6Yc0zJXqbn0XZg

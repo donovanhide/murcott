@@ -4,7 +4,6 @@ murcott
 Decentralized instant messaging framework
 
 [![Build Status](https://travis-ci.org/h2so5/murcott.svg)](https://travis-ci.org/h2so5/murcott)
-[![Coverage Status](https://img.shields.io/coveralls/h2so5/murcott.svg)](https://coveralls.io/r/h2so5/murcott)
 [![GoDoc](https://godoc.org/github.com/h2so5/murcott?status.svg)](http://godoc.org/github.com/h2so5/murcott)
 
 ## Installation
