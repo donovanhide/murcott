@@ -29,7 +29,6 @@ func TestRouterMessageExchange(t *testing.T) {
 	}
 	router2.Discover(utils.DefaultConfig.Bootstrap())
 
-	time.Sleep(time.Millisecond * 200)
 	router1.SendMessage(key2.PublicKeyHash(), []byte(msg))
 
 	m, err := router2.RecvMessage()

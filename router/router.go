@@ -24,11 +24,12 @@ type Router struct {
 	key      *utils.PrivateKey
 	sessions map[string]*session
 
-	requestedNodes map[string]time.Time
-	logger         *log.Logger
-	recv           chan Message
-	send           chan internal.Packet
-	exit           chan int
+	queuedPackets []internal.Packet
+
+	logger *log.Logger
+	recv   chan Message
+	send   chan internal.Packet
+	exit   chan int
 }
 
 func getOpenPortConn(config utils.Config) (*utp.Listener, error) {
@@ -58,12 +59,11 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		key:      key,
 		sessions: make(map[string]*session),
 
-		dht:            dht,
-		requestedNodes: make(map[string]time.Time),
-		logger:         logger,
-		recv:           make(chan Message, 100),
-		send:           make(chan internal.Packet, 100),
-		exit:           exit,
+		dht:    dht,
+		logger: logger,
+		recv:   make(chan Message, 100),
+		send:   make(chan internal.Packet, 100),
+		exit:   exit,
 	}
 
 	go r.run()
@@ -128,7 +128,22 @@ func (p *Router) run() {
 				s.Write(pkt)
 			} else {
 				p.logger.Error("Route not found: %v", pkt.Dst)
+				p.queuedPackets = append(p.queuedPackets, pkt)
 			}
+		case <-time.After(time.Second):
+			var rest []internal.Packet
+			for _, pkt := range p.queuedPackets {
+				p.dht.FindNearestNode(pkt.Dst)
+				s := p.getSession(pkt.Dst)
+				if s != nil {
+					s.Write(pkt)
+				} else {
+					p.logger.Error("Route not found: %v", pkt.Dst)
+					rest = append(rest, pkt)
+				}
+			}
+			p.queuedPackets = rest
+
 		case <-p.exit:
 			return
 		}
