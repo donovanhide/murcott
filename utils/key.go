@@ -95,6 +95,10 @@ func (p *PublicKey) Verify(data []byte, sign *Signature) bool {
 	return ecdsa.Verify(&key, hash[:], sign.r, sign.s)
 }
 
+func (p *PublicKey) IsZero() bool {
+	return (p.x == nil || p.y == nil || p.x.Int64() == 0 || p.y.Int64() == 0)
+}
+
 func init() {
 	msgpack.Register(reflect.TypeOf(Signature{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {

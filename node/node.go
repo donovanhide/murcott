@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"reflect"
-	"time"
 
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/router"
@@ -94,9 +93,6 @@ func (p *Node) Run() {
 				delete(p.idmap, id)
 			}
 
-		case id := <-p.cancelMessage:
-			p.router.CancelMessage(id)
-
 		case <-p.exit:
 			return
 		}
@@ -167,13 +163,7 @@ func (p *Node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interf
 	if err != nil {
 		return err
 	}
-	packetID := p.router.SendMessage(dst, data)
-
-	go func(msgID string, packetID int) {
-		<-time.After(time.Second)
-		p.cancelHandler <- msgID
-		p.cancelMessage <- packetID
-	}(t.ID, packetID)
+	p.router.SendMessage(dst, data)
 
 	return nil
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
 	"github.com/h2so5/utp"
-	"github.com/vmihailenco/msgpack"
 )
 
 type Message struct {
@@ -19,24 +18,16 @@ type Message struct {
 	Payload []byte
 }
 
-type queuedPacket struct {
-	id     int
-	packet *internal.Packet
-}
-
 type Router struct {
-	dht            *dht.DHT
-	conn           net.PacketConn
-	listener       *utp.Listener
-	key            *utils.PrivateKey
-	keycache       map[string]utils.PublicKey
-	keyWaiting     []internal.Packet
-	addrWaiting    map[int]internal.Packet
+	dht      *dht.DHT
+	listener *utp.Listener
+	key      *utils.PrivateKey
+	sessions map[string]*session
+
 	requestedNodes map[string]time.Time
 	logger         *log.Logger
-	packetID       chan int
 	recv           chan Message
-	send           chan queuedPacket
+	send           chan internal.Packet
 	exit           chan int
 }
 
@@ -52,7 +43,6 @@ func getOpenPortConn(config utils.Config) (*utp.Listener, error) {
 }
 
 func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*Router, error) {
-
 	exit := make(chan int)
 	listener, err := getOpenPortConn(config)
 	if err != nil {
@@ -64,46 +54,36 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	logger.Info("Node Socket: %v", listener.Addr())
 
 	r := Router{
-		listener:       listener,
-		key:            key,
-		keycache:       make(map[string]utils.PublicKey),
+		listener: listener,
+		key:      key,
+		sessions: make(map[string]*session),
+
 		dht:            dht,
-		addrWaiting:    make(map[int]internal.Packet),
 		requestedNodes: make(map[string]time.Time),
 		logger:         logger,
-		packetID:       make(chan int),
 		recv:           make(chan Message, 100),
-		send:           make(chan queuedPacket, 100),
+		send:           make(chan internal.Packet, 100),
 		exit:           exit,
 	}
 
-	go func() {
-		packetID := 0
-		for {
-			r.packetID <- packetID
-			packetID++
-		}
-	}()
-
 	go r.run()
-
 	return &r, nil
 }
 
 func (p *Router) Discover(addrs []net.UDPAddr) {
 	for _, addr := range addrs {
-		a := addr
-		p.sendPacket(utils.NodeID{}, &a, "disco", nil)
+		p.dht.Discover(&addr)
 		p.logger.Info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
 	}
 }
 
-func (p *Router) SendMessage(dst utils.NodeID, payload []byte) int {
-	return p.sendPacket(dst, nil, "msg", payload)
-}
-
-func (p *Router) CancelMessage(id int) {
-	p.send <- queuedPacket{id: id, packet: nil}
+func (p *Router) SendMessage(dst utils.NodeID, payload []byte) error {
+	pkt, err := p.makePacket(dst, "msg", payload)
+	if err != nil {
+		return err
+	}
+	p.send <- pkt
+	return nil
 }
 
 func (p *Router) RecvMessage() (Message, error) {
@@ -114,174 +94,103 @@ func (p *Router) RecvMessage() (Message, error) {
 }
 
 func (p *Router) run() {
+	acceptch := make(chan *session)
 
-	recv := make(chan internal.Packet)
-
-	// read datagram from udp socket
 	go func() {
 		for {
-			var buf [65507]byte
-			len, addr, err := p.conn.ReadFrom(buf[:])
+			conn, err := p.listener.Accept()
 			if err != nil {
-				break
+				p.logger.Error("%v", err)
+				return
 			}
-
-			var packet internal.Packet
-			err = msgpack.Unmarshal(buf[:len], &packet)
+			s, err := newSesion(conn, p.key)
 			if err != nil {
+				conn.Close()
+				p.logger.Error("%v", err)
 				continue
+			} else {
+				go p.readSession(s)
+				acceptch <- s
 			}
-
-			if packet.Src.Cmp(p.key.PublicKeyHash()) == 0 {
-				continue
-			}
-
-			p.logger.Info("Receive %s packet from %s", packet.Type, packet.Src.String())
-			packet.Addr = addr
-
-			recv <- packet
 		}
 	}()
 
 	for {
 		select {
-		case q := <-p.send:
-			if q.packet == nil {
-				// cancel queued packet
-				delete(p.addrWaiting, q.id)
-			} else {
-				q.packet.Sign(p.key)
-				addr := q.packet.Addr
-				if addr != nil {
-					data, err := msgpack.Marshal(q.packet)
-					if err == nil {
-						p.conn.WriteTo(data, addr)
-					} else {
-						p.logger.Error("packet marshal error")
-					}
-				} else {
-					p.addrWaiting[q.id] = *q.packet
-				}
+		case s := <-acceptch:
+			id := s.ID().String()
+			if _, ok := p.sessions[id]; !ok {
+				p.sessions[id] = s
 			}
-
-		case packet := <-recv:
-			if packet.Type == "key" {
-				if len(packet.Payload) == 0 {
-					key, _ := msgpack.Marshal(p.key.PublicKey)
-					p.sendPacket(packet.Src, packet.Addr, "key", key)
-				} else {
-					p.processPublicKeyResponse(packet)
-				}
+		case pkt := <-p.send:
+			s := p.getSession(pkt.Dst)
+			if s != nil {
+				s.Write(pkt)
 			} else {
-				// find publickey from cache
-				if key, ok := p.keycache[packet.Src.String()]; ok {
-					if packet.Verify(&key) {
-						p.processPacket(packet)
-					}
-				} else {
-					// request publickey
-					p.sendPacket(packet.Src, packet.Addr, "key", nil)
-					p.keyWaiting = append(p.keyWaiting, packet)
-				}
+				p.logger.Error("Route not found: %v", pkt.Dst)
 			}
-		case <-time.After(time.Second):
 		case <-p.exit:
 			return
 		}
-		p.processWaitingRoutePackets()
 	}
 }
 
-func (p *Router) processPublicKeyResponse(packet internal.Packet) {
-	var key utils.PublicKey
-	err := msgpack.Unmarshal(packet.Payload, &key)
-	if err == nil {
-		id := key.PublicKeyHash()
-		if id.Cmp(packet.Src) == 0 {
-			id := packet.Src.String()
-			p.keycache[id] = key
-			p.logger.Info("Get publickey for %s", id)
-			p.processWaitingKeyPackets()
-		} else {
-			p.logger.Error("receive wrong public key")
+func (p *Router) readSession(s *session) {
+	for {
+		pkt, err := s.Read()
+		if err != nil {
+			p.logger.Error("%v", err)
+			return
+		}
+		if pkt.Type == "msg" {
+			p.recv <- Message{ID: pkt.Src, Payload: pkt.Payload}
 		}
 	}
 }
 
-func (p *Router) processPacket(packet internal.Packet) {
-	info := utils.NodeInfo{ID: packet.Src, Addr: packet.Addr}
-	switch packet.Type {
-	case "msg":
-		p.recv <- Message{ID: info.ID, Payload: packet.Payload}
+func (p *Router) getSession(id utils.NodeID) *session {
+	idstr := id.String()
+	if s, ok := p.sessions[idstr]; ok {
+		return s
 	}
+
+	info := p.dht.GetNodeInfo(id)
+	if info == nil {
+		return nil
+	}
+
+	addr, err := utp.ResolveAddr("utp4", info.Addr.String())
+	if err != nil {
+		p.logger.Error("%v", err)
+		return nil
+	}
+
+	conn, err := utp.DialUTP("utp4", nil, addr)
+	if err != nil {
+		p.logger.Error("%v", err)
+		return nil
+	}
+
+	s, err := newSesion(conn, p.key)
+	if err != nil {
+		conn.Close()
+		p.logger.Error("%v", err)
+		return nil
+	} else {
+		go p.readSession(s)
+		p.sessions[id.String()] = s
+	}
+
+	return s
 }
 
-// process packets waiting publickeys
-func (p *Router) processWaitingKeyPackets() {
-	rest := make([]internal.Packet, 0, len(p.keyWaiting))
-	for _, packet := range p.keyWaiting {
-		// find publickey from cache
-		if key, ok := p.keycache[packet.Src.String()]; ok {
-			if packet.Verify(&key) {
-				p.processPacket(packet)
-			}
-		} else {
-			rest = append(rest, packet)
-		}
-	}
-	p.keyWaiting = rest
-}
-
-// process packets waiting addresses
-func (p *Router) processWaitingRoutePackets() {
-	var unknownNodes []utils.NodeID
-	for id, packet := range p.addrWaiting {
-		node := p.dht.GetNodeInfo(packet.Dst)
-		if node != nil {
-			data, err := msgpack.Marshal(packet)
-			if err == nil {
-				p.conn.WriteTo(data, node.Addr)
-			} else {
-				p.logger.Error("packet marshal error")
-			}
-			delete(p.addrWaiting, id)
-		} else {
-			unknownNodes = append(unknownNodes, packet.Dst)
-		}
-	}
-
-	// Remove old entries.
-	for k, v := range p.requestedNodes {
-		if time.Since(v).Minutes() >= 5 {
-			delete(p.requestedNodes, k)
-		}
-	}
-
-	for _, n := range unknownNodes {
-		if _, ok := p.requestedNodes[n.String()]; !ok {
-			go p.dht.FindNearestNode(n)
-			p.requestedNodes[n.String()] = time.Now()
-		}
-	}
-}
-
-func (p *Router) sendPacket(dst utils.NodeID, addr net.Addr, typ string, payload []byte) int {
-	packet := internal.Packet{
+func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (internal.Packet, error) {
+	return internal.Packet{
 		Dst:     dst,
 		Src:     p.key.PublicKeyHash(),
 		Type:    typ,
 		Payload: payload,
-		Addr:    addr,
-	}
-
-	id := <-p.packetID
-	p.send <- queuedPacket{id: id, packet: &packet}
-
-	if d := dst.String(); len(d) > 0 {
-		p.logger.Info("Send %s packet to %s", packet.Type, d)
-	}
-
-	return id
+	}, nil
 }
 
 func (p *Router) AddNode(info utils.NodeInfo) {
@@ -294,7 +203,5 @@ func (p *Router) KnownNodes() []utils.NodeInfo {
 
 func (p *Router) Close() {
 	p.exit <- 0
-	close(p.recv)
 	p.dht.Close()
-	p.conn.Close()
 }

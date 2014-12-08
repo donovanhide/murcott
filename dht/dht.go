@@ -326,9 +326,23 @@ func newRPCReturnCommand(id []byte, args map[string]interface{}) dhtRPCCommand {
 	}
 }
 
-func (p *DHT) sendPing(dst utils.NodeID) {
+func (p *DHT) Discover(addr net.Addr) error {
 	c := newRPCCommand("ping", nil)
-	p.sendPacket(dst, c)
+	c.Src = p.id
+	b, err := msgpack.Marshal(c)
+	if err != nil {
+		return err
+	}
+	_, err = p.conn.WriteTo(b, addr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *DHT) sendPing(dst utils.NodeID) error {
+	c := newRPCCommand("ping", nil)
+	return p.sendPacket(dst, c)
 }
 
 func (p *DHT) sendPacket(dst utils.NodeID, c dhtRPCCommand) error {

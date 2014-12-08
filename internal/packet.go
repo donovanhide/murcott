@@ -2,7 +2,6 @@ package internal
 
 import (
 	"errors"
-	"net"
 
 	"github.com/h2so5/murcott/utils"
 	"github.com/vmihailenco/msgpack"
@@ -14,7 +13,6 @@ type Packet struct {
 	Type    string          `msgpack:"type"`
 	Payload []byte          `msgpack:"payload"`
 	S       utils.Signature `msgpack:"sign"`
-	Addr    net.Addr        `msgpack:"-"`
 }
 
 func (p *Packet) Serialize() []byte {

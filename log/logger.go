@@ -2,7 +2,14 @@ package log
 
 import (
 	"fmt"
+	"os"
 )
+
+var debug bool
+
+func init() {
+	debug = (len(os.Getenv("GO_MURCOTT_LOGGING")) > 0)
+}
 
 type Logger struct {
 	ch chan string
@@ -20,6 +27,9 @@ func (l *Logger) Read(p []byte) (n int, err error) {
 }
 
 func (l *Logger) write(msg string) {
+	if debug {
+		fmt.Println(msg)
+	}
 	l.ch <- msg
 }
 
