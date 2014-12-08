@@ -1,7 +1,11 @@
 package router
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"errors"
+	"io"
 	"net"
 	"time"
 
@@ -12,6 +16,8 @@ import (
 
 type session struct {
 	conn net.Conn
+	r    io.Reader
+	w    io.Writer
 	rkey *utils.PublicKey
 	lkey *utils.PrivateKey
 }
@@ -19,26 +25,17 @@ type session struct {
 func newSesion(conn net.Conn, lkey *utils.PrivateKey) (*session, error) {
 	s := session{
 		conn: conn,
+		r:    conn,
+		w:    conn,
 		lkey: lkey,
 	}
 
-	data, err := msgpack.Marshal(lkey.PublicKey)
+	err := s.sendPubkey()
 	if err != nil {
 		return nil, err
 	}
 
-	pkt := internal.Packet{
-		Src:     lkey.PublicKeyHash(),
-		Type:    "key",
-		Payload: data,
-	}
-
-	err = s.Write(pkt)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.verify()
+	err = s.verifyPubkey()
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +48,7 @@ func (s *session) ID() utils.NodeID {
 
 func (s *session) Read() (internal.Packet, error) {
 	var packet internal.Packet
-	d := msgpack.NewDecoder(s.conn)
+	d := msgpack.NewDecoder(s.r)
 	err := d.Decode(&packet)
 	if err != nil {
 		return internal.Packet{}, err
@@ -67,20 +64,20 @@ func (s *session) Write(p internal.Packet) error {
 	if err != nil {
 		return err
 	}
-	d := msgpack.NewEncoder(s.conn)
+	d := msgpack.NewEncoder(s.w)
 	return d.Encode(p)
 }
 
-func (s *session) verify() error {
+func (s *session) verifyPubkey() error {
 	s.conn.SetReadDeadline(time.Now().Add(time.Second * 2))
 	defer s.conn.SetReadDeadline(time.Time{})
-	r := msgpack.NewDecoder(s.conn)
+	r := msgpack.NewDecoder(s.r)
 	var packet internal.Packet
 	err := r.Decode(&packet)
 	if err != nil {
 		return err
 	}
-	if packet.Type == "key" {
+	if packet.Type == "pubkey" {
 		var key utils.PublicKey
 		err := msgpack.Unmarshal(packet.Payload, &key)
 		if err == nil {
@@ -93,5 +90,61 @@ func (s *session) verify() error {
 	} else {
 		return errors.New("receive wrong packet")
 	}
+	return nil
+}
+
+func (s *session) sendPubkey() error {
+	data, err := msgpack.Marshal(s.lkey.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	pkt := internal.Packet{
+		Src:     s.lkey.PublicKeyHash(),
+		Type:    "pubkey",
+		Payload: data,
+	}
+
+	err = s.Write(pkt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *session) sendCommonKey() error {
+	var key [32]byte
+	_, err := rand.Read(key[:])
+	if err != nil {
+		return err
+	}
+
+	pkt := internal.Packet{
+		Src:     s.lkey.PublicKeyHash(),
+		Type:    "key",
+		Payload: key[:],
+	}
+
+	err = s.Write(pkt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *session) setKey(inkey, outkey []byte) error {
+	block, err := aes.NewCipher(inkey)
+	if err != nil {
+		return err
+	}
+	var iniv [aes.BlockSize]byte
+	s.r = cipher.StreamReader{S: cipher.NewOFB(block, iniv[:]), R: s.r}
+
+	block, err = aes.NewCipher(outkey)
+	if err != nil {
+		return err
+	}
+	var outiv [aes.BlockSize]byte
+	s.w = cipher.StreamWriter{S: cipher.NewOFB(block, outiv[:]), W: s.w}
 	return nil
 }
