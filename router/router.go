@@ -52,9 +52,9 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	if err != nil {
 		return nil, err
 	}
-	dht := dht.NewDHT(10, key.PublicKeyHash(), listener.RawConn, logger)
+	dht := dht.NewDHT(10, utils.NewNodeID(key.Digest()), listener.RawConn, logger)
 
-	logger.Info("Node ID: %s", key.PublicKeyHash().String())
+	logger.Info("Node ID: %s", key.Digest().String())
 	logger.Info("Node Socket: %v", listener.Addr())
 
 	r := Router{
@@ -232,7 +232,7 @@ func (p *Router) getSession(id utils.NodeID) *session {
 func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (internal.Packet, error) {
 	return internal.Packet{
 		Dst:     dst,
-		Src:     p.key.PublicKeyHash(),
+		Src:     utils.NewNodeID(p.key.Digest()),
 		Type:    typ,
 		Payload: payload,
 	}, nil

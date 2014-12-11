@@ -27,9 +27,17 @@ type Signature struct {
 	r, s *big.Int
 }
 
-// PublicKeyHash returns a SHA-1 digest for the public key.
-func (p *PublicKey) PublicKeyHash() NodeID {
-	return NewNodeID(sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...)))
+type PublicKeyDigest [20]byte
+
+func (p PublicKeyDigest) String() string {
+	var i big.Int
+	i.SetBytes(p[:])
+	return string(base58.EncodeBig(nil, &i))
+}
+
+// Digest returns a SHA-1 digest for the public key.
+func (p *PublicKey) Digest() PublicKeyDigest {
+	return sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...))
 }
 
 // GeneratePrivateKey generates new ECDSA key pair.

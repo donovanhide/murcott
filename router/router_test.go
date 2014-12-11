@@ -29,25 +29,25 @@ func TestRouterMessageExchange(t *testing.T) {
 	}
 	router2.Discover(utils.DefaultConfig.Bootstrap())
 
-	router1.SendMessage(key2.PublicKeyHash(), []byte(msg))
+	router1.SendMessage(utils.NewNodeID(key2.Digest()), []byte(msg))
 
 	m, err := router2.RecvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.ID.Cmp(router1.key.PublicKeyHash()) != 0 {
+	if m.ID.Cmp(utils.NewNodeID(router1.key.Digest())) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.Payload) != msg {
 		t.Errorf("router2: wrong message body")
 	}
 
-	router2.SendMessage(router1.key.PublicKeyHash(), []byte(msg))
+	router2.SendMessage(utils.NewNodeID(router1.key.Digest()), []byte(msg))
 	m, err = router1.RecvMessage()
 	if err != nil {
 		t.Errorf("router1: recvMessage() returns error")
 	}
-	if m.ID.Cmp(router2.key.PublicKeyHash()) != 0 {
+	if m.ID.Cmp(utils.NewNodeID(router2.key.Digest())) != 0 {
 		t.Errorf("router1: wrong source id")
 	}
 	if string(m.Payload) != msg {
@@ -87,13 +87,13 @@ func TestRouterRouteExchange(t *testing.T) {
 	router3.Discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
 
 	time.Sleep(100 * time.Millisecond)
-	router3.SendMessage(key1.PublicKeyHash(), []byte(msg))
+	router3.SendMessage(utils.NewNodeID(key1.Digest()), []byte(msg))
 
 	m, err := router1.RecvMessage()
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.ID.Cmp(router3.key.PublicKeyHash()) != 0 {
+	if m.ID.Cmp(utils.NewNodeID(router3.key.Digest())) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.Payload) != msg {

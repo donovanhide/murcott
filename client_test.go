@@ -31,7 +31,7 @@ func TestClientMessage(t *testing.T) {
 	plainmsg := client.NewPlainChatMessage("Hello")
 
 	client2.HandleMessages(func(src utils.NodeID, msg client.ChatMessage) {
-		if src.Cmp(key1.PublicKeyHash()) == 0 {
+		if src.Cmp(utils.NewNodeID(key1.Digest())) == 0 {
 			if msg.Text() == plainmsg.Text() {
 				success <- true
 			} else {
@@ -44,7 +44,7 @@ func TestClientMessage(t *testing.T) {
 		}
 	})
 
-	client1.SendMessage(key2.PublicKeyHash(), plainmsg, func(ok bool) {
+	client1.SendMessage(utils.NewNodeID(key2.Digest()), plainmsg, func(ok bool) {
 		if ok {
 			success <- true
 		} else {
@@ -118,7 +118,7 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 	go client1.Run()
 	go client2.Run()
 
-	client1.RequestProfile(key2.PublicKeyHash(), func(p *client.UserProfile) {
+	client1.RequestProfile(utils.NewNodeID(key2.Digest()), func(p *client.UserProfile) {
 		if p == nil {
 			t.Errorf("UserProfile should not be nil")
 			success <- false
@@ -167,8 +167,8 @@ func TestClientStatus(t *testing.T) {
 
 	status1 := client.UserStatus{Type: client.StatusActive, Message: ":-("}
 
-	client1.Roster.Add(key2.PublicKeyHash())
-	client2.Roster.Add(key1.PublicKeyHash())
+	client1.Roster.Add(utils.NewNodeID(key2.Digest()))
+	client2.Roster.Add(utils.NewNodeID(key1.Digest()))
 
 	success := make(chan bool)
 
@@ -248,7 +248,7 @@ func TestNodeChatMessage(t *testing.T) {
 	node2.Handle(func(src utils.NodeID, msg interface{}) interface{} {
 		if m, ok := msg.(client.ChatMessage); ok {
 			if m.Text() == plainmsg.Text() {
-				if src.Cmp(key1.PublicKeyHash()) == 0 {
+				if src.Cmp(utils.NewNodeID(key1.Digest())) == 0 {
 					success <- true
 				} else {
 					t.Errorf("wrong source id")
@@ -265,7 +265,7 @@ func TestNodeChatMessage(t *testing.T) {
 		return client.MessageAck{}
 	})
 
-	node1.Send(key2.PublicKeyHash(), plainmsg, func(msg interface{}) {
+	node1.Send(utils.NewNodeID(key2.Digest()), plainmsg, func(msg interface{}) {
 		if _, ok := msg.(client.MessageAck); ok {
 			success <- true
 		} else {
