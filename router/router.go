@@ -34,7 +34,7 @@ type Router struct {
 
 func getOpenPortConn(config utils.Config) (*utp.Listener, error) {
 	for _, port := range config.Ports() {
-		addr, err := utp.ResolveAddr("utp4", ":"+strconv.Itoa(port))
+		addr, err := utp.ResolveAddr("utp", ":"+strconv.Itoa(port))
 		conn, err := utp.Listen("utp", addr)
 		if err == nil {
 			return conn, nil
@@ -174,13 +174,13 @@ func (p *Router) getSession(id utils.NodeID) *session {
 		return nil
 	}
 
-	addr, err := utp.ResolveAddr("utp4", info.Addr.String())
+	addr, err := utp.ResolveAddr("utp", info.Addr.String())
 	if err != nil {
 		p.logger.Error("%v", err)
 		return nil
 	}
 
-	conn, err := utp.DialUTP("utp4", nil, addr)
+	conn, err := utp.DialUTP("utp", nil, addr)
 	if err != nil {
 		p.logger.Error("%v", err)
 		return nil
