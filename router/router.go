@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/h2so5/murcott/dht"
@@ -22,7 +23,9 @@ type Router struct {
 	dht      *dht.DHT
 	listener *utp.Listener
 	key      *utils.PrivateKey
-	sessions map[string]*session
+
+	sessions     map[string]*session
+	sessionMutex sync.RWMutex
 
 	queuedPackets []internal.Packet
 
@@ -118,14 +121,16 @@ func (p *Router) run() {
 	for {
 		select {
 		case s := <-acceptch:
-			id := s.ID().String()
-			if _, ok := p.sessions[id]; !ok {
-				p.sessions[id] = s
-			}
+			p.addSession(s)
 		case pkt := <-p.send:
 			s := p.getSession(pkt.Dst)
 			if s != nil {
-				s.Write(pkt)
+				err := s.Write(pkt)
+				if err != nil {
+					p.logger.Error("%v", err)
+					p.removeSession(s)
+					p.queuedPackets = append(p.queuedPackets, pkt)
+				}
 			} else {
 				p.logger.Error("Route not found: %v", pkt.Dst)
 				p.queuedPackets = append(p.queuedPackets, pkt)
@@ -136,7 +141,12 @@ func (p *Router) run() {
 				p.dht.FindNearestNode(pkt.Dst)
 				s := p.getSession(pkt.Dst)
 				if s != nil {
-					s.Write(pkt)
+					err := s.Write(pkt)
+					if err != nil {
+						p.logger.Error("%v", err)
+						p.removeSession(s)
+						p.queuedPackets = append(p.queuedPackets, pkt)
+					}
 				} else {
 					p.logger.Error("Route not found: %v", pkt.Dst)
 					rest = append(rest, pkt)
@@ -150,11 +160,28 @@ func (p *Router) run() {
 	}
 }
 
+func (p *Router) addSession(s *session) {
+	p.sessionMutex.Lock()
+	defer p.sessionMutex.Unlock()
+	id := s.ID().String()
+	if _, ok := p.sessions[id]; !ok {
+		p.sessions[id] = s
+	}
+}
+
+func (p *Router) removeSession(s *session) {
+	p.sessionMutex.Lock()
+	defer p.sessionMutex.Unlock()
+	id := s.ID().String()
+	delete(p.sessions, id)
+}
+
 func (p *Router) readSession(s *session) {
 	for {
 		pkt, err := s.Read()
 		if err != nil {
 			p.logger.Error("%v", err)
+			p.removeSession(s)
 			return
 		}
 		if pkt.Type == "msg" {
@@ -165,9 +192,12 @@ func (p *Router) readSession(s *session) {
 
 func (p *Router) getSession(id utils.NodeID) *session {
 	idstr := id.String()
+	p.sessionMutex.RLock()
 	if s, ok := p.sessions[idstr]; ok {
+		p.sessionMutex.RUnlock()
 		return s
 	}
+	p.sessionMutex.RUnlock()
 
 	info := p.dht.GetNodeInfo(id)
 	if info == nil {
@@ -193,7 +223,7 @@ func (p *Router) getSession(id utils.NodeID) *session {
 		return nil
 	} else {
 		go p.readSession(s)
-		p.sessions[id.String()] = s
+		p.addSession(s)
 	}
 
 	return s
