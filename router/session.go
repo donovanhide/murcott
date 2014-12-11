@@ -39,6 +39,18 @@ func newSesion(conn net.Conn, lkey *utils.PrivateKey) (*session, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	outkey, err := s.sendCommonKey()
+	if err != nil {
+		return nil, err
+	}
+
+	inkey, err := s.verifyCommonKey()
+	if err != nil {
+		return nil, err
+	}
+	s.setKey(inkey, outkey)
+
 	return &s, nil
 }
 
@@ -93,6 +105,22 @@ func (s *session) verifyPubkey() error {
 	return nil
 }
 
+func (s *session) verifyCommonKey() ([]byte, error) {
+	s.conn.SetReadDeadline(time.Now().Add(time.Second * 2))
+	defer s.conn.SetReadDeadline(time.Time{})
+	r := msgpack.NewDecoder(s.r)
+	var packet internal.Packet
+	err := r.Decode(&packet)
+	if err != nil {
+		return nil, err
+	}
+	if packet.Type == "key" {
+		return packet.Payload, nil
+	} else {
+		return nil, errors.New("receive wrong packet")
+	}
+}
+
 func (s *session) sendPubkey() error {
 	data, err := msgpack.Marshal(s.lkey.PublicKey)
 	if err != nil {
@@ -112,11 +140,11 @@ func (s *session) sendPubkey() error {
 	return nil
 }
 
-func (s *session) sendCommonKey() error {
+func (s *session) sendCommonKey() ([]byte, error) {
 	var key [32]byte
 	_, err := rand.Read(key[:])
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pkt := internal.Packet{
@@ -127,9 +155,9 @@ func (s *session) sendCommonKey() error {
 
 	err = s.Write(pkt)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return key[:], nil
 }
 
 func (s *session) setKey(inkey, outkey []byte) error {
