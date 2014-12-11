@@ -148,7 +148,7 @@ func (p *DHT) FindNearestNode(findid utils.NodeID) []utils.NodeInfo {
 				var nodes []utils.NodeInfo
 				ret.command.getArgs("nodes", &nodes)
 				for _, n := range nodes {
-					if n.ID.Cmp(p.id) != 0 {
+					if n.ID.Digest.Cmp(p.id.Digest) != 0 {
 						p.table.insert(n)
 						reqch <- n
 					}
@@ -230,10 +230,10 @@ func (p *DHT) LoadValue(key string) *string {
 			} else if _, ok := ret.command.Args["nodes"]; ok {
 				var nodes []utils.NodeInfo
 				ret.command.getArgs("nodes", &nodes)
-				dist := id.Xor(keyid)
+				dist := id.Digest.Xor(keyid.Digest)
 				for _, n := range nodes {
 					p.table.insert(n)
-					if dist.Cmp(n.ID.Xor(keyid)) == 1 {
+					if dist.Cmp(n.ID.Digest.Xor(keyid.Digest)) == 1 {
 						reqch <- n.ID
 					}
 				}

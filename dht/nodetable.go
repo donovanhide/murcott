@@ -30,7 +30,7 @@ func (p *nodeTable) insert(node utils.NodeInfo) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	b := node.ID.Xor(p.selfid).Log2int()
+	b := node.ID.Digest.Xor(p.selfid.Digest).Log2int()
 
 	if len(p.buckets[b]) < p.k {
 		p.buckets[b] = append(p.buckets[b], node)
@@ -42,9 +42,9 @@ func (p *nodeTable) insert(node utils.NodeInfo) {
 func (p *nodeTable) remove(id utils.NodeID) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	b := id.Xor(p.selfid).Log2int()
+	b := id.Digest.Xor(p.selfid.Digest).Log2int()
 	for i, n := range p.buckets[b] {
-		if n.ID.Cmp(id) == 0 {
+		if n.ID.Digest.Cmp(id.Digest) == 0 {
 			p.buckets[b] = append(p.buckets[b][:i], p.buckets[b][i+1:]...)
 			return
 		}
@@ -67,7 +67,7 @@ func (p *nodeTable) nearestNodes(id utils.NodeID) []utils.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 	var n []utils.NodeInfo
-	b := id.Xor(p.selfid).Log2int()
+	b := id.Digest.Xor(p.selfid.Digest).Log2int()
 	n = append(n, p.buckets[b]...)
 	if len(n) > p.k {
 		return n[len(n)-p.k:]
@@ -91,9 +91,9 @@ func (p *nodeTable) nearestNodes(id utils.NodeID) []utils.NodeInfo {
 func (p *nodeTable) find(id utils.NodeID) *utils.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	b := id.Xor(p.selfid).Log2int()
+	b := id.Digest.Xor(p.selfid.Digest).Log2int()
 	for _, n := range p.buckets[b] {
-		if n.ID.Cmp(id) == 0 {
+		if n.ID.Digest.Cmp(id.Digest) == 0 {
 			return &n
 		}
 	}

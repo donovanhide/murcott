@@ -35,7 +35,7 @@ func TestRouterMessageExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.ID.Cmp(utils.NewNodeID(router1.key.Digest())) != 0 {
+	if m.ID.Digest.Cmp(router1.key.Digest()) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.Payload) != msg {
@@ -47,7 +47,7 @@ func TestRouterMessageExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router1: recvMessage() returns error")
 	}
-	if m.ID.Cmp(utils.NewNodeID(router2.key.Digest())) != 0 {
+	if m.ID.Digest.Cmp(router2.key.Digest()) != 0 {
 		t.Errorf("router1: wrong source id")
 	}
 	if string(m.Payload) != msg {
@@ -93,7 +93,7 @@ func TestRouterRouteExchange(t *testing.T) {
 	if err != nil {
 		t.Errorf("router2: recvMessage() returns error")
 	}
-	if m.ID.Cmp(utils.NewNodeID(router3.key.Digest())) != 0 {
+	if m.ID.Digest.Cmp(router3.key.Digest()) != 0 {
 		t.Errorf("router2: wrong source id")
 	}
 	if string(m.Payload) != msg {

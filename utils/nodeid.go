@@ -14,33 +14,33 @@ func init() {
 	msgpack.Register(reflect.TypeOf(NodeID{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {
 			id := v.Interface().(NodeID)
-			return e.EncodeBytes(id.i.Bytes())
+			return e.EncodeBytes(id.Digest[:])
 		},
 		func(d *msgpack.Decoder, v reflect.Value) error {
 			b, err := d.DecodeBytes()
 			if err != nil {
 				return err
 			}
-			i := big.NewInt(0)
-			i.SetBytes(b)
-			if i.BitLen() > 160 {
+			var digest PublicKeyDigest
+			if len(b) > len(digest) {
 				return errors.New("too long id")
 			}
-			v.Set(reflect.ValueOf(NodeID{*i}))
+			copy(digest[:], b)
+			v.Set(reflect.ValueOf(NodeID{Digest: digest}))
 			return nil
 		})
 }
 
+type PublicKeyDigest [20]byte
+
 // NodeID represents a 160-bit node identifier.
 type NodeID struct {
-	i big.Int
+	Digest PublicKeyDigest
 }
 
 // NewNodeID generates NodeID from the given big-endian byte array.
-func NewNodeID(data [20]byte) NodeID {
-	i := big.NewInt(0)
-	i.SetBytes(data[:])
-	return NodeID{*i}
+func NewNodeID(data PublicKeyDigest) NodeID {
+	return NodeID{Digest: data}
 }
 
 // NewNodeIDFromString generates NodeID from the given base58-encoded string.
@@ -49,11 +49,13 @@ func NewNodeIDFromString(str string) (NodeID, error) {
 	if err != nil {
 		return NodeID{}, err
 	}
-	return NodeID{*i}, nil
+	var digest PublicKeyDigest
+	copy(digest[:], i.Bytes())
+	return NodeID{Digest: digest}, nil
 }
 
 func NewRandomNodeID() NodeID {
-	var data [20]byte
+	var data PublicKeyDigest
 	_, err := rand.Read(data[:])
 	if err != nil {
 		panic(err)
@@ -62,54 +64,55 @@ func NewRandomNodeID() NodeID {
 	}
 }
 
-func (id NodeID) Xor(n NodeID) NodeID {
-	d := big.NewInt(0)
-	return NodeID{i: *d.Xor(&id.i, &n.i)}
+// Bytes returns identifier as a big-endian byte array.
+func (id NodeID) Bytes() []byte {
+	return id.Digest[:]
 }
 
-func (id NodeID) BitLen() int {
-	return 160
+// String returns identifier as a base58-encoded byte array.
+func (id NodeID) String() string {
+	var i big.Int
+	i.SetBytes(id.Digest[:])
+	return string(base58.EncodeBig(nil, &i))
 }
 
-func (id NodeID) Bit(i int) uint {
-	return id.i.Bit(159 - i)
+func (d PublicKeyDigest) Xor(n PublicKeyDigest) PublicKeyDigest {
+	var b, c big.Int
+	b.SetBytes(d[:])
+	c.SetBytes(n[:])
+	b.Xor(&b, &c)
+	var e PublicKeyDigest
+	copy(e[:], b.Bytes())
+	return e
 }
 
-func (id NodeID) Cmp(n NodeID) int {
-	return id.i.Cmp(&n.i)
+func (d PublicKeyDigest) BitLen() int {
+	return len(d) * 8
 }
 
-func (id NodeID) Log2int() int {
-	l := 159
-	b := big.NewInt(0).Add(&id.i, big.NewInt(1))
-	for i := 160; i >= 0 && b.Bit(i) == 0; i-- {
+func (d PublicKeyDigest) Bit(i int) uint {
+	var b big.Int
+	b.SetBytes(d[:])
+	return b.Bit(len(d)*8 - 1 - i)
+}
+
+func (d PublicKeyDigest) Cmp(n PublicKeyDigest) int {
+	var b, c big.Int
+	b.SetBytes(d[:])
+	c.SetBytes(n[:])
+	return b.Cmp(&c)
+}
+
+func (d PublicKeyDigest) Log2int() int {
+	var b big.Int
+	b.SetBytes(d[:])
+	b.Add(&b, big.NewInt(1))
+	l := len(d)*8 - 1
+	for i := len(d) * 8; i >= 0 && b.Bit(i) == 0; i-- {
 		l--
 	}
 	if l < 0 {
 		return 0
 	}
 	return l
-}
-
-// Bytes returns identifier as a big-endian byte array.
-func (id NodeID) Bytes() []byte {
-	return id.i.Bytes()
-}
-
-// String returns identifier as a base58-encoded byte array.
-func (id NodeID) String() string {
-	return string(base58.EncodeBig(nil, &id.i))
-}
-
-func (id NodeID) MarshalText() (text []byte, err error) {
-	return []byte(id.String()), nil
-}
-
-func (id *NodeID) UnmarshalText(text []byte) error {
-	i, err := base58.DecodeToBig(text)
-	if err != nil {
-		return err
-	}
-	id.i = *i
-	return nil
 }

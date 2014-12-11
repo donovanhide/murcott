@@ -94,7 +94,7 @@ func (s *session) verifyPubkey() error {
 		err := msgpack.Unmarshal(packet.Payload, &key)
 		if err == nil {
 			id := utils.NewNodeID(key.Digest())
-			if id.Cmp(packet.Src) != 0 {
+			if id.Digest.Cmp(packet.Src.Digest) != 0 {
 				return errors.New("receive wrong public key")
 			}
 			s.rkey = &key

@@ -31,7 +31,7 @@ func TestClientMessage(t *testing.T) {
 	plainmsg := client.NewPlainChatMessage("Hello")
 
 	client2.HandleMessages(func(src utils.NodeID, msg client.ChatMessage) {
-		if src.Cmp(utils.NewNodeID(key1.Digest())) == 0 {
+		if src.Digest.Cmp(key1.Digest()) == 0 {
 			if msg.Text() == plainmsg.Text() {
 				success <- true
 			} else {
@@ -248,7 +248,7 @@ func TestNodeChatMessage(t *testing.T) {
 	node2.Handle(func(src utils.NodeID, msg interface{}) interface{} {
 		if m, ok := msg.(client.ChatMessage); ok {
 			if m.Text() == plainmsg.Text() {
-				if src.Cmp(utils.NewNodeID(key1.Digest())) == 0 {
+				if src.Digest.Cmp(key1.Digest()) == 0 {
 					success <- true
 				} else {
 					t.Errorf("wrong source id")

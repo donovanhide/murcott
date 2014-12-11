@@ -23,7 +23,7 @@ func TestNodeIDString(t *testing.T) {
 	id := NewRandomNodeID()
 	str := id.String()
 	id2, err := NewNodeIDFromString(str)
-	if err != nil || id.Cmp(id2) != 0 {
+	if err != nil || id.Digest.Cmp(id2.Digest) != 0 {
 		t.Errorf("failed to generate NodeID from string")
 	}
 }

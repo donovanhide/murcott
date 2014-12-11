@@ -17,7 +17,7 @@ func (r *Roster) List() []utils.NodeID {
 
 func (r *Roster) Add(id utils.NodeID) {
 	for _, n := range r.list {
-		if n.Cmp(id) == 0 {
+		if n.Digest.Cmp(id.Digest) == 0 {
 			return
 		}
 	}
@@ -26,7 +26,7 @@ func (r *Roster) Add(id utils.NodeID) {
 
 func (r *Roster) Remove(id utils.NodeID) error {
 	for i, n := range r.list {
-		if n.Cmp(id) == 0 {
+		if n.Digest.Cmp(id.Digest) == 0 {
 			r.list = append(r.list[:i], r.list[i+1:]...)
 			return nil
 		}

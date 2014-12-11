@@ -26,8 +26,8 @@ func (p NodeInfoSorter) Swap(i, j int) {
 }
 
 func (p NodeInfoSorter) Less(i, j int) bool {
-	disti := p.Nodes[i].ID.Xor(p.ID)
-	distj := p.Nodes[j].ID.Xor(p.ID)
+	disti := p.Nodes[i].ID.Digest.Xor(p.ID.Digest)
+	distj := p.Nodes[j].ID.Digest.Xor(p.ID.Digest)
 	return (disti.Cmp(distj) == -1)
 }
 

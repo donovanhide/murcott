@@ -27,8 +27,6 @@ type Signature struct {
 	r, s *big.Int
 }
 
-type PublicKeyDigest [20]byte
-
 func (p PublicKeyDigest) String() string {
 	var i big.Int
 	i.SetBytes(p[:])
