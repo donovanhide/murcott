@@ -15,6 +15,8 @@ import (
 	"github.com/h2so5/murcott/utils"
 )
 
+var namespace = [4]byte{1, 1, 1, 1}
+
 func TestClientMessage(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
@@ -44,7 +46,7 @@ func TestClientMessage(t *testing.T) {
 		}
 	})
 
-	client1.SendMessage(utils.NewNodeID(key2.Digest()), plainmsg, func(ok bool) {
+	client1.SendMessage(utils.NewNodeID(namespace, key2.Digest()), plainmsg, func(ok bool) {
 		if ok {
 			success <- true
 		} else {
@@ -118,7 +120,7 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 	go client1.Run()
 	go client2.Run()
 
-	client1.RequestProfile(utils.NewNodeID(key2.Digest()), func(p *client.UserProfile) {
+	client1.RequestProfile(utils.NewNodeID(namespace, key2.Digest()), func(p *client.UserProfile) {
 		if p == nil {
 			t.Errorf("UserProfile should not be nil")
 			success <- false
@@ -167,8 +169,8 @@ func TestClientStatus(t *testing.T) {
 
 	status1 := client.UserStatus{Type: client.StatusActive, Message: ":-("}
 
-	client1.Roster.Add(utils.NewNodeID(key2.Digest()))
-	client2.Roster.Add(utils.NewNodeID(key1.Digest()))
+	client1.Roster.Add(utils.NewNodeID(namespace, key2.Digest()))
+	client2.Roster.Add(utils.NewNodeID(namespace, key1.Digest()))
 
 	success := make(chan bool)
 
@@ -265,7 +267,7 @@ func TestNodeChatMessage(t *testing.T) {
 		return client.MessageAck{}
 	})
 
-	node1.Send(utils.NewNodeID(key2.Digest()), plainmsg, func(msg interface{}) {
+	node1.Send(utils.NewNodeID(namespace, key2.Digest()), plainmsg, func(msg interface{}) {
 		if _, ok := msg.(client.MessageAck); ok {
 			success <- true
 		} else {

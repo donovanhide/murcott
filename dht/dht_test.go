@@ -1,6 +1,7 @@
 package dht
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -9,6 +10,8 @@ import (
 	"github.com/h2so5/murcott/utils"
 	"github.com/h2so5/utp"
 )
+
+var namespace = [4]byte{1, 1, 1, 1}
 
 func getLoopbackAddr(addr net.Addr) (*net.UDPAddr, error) {
 	_, port, err := net.SplitHostPort(addr.String())
@@ -46,8 +49,8 @@ func TestDhtPing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: addr1}
-	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(), Addr: addr2}
+	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(namespace), Addr: addr1}
+	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(namespace), Addr: addr2}
 
 	dht1 := NewDHT(10, node1.ID, utp1.RawConn, log.NewLogger())
 	dht2 := NewDHT(10, node2.ID, utp2.RawConn, log.NewLogger())
@@ -74,31 +77,8 @@ func TestDhtGroup(t *testing.T) {
 	dhtmap := make(map[string]*DHT)
 	idary := make([]utils.NodeInfo, n)
 
-	ids := []string{
-		"2R2eoXNPEhbmhx7aNqgY1e2SdKrJ",
-		"4cLuxzdqZgKCatw2HJqEoZEAhkdD",
-		"4fmJMvhoXrmBrHdeZnQ5iX5ropm3",
-		"4fqqyXWVWmBRnLUVHfZgzjKdtFcd",
-		"218GStqPqa7iLzLsAQBS9eZRrUik",
-		"2vm8ByjrLATzFR6qqEHCdwua6eCf",
-		"3nvgbcBzvt9y9Uvf1AbwVfnqV2RG",
-		"33m8NJkskAUdCGw3uYAxeBD5jjBY",
-		"3ru66Gjzx2cDuddRTzA47yMqEoLE",
-		"2S68uiyhVt5c59zgXh1mj3v8vThp",
-		"43eYKjPkMX3gqqWuzzBYvejLSQgJ",
-		"2EhubMbxHHTHSdsLUuJmNpvRakt6",
-		"hVrmqGmWDeRWcWVwTxMBEr1pszM",
-		"3Fx6deQbP8arwtVAxbcts5d9KaTw",
-		"36gDQzwABf2bscJwTjw9y2UU8Adg",
-		"dT378JwadJ4h7HTgeh8UkMgAuVm",
-		"37ZrjbsRymbaCD14mUu6FX3nHnPF",
-		"3qtQPy3WCq3sx4vhGW1vR46aRRSo",
-		"2Af1fPjeQ8jdtsHrrRxZCfJNBWGr",
-		"3HJJyARx667UUrwoEDzCJAMx6tMg",
-	}
-
 	for i := 0; i < n; i++ {
-		id, _ := utils.NewNodeIDFromString(ids[i])
+		id := utils.NewRandomNodeID(namespace)
 		addr, err := utp.ResolveAddr("utp", ":0")
 		if err != nil {
 			t.Fatal(err)
@@ -109,7 +89,7 @@ func TestDhtGroup(t *testing.T) {
 			t.Fatal(err)
 		}
 		node := utils.NodeInfo{ID: id, Addr: uaddr}
-		d := NewDHT(20, node.ID, utp.RawConn, logger)
+		d := NewDHT(10, node.ID, utp.RawConn, logger)
 		idary[i] = node
 		dhtmap[id.String()] = d
 		defer d.Close()
@@ -124,8 +104,8 @@ func TestDhtGroup(t *testing.T) {
 	}
 
 	kvs := map[string]string{}
-	for i := 0; i < 10; i++ {
-		kvs[utils.NewRandomNodeID().String()] = utils.NewRandomNodeID().String()
+	for i := 0; i < 20; i++ {
+		kvs[fmt.Sprintf("<%d>", i)] = utils.NewRandomNodeID(namespace).String()
 	}
 
 	for k, v := range kvs {

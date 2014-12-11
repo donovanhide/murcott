@@ -66,16 +66,19 @@ func NewDHT(k int, id utils.NodeID, conn net.PacketConn, logger *log.Logger) *DH
 }
 
 func (p *DHT) loop() {
-	var b [1024]byte
+	var b [102400]byte
 	for {
 		l, addr, err := p.conn.ReadFrom(b[:])
 		if err != nil {
+			p.logger.Error("%v", err)
 			return
 		}
 		var command dhtRPCCommand
 		err = msgpack.Unmarshal(b[:l], &command)
 		if err == nil {
 			p.processPacket(command, addr)
+		} else {
+			p.logger.Error("%v", err)
 		}
 	}
 }
@@ -86,21 +89,24 @@ func (p *DHT) processPacket(c dhtRPCCommand, addr net.Addr) {
 
 	switch c.Method {
 	case "ping":
-		p.logger.Info("Receive DHT Ping from %s", c.Src.String())
+		p.logger.Info("%s: Receive DHT Ping from %s", p.id.String(), c.Src.String())
 		p.sendPacket(c.Src, newRPCReturnCommand(c.ID, nil))
 
 	case "find-node":
-		p.logger.Info("Receive DHT Find-Node from %s", c.Src.String())
+		p.logger.Info("%s: Receive DHT Find-Node from %s", p.id.String(), c.Src.String())
 		if id, ok := c.Args["id"].(string); ok {
 			args := map[string]interface{}{}
-			var idary [20]byte
-			copy(idary[:], []byte(id)[:20])
-			args["nodes"] = p.table.nearestNodes(utils.NewNodeID(idary))
-			p.sendPacket(c.Src, newRPCReturnCommand(c.ID, args))
+			nid, err := utils.NewNodeIDFromBytes([]byte(id))
+			if err != nil {
+				p.logger.Error("find-node: %v", err)
+			} else {
+				args["nodes"] = p.table.nearestNodes(nid)
+				p.sendPacket(c.Src, newRPCReturnCommand(c.ID, args))
+			}
 		}
 
 	case "store":
-		p.logger.Info("Receive DHT Store from %s", c.Src.String())
+		p.logger.Info("%s: Receive DHT Store from %s", p.id.String(), c.Src.String())
 		if key, ok := c.Args["key"].(string); ok {
 			if val, ok := c.Args["value"].(string); ok {
 				p.kvsMutex.Lock()
@@ -110,7 +116,7 @@ func (p *DHT) processPacket(c dhtRPCCommand, addr net.Addr) {
 		}
 
 	case "find-value":
-		p.logger.Info("Receive DHT Find-Node from %s", c.Src.String())
+		p.logger.Info("%s: Receive DHT Find-Value from %s", p.id.String(), c.Src.String())
 		if key, ok := c.Args["key"].(string); ok {
 			args := map[string]interface{}{}
 			p.kvsMutex.RLock()
@@ -118,7 +124,8 @@ func (p *DHT) processPacket(c dhtRPCCommand, addr net.Addr) {
 				args["value"] = val
 			} else {
 				hash := sha1.Sum([]byte(key))
-				args["nodes"] = p.table.nearestNodes(utils.NewNodeID(hash))
+				n := p.table.nearestNodes(utils.NewNodeID(c.Src.NS, hash))
+				args["nodes"] = n
 			}
 			p.kvsMutex.RUnlock()
 			p.sendPacket(c.Src, newRPCReturnCommand(c.ID, args))
@@ -175,8 +182,8 @@ loop:
 	for {
 		select {
 		case node := <-reqch:
-			if _, ok := requested[node.ID.String()]; !ok {
-				requested[node.ID.String()] = node
+			if _, ok := requested[node.ID.Digest.String()]; !ok {
+				requested[node.ID.Digest.String()] = node
 				c := newRPCCommand("find-node", map[string]interface{}{
 					"id": string(findid.Bytes()),
 				})
@@ -214,13 +221,13 @@ func (p *DHT) LoadValue(key string) *string {
 	p.kvsMutex.RUnlock()
 
 	hash := sha1.Sum([]byte(key))
-	keyid := utils.NewNodeID(hash)
+	keyid := utils.NewNodeID(p.id.NS, hash)
 
 	retch := make(chan *string, 2)
 	reqch := make(chan utils.NodeID, 100)
 	endch := make(chan struct{}, 100)
 
-	nodes := p.table.nearestNodes(utils.NewNodeID(hash))
+	nodes := p.table.nearestNodes(keyid)
 
 	f := func(id utils.NodeID, keyid utils.NodeID, command dhtRPCCommand) {
 		ret, err := p.sendAndWaitPacket(id, command)
@@ -256,8 +263,8 @@ func (p *DHT) LoadValue(key string) *string {
 	for {
 		select {
 		case id := <-reqch:
-			if _, ok := requested[id.String()]; !ok {
-				requested[id.String()] = struct{}{}
+			if _, ok := requested[id.Digest.String()]; !ok {
+				requested[id.Digest.String()] = struct{}{}
 				c := newRPCCommand("find-value", map[string]interface{}{
 					"key": key,
 				})
@@ -287,7 +294,7 @@ func (p *DHT) StoreValue(key string, value string) {
 		"key":   key,
 		"value": value,
 	})
-	for _, n := range p.FindNearestNode(utils.NewNodeID(hash)) {
+	for _, n := range p.FindNearestNode(utils.NewNodeID(p.id.NS, hash)) {
 		p.sendPacket(n.ID, c)
 	}
 }

@@ -14,7 +14,7 @@ func TestNodeInfoMsgpack(t *testing.T) {
 		t.Errorf("cannot marshal NodeInfo")
 	}
 
-	info := NodeInfo{ID: NewRandomNodeID(), Addr: addr}
+	info := NodeInfo{ID: NewRandomNodeID([4]byte{1, 1, 1, 1}), Addr: addr}
 	data, err := msgpack.Marshal(info)
 	if err != nil {
 		t.Errorf("cannot marshal NodeInfo")
@@ -34,49 +34,49 @@ func TestNodeInfoMsgpack(t *testing.T) {
 
 func TestNodeInfoSort(t *testing.T) {
 	ids := []string{
-		"2R2eoXNPEhbmhx7aNqgY1e2SdKrJ",
-		"4cLuxzdqZgKCatw2HJqEoZEAhkdD",
-		"4fmJMvhoXrmBrHdeZnQ5iX5ropm3",
-		"4fqqyXWVWmBRnLUVHfZgzjKdtFcd",
-		"218GStqPqa7iLzLsAQBS9eZRrUik",
-		"2vm8ByjrLATzFR6qqEHCdwua6eCf",
-		"3nvgbcBzvt9y9Uvf1AbwVfnqV2RG",
-		"33m8NJkskAUdCGw3uYAxeBD5jjBY",
-		"3ru66Gjzx2cDuddRTzA47yMqEoLE",
-		"2S68uiyhVt5c59zgXh1mj3v8vThp",
-		"43eYKjPkMX3gqqWuzzBYvejLSQgJ",
-		"2EhubMbxHHTHSdsLUuJmNpvRakt6",
-		"hVrmqGmWDeRWcWVwTxMBEr1pszM",
-		"3Fx6deQbP8arwtVAxbcts5d9KaTw",
-		"36gDQzwABf2bscJwTjw9y2UU8Adg",
-		"dT378JwadJ4h7HTgeh8UkMgAuVm",
-		"37ZrjbsRymbaCD14mUu6FX3nHnPF",
-		"3qtQPy3WCq3sx4vhGW1vR46aRRSo",
-		"2Af1fPjeQ8jdtsHrrRxZCfJNBWGr",
-		"3HJJyARx667UUrwoEDzCJAMx6tMg",
+		"ZXF3qv5dsuaXy2AAoj6nTdYVZQ4TdUtcUp",
+		"ZXF3qv3siKMSbZck8Ek6cMyMvrUmveitZE",
+		"ZXF3qv3iH4GEeFuCgQVQns5Lrnr1ks7bCT",
+		"ZXF3qv2DUw58cym8cpzn6Bg7re7P3xSWXp",
+		"ZXF3qv5kFtmuXarw5t7DJkdTqQn9TkfSAJ",
+		"ZXF3qv3i8q4y3UGboNW89n2bRy95ngwuDT",
+		"ZXF3qv53NguoqoAhhnVkJRdCk6BNcJm9yE",
+		"ZXF3qv5M1U8oaByBX3YoGHQxfWctgnZmzR",
+		"ZXF3qv5oMTEha58tXa5ky7QovHS6fc9Atx",
+		"ZXF3qv4Bywkot1zbRLWmGDKkivUfYyp6H5",
+		"ZXF3qv4gsmv8f5twDGYZyHiB1HcT1NFypb",
+		"ZXF3qv5y6o4VeFaoTjvLLwQ5bkWLahukr8",
+		"ZXF3qv2rc6UEg2sh5Y3mzNY6oUbWukiHCp",
+		"ZXF3qv3YwL8GcWMix817XPvP82dH2WgUiq",
+		"ZXF3qv3AhuHsm4fBFSJege3Fk8XHnpJnd8",
+		"ZXF3qv3n1vcYmHBYUUJ1mtGkt9PfcCuZCa",
+		"ZXF3qv2RLQa9M5Q74nJDgLYo5UuXR17iv1",
+		"ZXF3qv5yUgLsHMnB9qBQJ3pJoiWf3WsR5L",
+		"ZXF3qv5FgfyAVf5zU1HiuWB2f9J2BpCBmw",
+		"ZXF3qv5mkNeMvaPHNmga7mwSBXAmX6khV6",
 	}
 
 	sorted := []string{
-		"2R2eoXNPEhbmhx7aNqgY1e2SdKrJ",
-		"2S68uiyhVt5c59zgXh1mj3v8vThp",
-		"36gDQzwABf2bscJwTjw9y2UU8Adg",
-		"33m8NJkskAUdCGw3uYAxeBD5jjBY",
-		"37ZrjbsRymbaCD14mUu6FX3nHnPF",
-		"3qtQPy3WCq3sx4vhGW1vR46aRRSo",
-		"3ru66Gjzx2cDuddRTzA47yMqEoLE",
-		"3nvgbcBzvt9y9Uvf1AbwVfnqV2RG",
-		"3Fx6deQbP8arwtVAxbcts5d9KaTw",
-		"3HJJyARx667UUrwoEDzCJAMx6tMg",
-		"43eYKjPkMX3gqqWuzzBYvejLSQgJ",
-		"4cLuxzdqZgKCatw2HJqEoZEAhkdD",
-		"4fqqyXWVWmBRnLUVHfZgzjKdtFcd",
-		"4fmJMvhoXrmBrHdeZnQ5iX5ropm3",
-		"dT378JwadJ4h7HTgeh8UkMgAuVm",
-		"hVrmqGmWDeRWcWVwTxMBEr1pszM",
-		"218GStqPqa7iLzLsAQBS9eZRrUik",
-		"2vm8ByjrLATzFR6qqEHCdwua6eCf",
-		"2EhubMbxHHTHSdsLUuJmNpvRakt6",
-		"2Af1fPjeQ8jdtsHrrRxZCfJNBWGr",
+		"ZXF3qv5dsuaXy2AAoj6nTdYVZQ4TdUtcUp",
+		"ZXF3qv5kFtmuXarw5t7DJkdTqQn9TkfSAJ",
+		"ZXF3qv5oMTEha58tXa5ky7QovHS6fc9Atx",
+		"ZXF3qv5mkNeMvaPHNmga7mwSBXAmX6khV6",
+		"ZXF3qv5FgfyAVf5zU1HiuWB2f9J2BpCBmw",
+		"ZXF3qv5y6o4VeFaoTjvLLwQ5bkWLahukr8",
+		"ZXF3qv5yUgLsHMnB9qBQJ3pJoiWf3WsR5L",
+		"ZXF3qv5M1U8oaByBX3YoGHQxfWctgnZmzR",
+		"ZXF3qv4gsmv8f5twDGYZyHiB1HcT1NFypb",
+		"ZXF3qv4Bywkot1zbRLWmGDKkivUfYyp6H5",
+		"ZXF3qv53NguoqoAhhnVkJRdCk6BNcJm9yE",
+		"ZXF3qv3siKMSbZck8Ek6cMyMvrUmveitZE",
+		"ZXF3qv3i8q4y3UGboNW89n2bRy95ngwuDT",
+		"ZXF3qv3iH4GEeFuCgQVQns5Lrnr1ks7bCT",
+		"ZXF3qv3n1vcYmHBYUUJ1mtGkt9PfcCuZCa",
+		"ZXF3qv3AhuHsm4fBFSJege3Fk8XHnpJnd8",
+		"ZXF3qv3YwL8GcWMix817XPvP82dH2WgUiq",
+		"ZXF3qv2rc6UEg2sh5Y3mzNY6oUbWukiHCp",
+		"ZXF3qv2DUw58cym8cpzn6Bg7re7P3xSWXp",
+		"ZXF3qv2RLQa9M5Q74nJDgLYo5UuXR17iv1",
 	}
 
 	ary := make([]NodeInfo, len(ids))
@@ -90,7 +90,10 @@ func TestNodeInfoSort(t *testing.T) {
 	sort.Sort(sorter)
 
 	for i, n := range sorter.Nodes {
-		id, _ := NewNodeIDFromString(sorted[i])
+		id, err := NewNodeIDFromString(sorted[i])
+		if err != nil {
+			t.Fatal(err)
+		}
 		if id.Digest.Cmp(n.ID.Digest) != 0 {
 			t.Errorf("sorter.nodes[%d] expects %s", i, sorted[i])
 		}

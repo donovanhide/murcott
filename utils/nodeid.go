@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"crypto/rand"
 	"errors"
 	"math/big"
 	"reflect"
@@ -10,37 +9,57 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
+const NodeIDPrefix = 144
+
 func init() {
 	msgpack.Register(reflect.TypeOf(NodeID{}),
 		func(e *msgpack.Encoder, v reflect.Value) error {
 			id := v.Interface().(NodeID)
-			return e.EncodeBytes(id.Digest[:])
+			return e.EncodeBytes(id.Bytes())
 		},
 		func(d *msgpack.Decoder, v reflect.Value) error {
 			b, err := d.DecodeBytes()
 			if err != nil {
 				return err
 			}
-			var digest PublicKeyDigest
-			if len(b) > len(digest) {
-				return errors.New("too long id")
+			id, err := NewNodeIDFromBytes(b)
+			if err != nil {
+				return err
 			}
-			copy(digest[:], b)
-			v.Set(reflect.ValueOf(NodeID{Digest: digest}))
+			v.Set(reflect.ValueOf(id))
 			return nil
 		})
 }
 
 type PublicKeyDigest [20]byte
+type Namespace [4]byte
 
 // NodeID represents a 160-bit node identifier.
 type NodeID struct {
 	Digest PublicKeyDigest
+	NS     Namespace
 }
 
-// NewNodeID generates NodeID from the given big-endian byte array.
-func NewNodeID(data PublicKeyDigest) NodeID {
-	return NodeID{Digest: data}
+// NewNodeID generates NodeID from the given namespace and publickey digest.
+func NewNodeID(ns Namespace, data PublicKeyDigest) NodeID {
+	return NodeID{NS: ns, Digest: data}
+}
+
+// NewNodeIDFromBytes generates NodeID from the given big-endian byte array.
+func NewNodeIDFromBytes(b []byte) (NodeID, error) {
+	var ns Namespace
+	if len(b)-1 < len(ns) {
+		return NodeID{}, errors.New("too short bytes")
+	}
+	b = b[1:]
+	var digest PublicKeyDigest
+	if len(b) > len(ns)+len(digest) {
+		return NodeID{}, errors.New("too long bytes")
+	}
+	copy(ns[:], b[:])
+	l := len(digest) - (len(b) - len(ns))
+	copy(digest[l:], b[len(ns):])
+	return NodeID{NS: ns, Digest: digest}, nil
 }
 
 // NewNodeIDFromString generates NodeID from the given base58-encoded string.
@@ -49,30 +68,22 @@ func NewNodeIDFromString(str string) (NodeID, error) {
 	if err != nil {
 		return NodeID{}, err
 	}
-	var digest PublicKeyDigest
-	copy(digest[:], i.Bytes())
-	return NodeID{Digest: digest}, nil
+	return NewNodeIDFromBytes(i.Bytes())
 }
 
-func NewRandomNodeID() NodeID {
-	var data PublicKeyDigest
-	_, err := rand.Read(data[:])
-	if err != nil {
-		panic(err)
-	} else {
-		return NewNodeID(data)
-	}
+func NewRandomNodeID(ns Namespace) NodeID {
+	return NewNodeID(ns, GeneratePrivateKey().Digest())
 }
 
 // Bytes returns identifier as a big-endian byte array.
 func (id NodeID) Bytes() []byte {
-	return id.Digest[:]
+	return append([]byte{NodeIDPrefix}, append(id.NS[:], id.Digest[:]...)...)
 }
 
 // String returns identifier as a base58-encoded byte array.
 func (id NodeID) String() string {
 	var i big.Int
-	i.SetBytes(id.Digest[:])
+	i.SetBytes(id.Bytes())
 	return string(base58.EncodeBig(nil, &i))
 }
 

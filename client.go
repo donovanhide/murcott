@@ -40,7 +40,7 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 	c := &Client{
 		node:   node,
 		status: client.UserStatus{Type: client.StatusOffline},
-		id:     utils.NewNodeID(key.Digest()),
+		id:     utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()),
 		Roster: &client.Roster{},
 		Logger: logger,
 	}

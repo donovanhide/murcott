@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 var debug bool
@@ -12,17 +13,28 @@ func init() {
 }
 
 type Logger struct {
-	ch chan string
+	ch    chan int
+	b     [1024]string
+	begin int
+	size  int
+	mutex sync.RWMutex
 }
 
 func NewLogger() *Logger {
 	return &Logger{
-		ch: make(chan string, 1024),
+		ch: make(chan int),
 	}
 }
 
 func (l *Logger) Read(p []byte) (n int, err error) {
-	msg := <-l.ch
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
+	if l.size == 0 {
+		<-l.ch
+	}
+	msg := l.b[l.begin]
+	l.begin = (l.begin + 1) % len(l.b)
+	l.size--
 	return copy(p, []byte(msg)), nil
 }
 
@@ -30,7 +42,16 @@ func (l *Logger) write(msg string) {
 	if debug {
 		fmt.Println(msg)
 	}
-	l.ch <- msg
+	l.b[(l.begin+l.size)%len(l.b)] = msg
+	if l.size < len(l.b) {
+		l.size++
+	} else {
+		l.begin = (l.begin + 1) % len(l.b)
+	}
+	select {
+	case l.ch <- 0:
+	default:
+	}
 }
 
 func (l *Logger) Info(format string, a ...interface{}) {

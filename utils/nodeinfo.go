@@ -48,14 +48,16 @@ func init() {
 			m := i.(map[interface{}]interface{})
 			if id, ok := m["id"].([]byte); ok {
 				if addrstr, ok := m["addr"].([]byte); ok {
-					var idbuf [20]byte
-					copy(idbuf[:], id)
 					addr, err := net.ResolveUDPAddr("udp", string(addrstr))
 					if err != nil {
 						return err
 					}
+					nid, err := NewNodeIDFromBytes(id)
+					if err != nil {
+						return err
+					}
 					v.Set(reflect.ValueOf(NodeInfo{
-						ID:   NewNodeID(idbuf),
+						ID:   nid,
 						Addr: addr,
 					}))
 				}

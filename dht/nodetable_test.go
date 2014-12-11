@@ -11,7 +11,7 @@ func TestNodeTableInsertRemove(t *testing.T) {
 	b := big.NewInt(int64(0))
 	var id [20]byte
 	copy(id[:], b.Bytes()[:])
-	selfid := utils.NewNodeID(id)
+	selfid := utils.NewNodeID(namespace, id)
 	n := newNodeTable(50, selfid)
 
 	ary := make([]utils.NodeID, 100)
@@ -20,7 +20,7 @@ func TestNodeTableInsertRemove(t *testing.T) {
 		b.Add(b, big.NewInt(int64(1)))
 		var id [20]byte
 		copy(id[:], b.Bytes()[:])
-		node := utils.NewNodeID(id)
+		node := utils.NewNodeID(namespace, id)
 		ary[i] = node
 	}
 

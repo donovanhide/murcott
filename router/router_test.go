@@ -10,6 +10,8 @@ import (
 	"github.com/h2so5/murcott/log"
 )
 
+var namespace = [4]byte{1, 1, 1, 1}
+
 func TestRouterMessageExchange(t *testing.T) {
 	logger := log.NewLogger()
 	msg := "The quick brown fox jumps over the lazy dog"
@@ -29,7 +31,8 @@ func TestRouterMessageExchange(t *testing.T) {
 	}
 	router2.Discover(utils.DefaultConfig.Bootstrap())
 
-	router1.SendMessage(utils.NewNodeID(key2.Digest()), []byte(msg))
+	time.Sleep(100 * time.Millisecond)
+	router1.SendMessage(utils.NewNodeID(namespace, key2.Digest()), []byte(msg))
 
 	m, err := router2.RecvMessage()
 	if err != nil {
@@ -42,7 +45,7 @@ func TestRouterMessageExchange(t *testing.T) {
 		t.Errorf("router2: wrong message body")
 	}
 
-	router2.SendMessage(utils.NewNodeID(router1.key.Digest()), []byte(msg))
+	router2.SendMessage(utils.NewNodeID(namespace, router1.key.Digest()), []byte(msg))
 	m, err = router1.RecvMessage()
 	if err != nil {
 		t.Errorf("router1: recvMessage() returns error")
@@ -87,7 +90,7 @@ func TestRouterRouteExchange(t *testing.T) {
 	router3.Discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
 
 	time.Sleep(100 * time.Millisecond)
-	router3.SendMessage(utils.NewNodeID(key1.Digest()), []byte(msg))
+	router3.SendMessage(utils.NewNodeID(namespace, key1.Digest()), []byte(msg))
 
 	m, err := router1.RecvMessage()
 	if err != nil {
