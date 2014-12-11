@@ -43,41 +43,6 @@ func TestStorageRoster(t *testing.T) {
 	}
 }
 
-func TestStorageBlockList(t *testing.T) {
-	s := NewStorage(":memory:")
-	defer s.close()
-
-	roster := &BlockList{
-		list: []utils.NodeID{
-			utils.NewRandomNodeID(),
-			utils.NewRandomNodeID(),
-			utils.NewRandomNodeID(),
-			utils.NewRandomNodeID(),
-			utils.NewRandomNodeID(),
-		},
-	}
-
-	err := s.SaveBlockList(roster)
-	if err != nil {
-		t.Errorf("saveRoster error: %v", err)
-	}
-
-	r, err := s.LoadBlockList()
-	if err != nil {
-		t.Errorf("loadRoster error: %v", err)
-	}
-
-	if len(r.list) != len(roster.list) {
-		t.Errorf("roster length mismatch")
-	}
-
-	for i, id := range r.list {
-		if id.Cmp(roster.list[i]) != 0 {
-			t.Errorf("wrong NodeID: %s; expects %s", id.String(), roster.list[i].String())
-		}
-	}
-}
-
 func TestStorageProfile(t *testing.T) {
 	s := NewStorage(":memory:")
 	defer s.close()

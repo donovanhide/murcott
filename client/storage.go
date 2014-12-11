@@ -170,39 +170,6 @@ func (s *Storage) SaveProfile(id utils.NodeID, profile UserProfile) error {
 	return err
 }
 
-func (s *Storage) LoadBlockList() (*BlockList, error) {
-	var list []utils.NodeID
-	rows, err := s.query(loadBlockListStmt)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id string
-		rows.Scan(&id)
-		nodeid, err := utils.NewNodeIDFromString(id)
-		if err == nil {
-			list = append(list, nodeid)
-		}
-	}
-	return &BlockList{list: list}, nil
-}
-
-func (s *Storage) SaveBlockList(blocklist *BlockList) error {
-	_, err := s.exec(clearBlockListStmt)
-	if err != nil {
-		return err
-	}
-
-	for _, id := range blocklist.list {
-		_, err := s.exec(insertIDToBlockListStmt, id.String())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (s *Storage) LoadKnownNodes() ([]utils.NodeInfo, error) {
 	var list []utils.NodeInfo
 	rows, err := s.query(loadKnownNodesStmt)
