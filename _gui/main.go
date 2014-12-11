@@ -40,7 +40,7 @@ func main() {
 	m.Get("/newkey", func(r render.Render) {
 		key := utils.GeneratePrivateKey()
 		r.JSON(200, map[string]interface{}{
-			"id":  key.PublicKeyHash().String(),
+			"id":  key.Digest().String(),
 			"key": key.String(),
 		})
 	})
