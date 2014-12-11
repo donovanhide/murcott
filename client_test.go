@@ -18,11 +18,11 @@ import (
 func TestClientMessage(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	client1, err := NewClient(key1, client.NewStorage(":memory:"), utils.DefaultConfig)
+	client1, err := NewClient(key1, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client2, err := NewClient(key2, client.NewStorage(":memory:"), utils.DefaultConfig)
+	client2, err := NewClient(key2, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,11 +88,11 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	client1, err := NewClient(key1, client.NewStorage(":memory:"), utils.DefaultConfig)
+	client1, err := NewClient(key1, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client2, err := NewClient(key2, client.NewStorage(":memory:"), utils.DefaultConfig)
+	client2, err := NewClient(key2, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,11 +156,11 @@ R496KHSxGDMljK+P9u+gTOnzzpHBoBGFBEAAAAAElFTkSuQmCC`
 func TestClientStatus(t *testing.T) {
 	key1 := utils.GeneratePrivateKey()
 	key2 := utils.GeneratePrivateKey()
-	client1, err := NewClient(key1, client.NewStorage(":memory:"), utils.DefaultConfig)
+	client1, err := NewClient(key1, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client2, err := NewClient(key2, client.NewStorage(":memory:"), utils.DefaultConfig)
+	client2, err := NewClient(key2, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

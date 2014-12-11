@@ -183,8 +183,7 @@ func ws(w http.ResponseWriter, r *http.Request, params martini.Params) {
 		return
 	}
 
-	storage := client.NewStorage(key.PublicKeyHash().String() + ".sqlite3")
-	c, err := murcott.NewClient(key, storage, utils.DefaultConfig)
+	c, err := murcott.NewClient(key, utils.DefaultConfig)
 	if err != nil {
 		return
 	}

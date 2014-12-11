@@ -12,7 +12,6 @@ type Client struct {
 	node          *node.Node
 	msgHandler    messageHandler
 	statusHandler statusHandler
-	storage       *client.Storage
 	status        client.UserStatus
 	profile       client.UserProfile
 	id            utils.NodeID
@@ -24,9 +23,8 @@ type messageHandler func(src utils.NodeID, msg client.ChatMessage)
 type statusHandler func(src utils.NodeID, status client.UserStatus)
 
 // NewClient generates a Client with the given PrivateKey.
-func NewClient(key *utils.PrivateKey, storage *client.Storage, config utils.Config) (*Client, error) {
+func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 	logger := log.NewLogger()
-	roster, _ := storage.LoadRoster()
 
 	node, err := node.NewNode(key, logger, config)
 	if err != nil {
@@ -39,23 +37,12 @@ func NewClient(key *utils.PrivateKey, storage *client.Storage, config utils.Conf
 	node.RegisterMessageType("profile-res", client.UserProfileResponse{})
 	node.RegisterMessageType("presence", client.UserPresence{})
 
-	knownNodes, _ := storage.LoadKnownNodes()
-	for _, n := range knownNodes {
-		node.AddNode(n)
-	}
-
 	c := &Client{
-		node:    node,
-		storage: storage,
-		status:  client.UserStatus{Type: client.StatusOffline},
-		id:      key.PublicKeyHash(),
-		Roster:  roster,
-		Logger:  logger,
-	}
-
-	profile := storage.LoadProfile(c.id)
-	if profile != nil {
-		c.profile = *profile
+		node:   node,
+		status: client.UserStatus{Type: client.StatusOffline},
+		id:     key.PublicKeyHash(),
+		Roster: &client.Roster{},
+		Logger: logger,
 	}
 
 	c.node.Handle(func(src utils.NodeID, msg interface{}) interface{} {
@@ -95,8 +82,6 @@ func (c *Client) Close() {
 		c.node.Send(n, client.UserPresence{Status: status, Ack: false}, nil)
 	}
 
-	c.storage.SaveRoster(c.Roster)
-	c.storage.SaveKnownNodes(c.node.KnownNodes())
 	c.node.Close()
 }
 
@@ -122,10 +107,9 @@ func (c *Client) HandleStatuses(handler func(src utils.NodeID, status client.Use
 func (c *Client) RequestProfile(dst utils.NodeID, f func(profile *client.UserProfile)) {
 	c.node.Send(dst, client.UserProfileRequest{}, func(r interface{}) {
 		if p, ok := r.(client.UserProfileResponse); ok {
-			c.storage.SaveProfile(dst, p.Profile)
 			f(&p.Profile)
 		} else {
-			f(c.storage.LoadProfile(dst))
+			f(nil)
 		}
 	})
 }
@@ -150,6 +134,5 @@ func (c *Client) Profile() client.UserProfile {
 }
 
 func (c *Client) SetProfile(profile client.UserProfile) {
-	c.storage.SaveProfile(c.id, profile)
 	c.profile = profile
 }

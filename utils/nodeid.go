@@ -100,3 +100,16 @@ func (id NodeID) Bytes() []byte {
 func (id NodeID) String() string {
 	return string(base58.EncodeBig(nil, &id.i))
 }
+
+func (id NodeID) MarshalText() (text []byte, err error) {
+	return []byte(id.String()), nil
+}
+
+func (id *NodeID) UnmarshalText(text []byte) error {
+	i, err := base58.DecodeToBig(text)
+	if err != nil {
+		return err
+	}
+	id.i = *i
+	return nil
+}
