@@ -17,7 +17,6 @@ type Client struct {
 	profile       client.UserProfile
 	id            utils.NodeID
 	Roster        *client.Roster
-	BlockList     *client.BlockList
 	Logger        *log.Logger
 }
 
@@ -28,7 +27,6 @@ type statusHandler func(src utils.NodeID, status client.UserStatus)
 func NewClient(key *utils.PrivateKey, storage *client.Storage, config utils.Config) (*Client, error) {
 	logger := log.NewLogger()
 	roster, _ := storage.LoadRoster()
-	blocklist, _ := storage.LoadBlockList()
 
 	node, err := node.NewNode(key, logger, config)
 	if err != nil {
@@ -47,13 +45,12 @@ func NewClient(key *utils.PrivateKey, storage *client.Storage, config utils.Conf
 	}
 
 	c := &Client{
-		node:      node,
-		storage:   storage,
-		status:    client.UserStatus{Type: client.StatusOffline},
-		id:        key.PublicKeyHash(),
-		Roster:    roster,
-		BlockList: blocklist,
-		Logger:    logger,
+		node:    node,
+		storage: storage,
+		status:  client.UserStatus{Type: client.StatusOffline},
+		id:      key.PublicKeyHash(),
+		Roster:  roster,
+		Logger:  logger,
 	}
 
 	profile := storage.LoadProfile(c.id)
@@ -62,9 +59,6 @@ func NewClient(key *utils.PrivateKey, storage *client.Storage, config utils.Conf
 	}
 
 	c.node.Handle(func(src utils.NodeID, msg interface{}) interface{} {
-		if c.BlockList.Contains(src) {
-			return nil
-		}
 		switch msg.(type) {
 		case client.ChatMessage:
 			if c.msgHandler != nil {
@@ -102,7 +96,6 @@ func (c *Client) Close() {
 	}
 
 	c.storage.SaveRoster(c.Roster)
-	c.storage.SaveBlockList(c.BlockList)
 	c.storage.SaveKnownNodes(c.node.KnownNodes())
 	c.node.Close()
 }
