@@ -32,10 +32,12 @@ func init() {
 }
 
 type PublicKeyDigest [20]byte
+type Namespace [4]byte
 
 // NodeID represents a 160-bit node identifier.
 type NodeID struct {
 	Digest PublicKeyDigest
+	NS     Namespace
 }
 
 // NewNodeID generates NodeID from the given big-endian byte array.
