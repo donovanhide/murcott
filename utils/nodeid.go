@@ -127,3 +127,12 @@ func (d PublicKeyDigest) Log2int() int {
 	}
 	return l
 }
+
+func (n Namespace) Match(m Namespace) bool {
+	for i := 0; i < len(n); i++ {
+		if n[i] != 0 && n[i] != m[i] {
+			return false
+		}
+	}
+	return true
+}

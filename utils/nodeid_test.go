@@ -27,3 +27,17 @@ func TestNodeIDString(t *testing.T) {
 		t.Errorf("failed to generate NodeID from string")
 	}
 }
+
+func TestNodeIDNamespace(t *testing.T) {
+	ns := Namespace([4]byte{1, 1, 0, 0})
+
+	n1 := [4]byte{1, 1, 12, 56}
+	if !ns.Match(n1) {
+		t.Errorf("%v should match %v", ns, n1)
+	}
+
+	n2 := [4]byte{1, 5, 1, 1}
+	if ns.Match(n2) {
+		t.Errorf("%v should not match %v", ns, n2)
+	}
+}
