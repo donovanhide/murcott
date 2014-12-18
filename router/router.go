@@ -20,7 +20,9 @@ type Message struct {
 }
 
 type Router struct {
-	dht      []*dht.DHT
+	dht      map[string]*dht.DHT
+	dhtMutex sync.RWMutex
+
 	listener *utp.Listener
 	key      *utils.PrivateKey
 
@@ -52,7 +54,6 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	if err != nil {
 		return nil, err
 	}
-	dht := dht.NewDHT(10, utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()), listener.RawConn, logger)
 
 	logger.Info("Node ID: %s", key.Digest().String())
 	logger.Info("Node Socket: %v", listener.Addr())
@@ -61,24 +62,36 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		listener: listener,
 		key:      key,
 		sessions: make(map[string]*session),
+		dht:      make(map[string]*dht.DHT),
 
 		logger: logger,
 		recv:   make(chan Message, 100),
 		send:   make(chan internal.Packet, 100),
 		exit:   exit,
 	}
-	r.dht = append(r.dht, dht)
+	r.dht[""] = dht.NewDHT(10, utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()), listener.RawConn, logger)
 
 	go r.run()
 	return &r, nil
 }
 
 func (p *Router) Discover(addrs []net.UDPAddr) {
+	p.dhtMutex.RLock()
+	defer p.dhtMutex.RUnlock()
 	for _, addr := range addrs {
 		for _, d := range p.dht {
 			d.Discover(&addr)
 		}
 		p.logger.Info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
+	}
+}
+
+func (p *Router) Join(group utils.NodeID) {
+	p.dhtMutex.Lock()
+	defer p.dhtMutex.Unlock()
+	s := group.String()
+	if _, ok := p.dht[s]; !ok {
+		p.dht[s] = dht.NewDHT(10, group, p.listener.RawConn, p.logger)
 	}
 }
 
@@ -128,9 +141,11 @@ func (p *Router) run() {
 				p.logger.Error("%v", err)
 				return
 			}
+			p.dhtMutex.RLock()
 			for _, d := range p.dht {
 				d.ProcessPacket(b[:l], addr)
 			}
+			p.dhtMutex.RUnlock()
 		}
 	}()
 
@@ -154,9 +169,11 @@ func (p *Router) run() {
 		case <-time.After(time.Second):
 			var rest []internal.Packet
 			for _, pkt := range p.queuedPackets {
+				p.dhtMutex.RLock()
 				for _, d := range p.dht {
 					d.FindNearestNode(pkt.Dst)
 				}
+				p.dhtMutex.RUnlock()
 				s := p.getSession(pkt.Dst)
 				if s != nil {
 					err := s.Write(pkt)
@@ -218,12 +235,14 @@ func (p *Router) getSession(id utils.NodeID) *session {
 	p.sessionMutex.RUnlock()
 
 	var info *utils.NodeInfo
+	p.dhtMutex.RLock()
 	for _, d := range p.dht {
 		info = d.GetNodeInfo(id)
 		if info != nil {
 			break
 		}
 	}
+	p.dhtMutex.RUnlock()
 
 	if info == nil {
 		return nil
@@ -264,6 +283,8 @@ func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (inter
 }
 
 func (p *Router) AddNode(info utils.NodeInfo) {
+	p.dhtMutex.RLock()
+	defer p.dhtMutex.RUnlock()
 	for _, d := range p.dht {
 		d.AddNode(info)
 	}

@@ -73,12 +73,14 @@ func TestRouterRouteExchange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer router1.Close()
 	router1.Discover(utils.DefaultConfig.Bootstrap())
 
 	router2, err := NewRouter(key2, logger, utils.DefaultConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer router2.Close()
 	router2.Discover(utils.DefaultConfig.Bootstrap())
 
 	time.Sleep(100 * time.Millisecond)
@@ -86,6 +88,7 @@ func TestRouterRouteExchange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer router3.Close()
 	addr, _ := net.ResolveUDPAddr("udp", router1.listener.Addr().String())
 	router3.Discover([]net.UDPAddr{net.UDPAddr{Port: addr.Port, IP: net.ParseIP("127.0.0.1")}})
 
@@ -102,8 +105,39 @@ func TestRouterRouteExchange(t *testing.T) {
 	if string(m.Payload) != msg {
 		t.Errorf("router2: wrong message body")
 	}
+}
 
-	router1.Close()
-	router2.Close()
-	router3.Close()
+func TestRouterGroup(t *testing.T) {
+	logger := log.NewLogger()
+
+	key1 := utils.GeneratePrivateKey()
+	key2 := utils.GeneratePrivateKey()
+	key3 := utils.GeneratePrivateKey()
+
+	group := utils.NewNodeID([4]byte{1, 1, 1, 2}, utils.GeneratePrivateKey().Digest())
+
+	router1, err := NewRouter(key1, logger, utils.DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	router1.Join(group)
+	defer router1.Close()
+
+	router2, err := NewRouter(key2, logger, utils.DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	router2.Join(group)
+	defer router2.Close()
+
+	router3, err := NewRouter(key3, logger, utils.DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	router3.Join(group)
+	defer router3.Close()
+
+	router1.Discover(utils.DefaultConfig.Bootstrap())
+	router2.Discover(utils.DefaultConfig.Bootstrap())
+	router3.Discover(utils.DefaultConfig.Bootstrap())
 }
