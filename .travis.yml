@@ -6,6 +6,6 @@ install:
 
 script:
  - go test ./... -v
- - go test -v -race
+ - go test -v -race ./...
  - go build _gui/main.go
  - go build _bootstrap/main.go
