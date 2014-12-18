@@ -276,7 +276,7 @@ func (p *Router) getSession(id utils.NodeID) *session {
 func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (internal.Packet, error) {
 	return internal.Packet{
 		Dst:     dst,
-		Src:     utils.NewNodeID([4]byte{1, 1, 1, 1}, p.key.Digest()),
+		Src:     utils.NewNodeID(dst.NS, p.key.Digest()),
 		Type:    typ,
 		Payload: payload,
 	}, nil
