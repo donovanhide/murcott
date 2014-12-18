@@ -57,6 +57,28 @@ func TestDhtPing(t *testing.T) {
 	defer dht1.Close()
 	defer dht2.Close()
 
+	go func() {
+		var b [102400]byte
+		for {
+			l, addr, err := utp1.RawConn.ReadFrom(b[:])
+			if err != nil {
+				return
+			}
+			dht1.ProcessPacket(b[:l], addr)
+		}
+	}()
+
+	go func() {
+		var b [102400]byte
+		for {
+			l, addr, err := utp2.RawConn.ReadFrom(b[:])
+			if err != nil {
+				return
+			}
+			dht2.ProcessPacket(b[:l], addr)
+		}
+	}()
+
 	dht1.AddNode(node2)
 
 	time.Sleep(time.Millisecond * 100)
@@ -93,6 +115,17 @@ func TestDhtGroup(t *testing.T) {
 		idary[i] = node
 		dhtmap[id.String()] = d
 		defer d.Close()
+
+		go func() {
+			var b [102400]byte
+			for {
+				l, addr, err := utp.RawConn.ReadFrom(b[:])
+				if err != nil {
+					return
+				}
+				d.ProcessPacket(b[:l], addr)
+			}
+		}()
 	}
 
 	rootNode := idary[0]

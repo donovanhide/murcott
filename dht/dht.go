@@ -61,29 +61,16 @@ func NewDHT(k int, id utils.NodeID, conn net.PacketConn, logger *log.Logger) *DH
 		conn:   conn,
 		logger: logger,
 	}
-	go d.loop()
 	return &d
 }
 
-func (p *DHT) loop() {
-	var b [102400]byte
-	for {
-		l, addr, err := p.conn.ReadFrom(b[:])
-		if err != nil {
-			p.logger.Error("%v", err)
-			return
-		}
-		var command dhtRPCCommand
-		err = msgpack.Unmarshal(b[:l], &command)
-		if err == nil {
-			p.processPacket(command, addr)
-		} else {
-			p.logger.Error("%v", err)
-		}
+func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
+	var c dhtRPCCommand
+	err := msgpack.Unmarshal(b, &c)
+	if err != nil {
+		p.logger.Error("%v", err)
+		return
 	}
-}
-
-func (p *DHT) processPacket(c dhtRPCCommand, addr net.Addr) {
 
 	p.table.insert(utils.NodeInfo{ID: c.Src, Addr: addr})
 

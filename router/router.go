@@ -118,6 +118,18 @@ func (p *Router) run() {
 		}
 	}()
 
+	go func() {
+		var b [102400]byte
+		for {
+			l, addr, err := p.listener.RawConn.ReadFrom(b[:])
+			if err != nil {
+				p.logger.Error("%v", err)
+				return
+			}
+			p.dht.ProcessPacket(b[:l], addr)
+		}
+	}()
+
 	for {
 		select {
 		case s := <-acceptch:

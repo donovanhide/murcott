@@ -51,6 +51,9 @@ func NewNodeIDFromBytes(b []byte) (NodeID, error) {
 	if len(b)-1 < len(ns) {
 		return NodeID{}, errors.New("too short bytes")
 	}
+	if b[0] != NodeIDPrefix {
+		return NodeID{}, errors.New("invalid prefix")
+	}
 	b = b[1:]
 	var digest PublicKeyDigest
 	if len(b) > len(ns)+len(digest) {
