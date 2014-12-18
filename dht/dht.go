@@ -72,6 +72,10 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 		return
 	}
 
+	if !p.id.NS.Match(c.Src.NS) {
+		return
+	}
+
 	p.table.insert(utils.NodeInfo{ID: c.Src, Addr: addr})
 
 	switch c.Method {
@@ -130,6 +134,9 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 }
 
 func (p *DHT) FindNearestNode(findid utils.NodeID) []utils.NodeInfo {
+	if !p.id.NS.Match(findid.NS) {
+		return nil
+	}
 
 	reqch := make(chan utils.NodeInfo, 100)
 	endch := make(chan struct{}, 100)
@@ -287,6 +294,9 @@ func (p *DHT) StoreValue(key string, value string) {
 }
 
 func (p *DHT) AddNode(node utils.NodeInfo) {
+	if !p.id.NS.Match(node.ID.NS) {
+		return
+	}
 	p.table.insert(node)
 	p.sendPing(node.ID)
 }

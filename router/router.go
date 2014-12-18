@@ -20,7 +20,7 @@ type Message struct {
 }
 
 type Router struct {
-	dht      *dht.DHT
+	dht      []*dht.DHT
 	listener *utp.Listener
 	key      *utils.PrivateKey
 
@@ -62,12 +62,12 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		key:      key,
 		sessions: make(map[string]*session),
 
-		dht:    dht,
 		logger: logger,
 		recv:   make(chan Message, 100),
 		send:   make(chan internal.Packet, 100),
 		exit:   exit,
 	}
+	r.dht = append(r.dht, dht)
 
 	go r.run()
 	return &r, nil
@@ -75,7 +75,9 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 
 func (p *Router) Discover(addrs []net.UDPAddr) {
 	for _, addr := range addrs {
-		p.dht.Discover(&addr)
+		for _, d := range p.dht {
+			d.Discover(&addr)
+		}
 		p.logger.Info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
 	}
 }
@@ -126,7 +128,9 @@ func (p *Router) run() {
 				p.logger.Error("%v", err)
 				return
 			}
-			p.dht.ProcessPacket(b[:l], addr)
+			for _, d := range p.dht {
+				d.ProcessPacket(b[:l], addr)
+			}
 		}
 	}()
 
@@ -150,7 +154,9 @@ func (p *Router) run() {
 		case <-time.After(time.Second):
 			var rest []internal.Packet
 			for _, pkt := range p.queuedPackets {
-				p.dht.FindNearestNode(pkt.Dst)
+				for _, d := range p.dht {
+					d.FindNearestNode(pkt.Dst)
+				}
 				s := p.getSession(pkt.Dst)
 				if s != nil {
 					err := s.Write(pkt)
@@ -211,7 +217,14 @@ func (p *Router) getSession(id utils.NodeID) *session {
 	}
 	p.sessionMutex.RUnlock()
 
-	info := p.dht.GetNodeInfo(id)
+	var info *utils.NodeInfo
+	for _, d := range p.dht {
+		info = d.GetNodeInfo(id)
+		if info != nil {
+			break
+		}
+	}
+
 	if info == nil {
 		return nil
 	}
@@ -251,14 +264,22 @@ func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (inter
 }
 
 func (p *Router) AddNode(info utils.NodeInfo) {
-	p.dht.AddNode(info)
+	for _, d := range p.dht {
+		d.AddNode(info)
+	}
 }
 
 func (p *Router) KnownNodes() []utils.NodeInfo {
-	return p.dht.KnownNodes()
+	var nodes []utils.NodeInfo
+	for _, d := range p.dht {
+		nodes = append(nodes, d.KnownNodes()...)
+	}
+	return nodes
 }
 
 func (p *Router) Close() {
 	p.exit <- 0
-	p.dht.Close()
+	for _, d := range p.dht {
+		d.Close()
+	}
 }
