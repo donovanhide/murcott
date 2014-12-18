@@ -13,6 +13,7 @@ type Packet struct {
 	Type    string          `msgpack:"type"`
 	Payload []byte          `msgpack:"payload"`
 	S       utils.Signature `msgpack:"sign"`
+	TTL     uint8           `msgpack:"ttl"`
 }
 
 func (p *Packet) Serialize() []byte {

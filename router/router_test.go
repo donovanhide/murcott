@@ -170,19 +170,39 @@ func TestRouterGroup(t *testing.T) {
 	msg := "The quick brown fox jumps over the lazy dog"
 	router3.SendMessage(utils.NewNodeID([4]byte{1, 1, 1, 2}, key1.Digest()), []byte(msg))
 
-	m, err := router1.RecvMessage()
-	if err != nil {
-		t.Errorf("router1: recvMessage() returns error")
-	}
-	if m.ID.Digest.Cmp(router3.key.Digest()) != 0 {
-		t.Errorf("router1: wrong source id")
+	{
+		m, err := router1.RecvMessage()
+		if err != nil {
+			t.Errorf("router1: recvMessage() returns error")
+		}
+		if m.ID.Digest.Cmp(router3.key.Digest()) != 0 {
+			t.Errorf("router1: wrong source id")
+		}
+
+		ns := [4]byte{1, 1, 1, 2}
+		if !bytes.Equal(m.ID.NS[:], ns[:]) {
+			t.Errorf("router1: wrong namespace")
+		}
+		if string(m.Payload) != msg {
+			t.Errorf("router1: wrong message body")
+		}
 	}
 
-	ns := [4]byte{1, 1, 1, 2}
-	if !bytes.Equal(m.ID.NS[:], ns[:]) {
-		t.Errorf("router1: wrong namespace")
-	}
-	if string(m.Payload) != msg {
-		t.Errorf("router1: wrong message body")
+	{
+		m, err := router2.RecvMessage()
+		if err != nil {
+			t.Errorf("router1: recvMessage() returns error")
+		}
+		if m.ID.Digest.Cmp(router3.key.Digest()) != 0 {
+			t.Errorf("router1: wrong source id")
+		}
+
+		ns := [4]byte{1, 1, 1, 2}
+		if !bytes.Equal(m.ID.NS[:], ns[:]) {
+			t.Errorf("router1: wrong namespace")
+		}
+		if string(m.Payload) != msg {
+			t.Errorf("router1: wrong message body")
+		}
 	}
 }

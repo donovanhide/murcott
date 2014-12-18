@@ -1,6 +1,7 @@
 package router
 
 import (
+	"bytes"
 	"errors"
 	"net"
 	"strconv"
@@ -20,7 +21,7 @@ type Message struct {
 }
 
 type Router struct {
-	dht      map[string]*dht.DHT
+	dht      map[utils.Namespace]*dht.DHT
 	dhtMutex sync.RWMutex
 
 	listener *utp.Listener
@@ -62,14 +63,16 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		listener: listener,
 		key:      key,
 		sessions: make(map[string]*session),
-		dht:      make(map[string]*dht.DHT),
+		dht:      make(map[utils.Namespace]*dht.DHT),
 
 		logger: logger,
 		recv:   make(chan Message, 100),
 		send:   make(chan internal.Packet, 100),
 		exit:   exit,
 	}
-	r.dht[""] = dht.NewDHT(10, utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()), listener.RawConn, logger)
+
+	ns := [4]byte{1, 1, 1, 1}
+	r.dht[ns] = dht.NewDHT(10, utils.NewNodeID(ns, key.Digest()), listener.RawConn, logger)
 
 	go r.run()
 	return &r, nil
@@ -89,9 +92,8 @@ func (p *Router) Discover(addrs []net.UDPAddr) {
 func (p *Router) Join(group utils.NodeID) {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
-	s := group.String()
-	if _, ok := p.dht[s]; !ok {
-		p.dht[s] = dht.NewDHT(10, group, p.listener.RawConn, p.logger)
+	if _, ok := p.dht[group.NS]; !ok {
+		p.dht[group.NS] = dht.NewDHT(10, group, p.listener.RawConn, p.logger)
 	}
 }
 
@@ -219,6 +221,22 @@ func (p *Router) readSession(s *session) {
 			p.removeSession(s)
 			return
 		}
+		ns := [4]byte{1, 1, 1, 1}
+		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
+			p.dhtMutex.RLock()
+			if d, ok := p.dht[pkt.Src.NS]; ok {
+				pkt.TTL--
+				if pkt.TTL > 0 {
+					for _, n := range d.KnownNodes() {
+						s := p.getSession(n.ID)
+						if s != nil {
+							s.Write(pkt)
+						}
+					}
+				}
+			}
+			p.dhtMutex.RUnlock()
+		}
 		if pkt.Type == "msg" {
 			p.recv <- Message{ID: pkt.Src, Payload: pkt.Payload}
 		}
@@ -279,6 +297,7 @@ func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (inter
 		Src:     utils.NewNodeID(dst.NS, p.key.Digest()),
 		Type:    typ,
 		Payload: payload,
+		TTL:     3,
 	}, nil
 }
 
