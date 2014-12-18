@@ -109,6 +109,13 @@ func TestRouterRouteExchange(t *testing.T) {
 }
 
 func TestRouterGroup(t *testing.T) {
+	var config = utils.Config{
+		P: "9200-9300",
+		B: []string{
+			"localhost:9200-9300",
+		},
+	}
+
 	logger := log.NewLogger()
 
 	key1 := utils.GeneratePrivateKey()
@@ -117,35 +124,35 @@ func TestRouterGroup(t *testing.T) {
 	key4 := utils.GeneratePrivateKey()
 	key5 := utils.GeneratePrivateKey()
 
-	router1, err := NewRouter(key1, logger, utils.DefaultConfig)
+	router1, err := NewRouter(key1, logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	router1.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, key1.Digest()))
 	defer router1.Close()
 
-	router2, err := NewRouter(key2, logger, utils.DefaultConfig)
+	router2, err := NewRouter(key2, logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	router2.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, key2.Digest()))
 	defer router2.Close()
 
-	router3, err := NewRouter(key3, logger, utils.DefaultConfig)
+	router3, err := NewRouter(key3, logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	router3.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, key3.Digest()))
 	defer router3.Close()
 
-	router4, err := NewRouter(key4, logger, utils.DefaultConfig)
+	router4, err := NewRouter(key4, logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	router4.Join(utils.NewNodeID([4]byte{1, 1, 1, 3}, key4.Digest()))
 	defer router4.Close()
 
-	router5, err := NewRouter(key5, logger, utils.DefaultConfig)
+	router5, err := NewRouter(key5, logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
