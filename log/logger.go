@@ -13,11 +13,12 @@ func init() {
 }
 
 type Logger struct {
-	ch    chan int
-	b     [1024]string
-	begin int
-	size  int
-	mutex sync.RWMutex
+	ch     chan int
+	b      [1024]string
+	begin  int
+	size   int
+	rmutex sync.Mutex
+	wmutex sync.Mutex
 }
 
 func NewLogger() *Logger {
@@ -27,8 +28,8 @@ func NewLogger() *Logger {
 }
 
 func (l *Logger) Read(p []byte) (n int, err error) {
-	l.mutex.RLock()
-	defer l.mutex.RUnlock()
+	l.rmutex.Lock()
+	defer l.rmutex.Unlock()
 	if l.size == 0 {
 		<-l.ch
 	}
@@ -39,6 +40,8 @@ func (l *Logger) Read(p []byte) (n int, err error) {
 }
 
 func (l *Logger) write(msg string) {
+	l.wmutex.Lock()
+	defer l.wmutex.Unlock()
 	if debug {
 		fmt.Println(msg)
 	}
