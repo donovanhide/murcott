@@ -136,3 +136,7 @@ func (c *Client) Profile() client.UserProfile {
 func (c *Client) SetProfile(profile client.UserProfile) {
 	c.profile = profile
 }
+
+func (c *Client) Nodes() int {
+	return len(c.node.KnownNodes())
+}

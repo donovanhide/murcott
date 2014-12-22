@@ -76,6 +76,10 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 		return
 	}
 
+	if p.id.Digest.Cmp(c.Src.Digest) == 0 {
+		return
+	}
+
 	p.table.insert(utils.NodeInfo{ID: c.Src, Addr: addr})
 
 	switch c.Method {
