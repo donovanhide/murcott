@@ -72,3 +72,30 @@ func TestKeyMsgpack(t *testing.T) {
 		t.Errorf("varification failed")
 	}
 }
+
+func TestKeyPEM(t *testing.T) {
+	prikey := GeneratePrivateKey()
+	pubkey := prikey.PublicKey
+
+	mprikey, err := prikey.MarshalText()
+	if err != nil {
+		t.Errorf("cannot marshal PrivateKey")
+	}
+
+	mpubkey, err := pubkey.MarshalText()
+	if err != nil {
+		t.Errorf("cannot marshal PublicKey")
+	}
+
+	var uprikey PrivateKey
+	err = uprikey.UnmarshalText(mprikey)
+	if err != nil {
+		t.Errorf("cannot unmarshal PrivateKey")
+	}
+
+	var upubkey PublicKey
+	err = upubkey.UnmarshalText(mpubkey)
+	if err != nil {
+		t.Errorf("cannot unmarshal PublicKey")
+	}
+}

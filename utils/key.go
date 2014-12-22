@@ -5,6 +5,9 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"math/big"
 	"reflect"
 
@@ -36,6 +39,40 @@ func (p PublicKeyDigest) String() string {
 // Digest returns a SHA-1 digest for the public key.
 func (p *PublicKey) Digest() PublicKeyDigest {
 	return sha1.Sum(append(p.x.Bytes(), p.y.Bytes()...))
+}
+
+func (p *PublicKey) MarshalText() (text []byte, err error) {
+	pub := ecdsa.PublicKey{Curve: elliptic.P256(), X: p.x, Y: p.y}
+	x, err := x509.MarshalPKIXPublicKey(&pub)
+	if err != nil {
+		return nil, err
+	}
+	b := pem.Block{
+		Type:  "DSA PUBLIC KEY",
+		Bytes: x,
+	}
+	return pem.EncodeToMemory(&b), nil
+}
+
+func (p *PublicKey) UnmarshalText(text []byte) error {
+	for {
+		b, r := pem.Decode(text)
+		if b != nil {
+			if b.Type == "DSA PUBLIC KEY" {
+				k, err := x509.ParsePKIXPublicKey(b.Bytes)
+				if err != nil {
+					return err
+				}
+				p.x = k.(*ecdsa.PublicKey).X
+				p.y = k.(*ecdsa.PublicKey).Y
+				return nil
+			}
+		} else {
+			break
+		}
+		text = r
+	}
+	return errors.New("Public key block not found")
 }
 
 // GeneratePrivateKey generates new ECDSA key pair.
@@ -89,6 +126,44 @@ func (p *PrivateKey) Sign(data []byte) *Signature {
 		return &Signature{r: r, s: s}
 	}
 	return nil
+}
+
+func (p *PrivateKey) MarshalText() (text []byte, err error) {
+	pri := ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: p.x, Y: p.y},
+		D:         p.d,
+	}
+	x, err := x509.MarshalECPrivateKey(&pri)
+	if err != nil {
+		return nil, err
+	}
+	b := pem.Block{
+		Type:  "DSA PRIVATE KEY",
+		Bytes: x,
+	}
+	return pem.EncodeToMemory(&b), nil
+}
+
+func (p *PrivateKey) UnmarshalText(text []byte) error {
+	for {
+		b, r := pem.Decode(text)
+		if b != nil {
+			if b.Type == "DSA PRIVATE KEY" {
+				k, err := x509.ParseECPrivateKey(b.Bytes)
+				if err != nil {
+					return err
+				}
+				p.d = k.D
+				p.PublicKey.x = k.PublicKey.X
+				p.PublicKey.y = k.PublicKey.Y
+				return nil
+			}
+		} else {
+			break
+		}
+		text = r
+	}
+	return errors.New("Private key block not found")
 }
 
 func (p *PublicKey) Verify(data []byte, sign *Signature) bool {
