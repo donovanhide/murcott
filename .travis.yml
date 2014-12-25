@@ -2,10 +2,9 @@ language: go
 
 install:
  - go get -v .
- - go get -v ./_gui ...
+ - go get -v ./tangor ...
 
 script:
  - go test ./... -v
  - go test -v -race ./...
- - go build _gui/main.go
- - go build _bootstrap/main.go
+ - go build tangor/main.go
