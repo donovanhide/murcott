@@ -2,6 +2,8 @@
 package murcott
 
 import (
+	"time"
+
 	"github.com/h2so5/murcott/client"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/node"
@@ -82,15 +84,13 @@ func (c *Client) Close() {
 	for _, n := range c.Roster.List() {
 		c.node.Send(n, client.UserPresence{Status: status, Ack: false}, nil)
 	}
-
+	time.Sleep(100 * time.Millisecond)
 	c.node.Close()
 }
 
 // Sends the given message to the destination node.
-func (c *Client) SendMessage(dst utils.NodeID, msg client.ChatMessage, ack func(ok bool)) {
-	c.node.Send(dst, msg, func(r interface{}) {
-		ack(r != nil)
-	})
+func (c *Client) SendMessage(dst utils.NodeID, msg client.ChatMessage) {
+	c.node.Send(dst, msg, func(r interface{}) {})
 }
 
 // HandleMessages registers the given function as a massage handler.

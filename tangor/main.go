@@ -42,6 +42,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer client.Close()
 
 	// Load cache
 	data, err := ioutil.ReadFile(path + "/cache.dat")
@@ -128,6 +129,15 @@ func (s *Session) bootstrap() {
 func (s *Session) commandLoop() {
 	var chatID *utils.NodeID
 
+	s.cli.HandleMessages(func(src utils.NodeID, msg client.ChatMessage) {
+		if chatID == nil {
+			chatID = &src
+			color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
+		}
+		color.Printf("\r* @{Wk}%s@{|} %s\n", src.String()[:6], msg.Text())
+		fmt.Print("* ")
+	})
+
 	bio := bufio.NewReader(os.Stdin)
 	for {
 		if chatID == nil {
@@ -171,7 +181,7 @@ func (s *Session) commandLoop() {
 				color.Printf(" -> @{Rk}ERROR:@{|} unknown command\n")
 				showHelp()
 			} else {
-				s.cli.SendMessage(*chatID, client.NewPlainChatMessage(string(line)), func(bool) {})
+				s.cli.SendMessage(*chatID, client.NewPlainChatMessage(string(line)))
 			}
 		}
 	}
