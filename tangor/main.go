@@ -43,9 +43,31 @@ func main() {
 		panic(err)
 	}
 
+	// Load cache
+	data, err := ioutil.ReadFile(path + "/cache.dat")
+	if err == nil {
+		client.UnmarshalCache(data)
+	}
+
+	exit := make(chan int)
+	go func() {
+		for {
+			select {
+			case <-exit:
+				return
+			case <-time.After(time.Minute):
+				data, err := client.MarshalCache()
+				if err == nil {
+					ioutil.WriteFile(path+"/cache.dat", data, 0755)
+				}
+			}
+		}
+	}()
+
 	s := Session{cli: client}
 	s.bootstrap()
 	s.commandLoop()
+	close(exit)
 }
 
 func getKey(keyfile string) (*utils.PrivateKey, error) {
@@ -105,10 +127,6 @@ func (s *Session) bootstrap() {
 
 func (s *Session) commandLoop() {
 	var chatID *utils.NodeID
-
-	s.cli.HandleMessages(func(src utils.NodeID, msg client.ChatMessage) {
-		color.Printf("\r* @{Wk}%s@{|} %s\n", src.String()[:6], msg.Text())
-	})
 
 	bio := bufio.NewReader(os.Stdin)
 	for {

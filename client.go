@@ -6,6 +6,7 @@ import (
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/node"
 	"github.com/h2so5/murcott/utils"
+	"github.com/vmihailenco/msgpack"
 )
 
 type Client struct {
@@ -139,4 +140,17 @@ func (c *Client) SetProfile(profile client.UserProfile) {
 
 func (c *Client) Nodes() int {
 	return len(c.node.KnownNodes())
+}
+
+func (c *Client) MarshalCache() (data []byte, err error) {
+	return msgpack.Marshal(c.node.KnownNodes())
+}
+
+func (c *Client) UnmarshalCache(data []byte) error {
+	var nodes []utils.NodeInfo
+	err := msgpack.Unmarshal(data, &nodes)
+	for _, n := range nodes {
+		c.node.AddNode(n)
+	}
+	return err
 }

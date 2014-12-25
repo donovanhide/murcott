@@ -301,6 +301,9 @@ func (p *DHT) AddNode(node utils.NodeInfo) {
 	if !p.id.NS.Match(node.ID.NS) {
 		return
 	}
+	if p.id.Digest.Cmp(node.ID.Digest) == 0 {
+		return
+	}
 	p.table.insert(node)
 	p.sendPing(node.ID)
 }
